@@ -285,19 +285,21 @@ const recipeTable = {
 } satisfies Record<string, Recipe>;
 
 /** Every built-in sound name. */
-export type SoundName = keyof typeof recipeTable;
+export type BuiltinSoundName = keyof typeof recipeTable;
+/** Built-in or user-defined name; use isSound() to validate strings at runtime. */
+export type SoundName = BuiltinSoundName | (string & {});
 
 /** The recipe for every sound, keyed by name. Frozen; treat as read-only data. */
-export const recipes: Readonly<Record<SoundName, Recipe>> = Object.freeze(recipeTable);
+export const recipes: Readonly<Record<BuiltinSoundName, Recipe>> = Object.freeze(recipeTable);
 
 /** All sound names in catalog order. */
-export const sounds: readonly SoundName[] = Object.freeze(Object.keys(recipeTable) as SoundName[]);
+export const sounds: readonly BuiltinSoundName[] = Object.freeze(Object.keys(recipeTable) as BuiltinSoundName[]);
 
 const own = Object.prototype.hasOwnProperty;
 
 /** True when `value` names a built-in sound (own keys only, so `"toString"` is rejected). */
 export function isSound(value: unknown): value is SoundName {
-  return typeof value === 'string' && own.call(recipeTable, value);
+  return typeof value === 'string' && (own.call(recipeTable, value) || custom.has(value));
 }
 
 /** Seconds from the trigger until the last layer's envelope ends. */
@@ -317,6 +319,39 @@ export function echoTail(recipe: Recipe): number {
 
 /** Total audible length of a sound in seconds, including its echo tail. */
 export function duration(name: SoundName): number {
-  const recipe = recipeTable[name];
+  const recipe = getRecipe(name);
   return sourceEnd(recipe) + echoTail(recipe);
+}
+
+
+const custom = new Map<string, Recipe>();
+
+/** Resolves built-in and registered recipes. Call isSound() before using an untrusted name. */
+export function getRecipe(name: SoundName): Recipe {
+  return custom.get(name) ?? recipes[name as BuiltinSoundName];
+}
+
+/** Registers an immutable recipe. Built-in sounds and prototype-property names are reserved. */
+export function registerRecipe<Name extends string>(name: Name, recipe: Recipe): Name {
+  if (!name.trim() || name in Object.prototype || own.call(recipeTable, name)) throw new RangeError('Sound name is empty or already reserved');
+  const positive = (value: number): boolean => Number.isFinite(value) && value > 0;
+  const nonnegative = (value: number): boolean => Number.isFinite(value) && value >= 0;
+  if (!recipe || !positive(recipe.level) || !Array.isArray(recipe.layers) || !recipe.layers.length) throw new RangeError('A recipe needs a positive level and layers');
+  for (const layer of recipe.layers) {
+    if (!nonnegative(layer.at) || !positive(layer.attack) || !positive(layer.decay) || !nonnegative(layer.peak) || !positive(layer.freq)) throw new RangeError('Invalid layer timing, gain or frequency');
+    if (layer.pan !== undefined && (!Number.isFinite(layer.pan) || Math.abs(layer.pan) > 1)) throw new RangeError('Invalid layer pan');
+    if ('noise' in layer) {
+      if (!['lowpass', 'bandpass', 'highpass'].includes(layer.noise) || (layer.q !== undefined && !positive(layer.q))) throw new RangeError('Invalid noise filter');
+    } else {
+      if (!['sine', 'triangle', 'sawtooth', 'square'].includes(layer.wave) || (layer.to !== undefined && !positive(layer.to)) || (layer.glide !== undefined && !positive(layer.glide)) || (layer.detune !== undefined && !Number.isFinite(layer.detune))) throw new RangeError('Invalid tone');
+    }
+  }
+  const echo = recipe.echo;
+  if (echo && (!positive(echo.delay) || echo.delay > 1 || !nonnegative(echo.feedback) || echo.feedback >= 1 || !nonnegative(echo.wet) || !positive(echo.lowpass))) throw new RangeError('Invalid echo');
+  custom.set(name, Object.freeze({
+    level: recipe.level,
+    layers: Object.freeze(recipe.layers.map(layer => Object.freeze({ ...layer }))),
+    ...(echo ? { echo: Object.freeze({ ...echo }) } : {}),
+  }));
+  return name;
 }

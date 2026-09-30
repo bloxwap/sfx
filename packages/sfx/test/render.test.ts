@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { OfflineAudioContext } from 'node-web-audio-api';
 import { synthesize } from '../dist/engine.js';
-import { duration, recipes, sounds, type SoundName } from '../dist/recipes.js';
+import { duration, recipes, sounds, type BuiltinSoundName as SoundName } from '../dist/recipes.js';
 
 const SAMPLE_RATE = 48000;
 const buffers = new Map<SoundName, [Float32Array, Float32Array]>();

@@ -1,4 +1,4 @@
-import { echoTail, isSound, recipes, sourceEnd, type Recipe, type SoundName } from './recipes.js';
+import { echoTail, getRecipe, isSound, recipes, registerRecipe, sourceEnd, type Recipe, type SoundName } from './recipes.js';
 
 /** Per-play adjustments. All are optional and cheap: they add at most two nodes to a voice. */
 export interface PlayOptions {
@@ -255,7 +255,7 @@ function length(recipe: Recipe): number {
 async function bake(name: SoundName, sampleRate: number): Promise<AudioBuffer | null> {
   const Offline = offlineConstructor();
   if (!Offline) return null;
-  const recipe = recipes[name];
+  const recipe = getRecipe(name);
   try {
     const offline = new Offline(2, Math.ceil(length(recipe) * sampleRate), sampleRate);
     synthesize(offline, recipe, offline.destination, 0);
@@ -315,7 +315,7 @@ function register(voice: Voice): void {
  * Returns every node it created (for teardown) and the seconds until it has rung out.
  */
 function schedule(ctx: Ctx, name: SoundName, options: PlayOptions | undefined, destination: AudioNode): [AudioNode[], number] {
-  const recipe = recipes[name];
+  const recipe = getRecipe(name);
   const rate = clamp(options?.rate, 0.25, 4, 1);
   const delay = clamp(options?.delay, 0, 10, 0);
   const mix = ctx.createGain();
@@ -561,4 +561,14 @@ export async function dispose(): Promise<void> {
   if (ctx && typeof ctx.close === 'function') {
     try { await ctx.close(); } catch { /* already closed */ }
   }
+}
+
+
+/** Defines or replaces a custom sound, invalidating its cached and in-flight renders. */
+export function define<Name extends string>(name: Name, recipe: Recipe): Name {
+  const result = registerRecipe(name, recipe);
+  rendered.delete(name);
+  rendering.delete(name);
+  lastPlayed.delete(name);
+  return result;
 }

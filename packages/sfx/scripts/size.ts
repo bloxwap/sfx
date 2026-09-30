@@ -3,7 +3,8 @@
 import { build } from 'esbuild';
 import { brotliCompressSync, gzipSync } from 'node:zlib';
 
-const BUDGET_GZIP = 5632;
+// Custom recipe validation adds to the full API; play/bind still tree-shake it away.
+const BUDGET_GZIP = 6144;
 
 const entries: [label: string, contents: string][] = [
   ['full bundle', `export * from './dist/index.js';`],

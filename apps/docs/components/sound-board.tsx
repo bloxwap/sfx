@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pause, Play, Volume2, VolumeX, Zap } from 'lucide-react';
+import { Pause, Play, RotateCcw, Volume2, VolumeX, Zap } from 'lucide-react';
 import { getOutput, play, preload, setEnabled, setVolume, sounds, type SoundName } from '@bloxwap/sfx';
 import { CopyButton } from './copy-button';
 import { GROUPS, KEYS, describe } from '@/lib/catalog';
@@ -10,6 +10,9 @@ import { GROUPS, KEYS, describe } from '@/lib/catalog';
 const KEY_TO_SOUND = new Map<string, SoundName>();
 GROUPS.flatMap((group) => group.sounds).forEach((name, index) => { if (KEYS[index]) KEY_TO_SOUND.set(KEYS[index], name); });
 const SOUND_TO_KEY = new Map([...KEY_TO_SOUND].map(([key, name]) => [name, key]));
+
+/** Slider defaults; Reset returns every slider here. */
+const DEFAULTS = { master: 0.8, gain: 1, rate: 1, pan: 0 };
 
 function snippet(name: SoundName, volume: number, rate: number, pan: number): string {
   const options = [
@@ -23,11 +26,19 @@ function snippet(name: SoundName, volume: number, rate: number, pan: number): st
 export function SoundBoard() {
   const [last, setLast] = useState<SoundName>('chime');
   const [flash, setFlash] = useState<Record<string, number>>({});
-  const [master, setMaster] = useState(0.8);
+  const [master, setMaster] = useState(DEFAULTS.master);
   const [muted, setMuted] = useState(false);
-  const [rate, setRate] = useState(1);
-  const [pan, setPan] = useState(0);
-  const [gain, setGain] = useState(1);
+  const [rate, setRate] = useState(DEFAULTS.rate);
+  const [pan, setPan] = useState(DEFAULTS.pan);
+  const [gain, setGain] = useState(DEFAULTS.gain);
+  const changed = master !== DEFAULTS.master || gain !== DEFAULTS.gain || rate !== DEFAULTS.rate || pan !== DEFAULTS.pan;
+
+  function reset() {
+    setMaster(DEFAULTS.master);
+    setGain(DEFAULTS.gain);
+    setRate(DEFAULTS.rate);
+    setPan(DEFAULTS.pan);
+  }
   const [sequence, setSequence] = useState(false);
   const [ready, setReady] = useState(false);
   const scope = useRef<HTMLCanvasElement>(null);
@@ -149,6 +160,7 @@ export function SoundBoard() {
         <div className="board-buttons">
           <button type="button" className="btn btn--secondary btn--sm" onClick={playAll}>{sequence ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}{sequence ? 'Stop' : 'Play all'}</button>
           <button type="button" className="btn btn--secondary btn--sm" aria-pressed={muted} onClick={() => setMuted((m) => !m)}>{muted ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}{muted ? 'Muted' : 'Sound on'}</button>
+          <button type="button" className="btn btn--secondary btn--sm" onClick={reset} disabled={!changed} title="Reset master, voice, rate and pan to their defaults"><RotateCcw aria-hidden="true" />Reset</button>
           <span className="board-status" title="Sounds are rendered once, then every play is a single buffer node"><Zap aria-hidden="true" />{ready ? 'Pre-rendered' : 'Live synth'}</span>
         </div>
       </div>

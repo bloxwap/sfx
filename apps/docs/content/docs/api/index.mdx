@@ -1,0 +1,151 @@
+---
+title: API reference
+description: Every export of @bloxwap/sfx.
+---
+
+```ts
+import {
+  play, preload, bind, unlock,
+  setEnabled, isEnabled, setVolume, getVolume, configure,
+  stopAll, activeVoices, getOutput, dispose,
+  sounds, isSound, duration,
+  type SoundName, type PlayOptions, type BindOptions, type EngineOptions,
+} from '@bloxwap/sfx';
+```
+
+## play()
+
+```ts
+function play(name?: SoundName, options?: PlayOptions): void;
+
+interface PlayOptions {
+  volume?: number; // 0–2, default 1
+  rate?: number;   // 0.25–4, default 1 (2 = an octave up, twice as fast)
+  pan?: number;    // -1 (left) to 1 (right), default 0
+}
+```
+
+Plays a sound now. `name` defaults to `'chime'`. Out-of-range options are clamped, and non-finite values fall back to their defaults. A volume of 0 plays nothing.
+
+`play()` never throws. It does nothing when:
+
+- `name` is not a sound (including inherited keys like `"toString"`);
+- sound is disabled with `setEnabled(false)`;
+- the page hasn't had a user gesture yet (where `navigator.userActivation` is available);
+- the same sound played less than `minInterval` ms ago (default 16);
+- there is no Web Audio (on the server, or in old browsers).
+
+If the audio context is suspended, `play()` resumes it and plays once it is running. One resume is shared, requests for the same sound are merged, and requests older than 250 ms are dropped.
+
+## preload()
+
+```ts
+function preload(names?: readonly SoundName[]): Promise<void>;
+```
+
+Renders sounds to buffers ahead of time: every sound by default, or just the ones you list. Unknown names are skipped. Rendering happens offline, so you can call this before any user gesture. Until a sound is rendered, `play()` synthesizes it live, which sounds the same but costs more.
+
+## bind()
+
+```ts
+function bind(root?: ParentNode | null, options?: BindOptions): () => void;
+
+interface BindOptions {
+  keyboard?: boolean;     // Enter/Space press and release. Default true.
+  hoverInterval?: number; // ms between hover sounds. Default 150.
+}
+```
+
+Plays sounds for `data-sound-hover`, `data-sound-press`, `data-sound-release`, and `data-sound-toggle` under `root` (default: `document`). Returns a function that removes the listeners. Binding the same root again returns the same function. Without a DOM, it returns a no-op. See [Declarative binding](/docs/guides/binding).
+
+## unlock()
+
+```ts
+function unlock(): Promise<boolean>;
+```
+
+Creates and resumes the audio context. Call it from inside a user gesture. Resolves `true` once audio is running. `bind()` calls it for you on the first pointer or key press.
+
+## setEnabled() / isEnabled()
+
+```ts
+function setEnabled(enabled: boolean): void;
+function isEnabled(): boolean;
+```
+
+Global mute. It affects future plays only: sounds already playing finish, and queued sounds are dropped. Non-boolean arguments are ignored. Enabled by default, and not persisted.
+
+## setVolume() / getVolume()
+
+```ts
+function setVolume(volume: number): void; // 0–1
+function getVolume(): number;
+```
+
+Sets the master volume. Changes glide over about 10 ms to avoid clicks. Non-numbers are ignored. Default 1.
+
+## configure()
+
+```ts
+function configure(options: EngineOptions): void;
+
+interface EngineOptions {
+  maxVoices?: number;   // default 24
+  minInterval?: number; // ms, default 16
+}
+```
+
+`maxVoices` caps how many sounds play at once; when a new one starts at the cap, the oldest is cut. `minInterval` drops repeats of the *same* sound that arrive within that many milliseconds, which stops double-fired handlers from doubling the volume.
+
+## stopAll() / activeVoices()
+
+```ts
+function stopAll(): void;
+function activeVoices(): number;
+```
+
+Stops every playing sound, and counts the sounds playing right now.
+
+## getOutput()
+
+```ts
+function getOutput(): AudioNode | null;
+```
+
+The last node before the speakers (the limiter), or `null` before the first sound. Connect an `AnalyserNode` to draw a waveform, or a `MediaStreamAudioDestinationNode` to record:
+
+```ts
+const output = getOutput();
+if (output) {
+  const analyser = output.context.createAnalyser();
+  output.connect(analyser);
+}
+```
+
+## dispose()
+
+```ts
+function dispose(): Promise<void>;
+```
+
+Stops everything, closes the audio context, and forgets rendered buffers. The next `play()` starts fresh. Useful in tests and on single-page app teardown.
+
+## sounds / isSound() / duration()
+
+```ts
+const sounds: readonly SoundName[];
+function isSound(value: unknown): value is SoundName;
+function duration(name: SoundName): number;
+```
+
+`sounds` lists all nineteen names in catalog order, and it is frozen. `isSound` is a type guard that accepts own names only. `duration` returns a sound's length in seconds, including its echo tail.
+
+## SoundName
+
+```ts
+type SoundName =
+  | 'chime' | 'sparkle' | 'droplet' | 'bloom' | 'whisper'
+  | 'tick' | 'press' | 'release' | 'toggle'
+  | 'success' | 'error' | 'page' | 'loading' | 'ready'
+  | 'payout' | 'deposit' | 'pluck' | 'notification' | 'loss';
+```

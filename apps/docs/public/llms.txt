@@ -1,0 +1,25 @@
+# @bloxwap/sfx
+
+> Interface sound effects for the web, synthesized with Web Audio. 19 sounds, no audio files, zero runtime dependencies. Each sound renders once to a buffer; every play is one AudioBufferSourceNode.
+
+Install: `npm install @bloxwap/sfx`
+
+## Docs
+
+- [Introduction](https://bloxwap.github.io/sfx/docs/): what the library is and how it works
+- [Quick start](https://bloxwap.github.io/sfx/docs/getting-started/): install, bind(), play()
+- [Sound catalog](https://bloxwap.github.io/sfx/docs/sounds/): all 19 sounds and when to use them
+- [Declarative binding](https://bloxwap.github.io/sfx/docs/guides/binding/): data-sound-hover, -press, -release, -toggle
+- [React](https://bloxwap.github.io/sfx/docs/guides/react/)
+- [Other frameworks](https://bloxwap.github.io/sfx/docs/guides/frameworks/): Vue, Svelte, Astro, plain HTML
+- [Sound design](https://bloxwap.github.io/sfx/docs/guides/sound-design/): which sound for which moment
+- [Accessibility and preferences](https://bloxwap.github.io/sfx/docs/guides/accessibility/)
+- [API reference](https://bloxwap.github.io/sfx/docs/api/)
+- [Recipes](https://bloxwap.github.io/sfx/docs/api/recipes/): the sound data format
+- [Performance](https://bloxwap.github.io/sfx/docs/performance/)
+
+## Indexes
+
+- [Sitemap](https://bloxwap.github.io/sfx/sitemap.xml)
+- [Search index](https://bloxwap.github.io/sfx/search.json)
+- [Source](https://github.com/bloxwap/sfx)

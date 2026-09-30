@@ -1,0 +1,70 @@
+---
+title: Recipes
+description: The data format every sound is built from, exported from @bloxwap/sfx/recipes.
+---
+
+Every sound is plain data. You can inspect it from the `@bloxwap/sfx/recipes` entry point, for example to draw a visualization or document your sound design:
+
+```ts
+import { recipes, sourceEnd, echoTail, type Recipe } from '@bloxwap/sfx/recipes';
+
+recipes.payout.layers.length; // 16
+```
+
+## Recipe
+
+```ts
+interface Recipe {
+  level: number;                // output level for the summed layers
+  layers: readonly Layer[];
+  echo?: Echo;                  // optional darkening feedback delay
+}
+
+interface Echo {
+  delay: number;    // seconds between repeats
+  feedback: number; // 0–1, level of each repeat relative to the previous one
+  wet: number;      // level of the echo relative to the dry sound
+  lowpass: number;  // Hz, applied on every repeat
+}
+```
+
+## Layers
+
+Each layer has an envelope that rises exponentially from silence to `peak` over `attack`, then falls back over `decay`. It starts `at` seconds after the trigger. `pan` places it in the stereo field; leave it out to keep the layer centered.
+
+```ts
+interface ToneLayer {
+  wave: 'sine' | 'triangle' | 'sawtooth' | 'square';
+  freq: number;     // Hz
+  to?: number;      // Hz: glide exponentially to this pitch
+  glide?: number;   // glide time in seconds; defaults to attack + decay
+  detune?: number;  // cents
+  at: number; attack: number; decay: number; peak: number; pan?: number;
+}
+
+interface NoiseLayer {
+  noise: 'lowpass' | 'bandpass' | 'highpass'; // white noise through this filter
+  freq: number;     // filter frequency, Hz
+  q?: number;       // filter Q (default 1)
+  at: number; attack: number; decay: number; peak: number; pan?: number;
+}
+```
+
+## Example: chime
+
+```ts
+{
+  level: 1.75,
+  echo: { delay: 0.12, feedback: 0.25, wet: 0.18, lowpass: 4000 },
+  layers: [
+    { wave: 'sine', freq: 1046.5, at: 0,    attack: 0.006, decay: 0.22, peak: 0.09 },
+    { wave: 'sine', freq: 1568,   at: 0.09, attack: 0.006, decay: 0.26, peak: 0.08 },
+  ],
+}
+```
+
+## Timing helpers
+
+- `sourceEnd(recipe)` returns the seconds until the last layer's envelope ends.
+- `echoTail(recipe)` returns the seconds of echo after that, until the repeats fall below -60 dB.
+- `duration(name)` from the main entry returns the sum of the two.

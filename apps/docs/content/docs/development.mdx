@@ -1,0 +1,42 @@
+---
+title: Development
+description: Build, test, benchmark, and preview the docs locally.
+---
+
+The repository is an npm workspace:
+
+| Path | What it is |
+| --- | --- |
+| `packages/sfx` | The published library: `src/`, tests, benchmark, and size budget |
+| `apps/docs` | This site: Next.js, Fumadocs, and a static export for GitHub Pages |
+
+Requires Node.js 24 or later.
+
+```sh
+npm install
+npm test            # build and run the test suite
+npm run coverage    # tests with a 100% line, branch, and function gate
+npm run bench       # play() cost, live synthesis vs. pre-rendered buffers
+npm run size        # bundle size budget (gzip)
+npm run docs:dev    # this site at http://localhost:3903
+```
+
+## Tests
+
+- `test/engine.test.mjs` drives the engine against a recording fake of the Web Audio API: gating, the master bus, rendering, voices, suspended contexts, and cleanup.
+- `test/bind.test.mjs` uses happy-dom for attributes, hover rules, keyboard support, disabled controls, and multiple roots.
+- `test/render.test.mjs` renders every recipe with a real Web Audio implementation and checks the audio: finite, audible, below full scale, decaying to silence, mono or stereo as designed, and at the right pitch.
+- `test/recipes.test.mjs` checks the catalog, levels, and ring-out times.
+
+## Changing a sound
+
+1. Edit its recipe in `packages/sfx/src/recipes.ts`.
+2. Run `npm run docs:dev` and listen on the sound board.
+3. Run `npm test`. The render tests catch clipping, silence, and tails that don't decay.
+
+## Previewing the production site
+
+```sh
+NEXT_PUBLIC_BASE_PATH=/sfx npm run docs:build
+NEXT_PUBLIC_BASE_PATH=/sfx npm run docs:preview
+```

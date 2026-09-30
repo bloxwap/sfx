@@ -1,0 +1,74 @@
+name: Tests
+
+# Gates every pull request (and main) on the same checks contributors run locally. Runs without a
+# path filter so it can be a required status check without blocking docs-only changes.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      # Builds, runs the suite, and fails if any source file drops below the coverage thresholds.
+      - name: Tests and coverage gate
+        run: npm run coverage
+
+      - name: Bundle size budget
+        run: npm run size
+
+      - name: Scheduling benchmark
+        run: npm run bench
+
+      # Tests import dist/ directly, so check the published entry points separately: every
+      # "exports" subpath must import by package name in plain Node (SSR-safe, no window).
+      - name: Package entry points
+        run: |
+          node --input-type=module -e "
+            import { readFileSync } from 'node:fs';
+            const { name, exports } = JSON.parse(readFileSync('packages/sfx/package.json', 'utf8'));
+            for (const key of Object.keys(exports)) {
+              if (key.endsWith('.json')) continue;
+              await import(key === '.' ? name : name + key.slice(1));
+            }
+            console.log('imported', Object.keys(exports).length, 'entry points');
+          "
+
+      # What npm would publish: fails if the tarball is missing dist/ or ships sources/tests.
+      - name: Pack dry run
+        run: |
+          npm pack --workspace @bloxwap/sfx --dry-run --json > pack.json
+          node --input-type=module -e "
+            import { readFileSync } from 'node:fs';
+            const [{ files }] = JSON.parse(readFileSync('pack.json', 'utf8'));
+            const paths = files.map((f) => f.path);
+            for (const required of ['dist/index.js', 'dist/index.d.ts', 'README.md', 'LICENSE', 'package.json']) {
+              if (!paths.includes(required)) throw new Error('tarball is missing ' + required);
+            }
+            const stray = paths.filter((p) => /^(src|test|bench)\//.test(p));
+            if (stray.length) throw new Error('tarball ships ' + stray.join(', '));
+            console.log(paths.length, 'files in tarball');
+          "

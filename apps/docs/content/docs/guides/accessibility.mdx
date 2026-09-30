@@ -1,0 +1,50 @@
+---
+title: Accessibility and preferences
+description: User gestures, mute controls, keyboard users, and reduced-motion preferences.
+---
+
+## Autoplay and the first gesture
+
+Browsers only allow audio after the user has interacted with the page. `@bloxwap/sfx` respects that:
+
+- In browsers that expose `navigator.userActivation`, `play()` does nothing until the page has had a gesture. It never creates a blocked audio context, so the console stays free of autoplay warnings.
+- `bind()` creates and resumes the audio context during the first pointer or key press, so the first sound after that plays on time.
+- If the context is still waking up, sounds requested in the meantime are played once it is running. Duplicates are merged, and anything older than 250 ms is dropped so nothing plays late.
+
+`preload()` renders sounds offline, so you can call it at startup without a gesture.
+
+## Give people a mute
+
+Always offer a way to turn sounds off, and remember the choice:
+
+```ts
+import { setEnabled } from '@bloxwap/sfx';
+
+const saved = localStorage.getItem('sound');
+setEnabled(saved !== 'off');
+
+toggle.addEventListener('click', () => {
+  const on = toggle.getAttribute('aria-pressed') !== 'true';
+  toggle.setAttribute('aria-pressed', String(on));
+  setEnabled(on);
+  localStorage.setItem('sound', on ? 'on' : 'off');
+});
+```
+
+## Reduced motion
+
+There is no standard media query for "reduced sound", but many people who ask for reduced motion also prefer a quieter interface. Consider starting muted, or at a lower volume, for them:
+
+```ts
+import { setVolume } from '@bloxwap/sfx';
+
+if (matchMedia('(prefers-reduced-motion: reduce)').matches) setVolume(0.3);
+```
+
+## Keyboard users
+
+`bind()` plays press and release sounds for Enter and Space on elements with `data-sound-press` and `data-sound-release`. Toggle sounds play on `click`, which browsers also fire from the keyboard. Hover sounds are mouse-only by design, because keyboard focus moves too quickly for them.
+
+## Sound is never the only signal
+
+Every sound in this library confirms something that should also be visible. Pair `error` with an inline message, `success` with a state change, and `notification` with a badge or toast.

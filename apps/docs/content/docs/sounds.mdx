@@ -1,0 +1,58 @@
+---
+title: Sound catalog
+description: All nineteen sounds, what they sound like, and when to use them.
+---
+
+Click a name to hear it. The whole board is on the [home page](/#board).
+
+## Hover and ambience
+
+| Sound | Character | Good for |
+| --- | --- | --- |
+| <SoundButton name="chime" /> | A soft rising fifth (C6 → G6) with a light echo | Default hover |
+| <SoundButton name="sparkle" /> | A quick four-note A-major arpeggio | Playful accents, easter eggs |
+| <SoundButton name="droplet" /> | One note gliding down from 1.2 kHz to 550 Hz | Dismiss, collapse, close |
+| <SoundButton name="bloom" /> | A slow two-sine swell with a gentle beat | Reveal, expand, open |
+| <SoundButton name="whisper" /> | A breathy swell of dark noise | Dense lists, subtle hovers |
+
+## Controls
+
+| Sound | Character | Good for |
+| --- | --- | --- |
+| <SoundButton name="tick" /> | A crisp band of noise with a tiny high ping | Navigation hover, steppers |
+| <SoundButton name="press" /> | A dull, muted knock | Pointer down |
+| <SoundButton name="release" /> | A brighter, springier tick | Pointer up |
+| <SoundButton name="toggle" /> | A low click, then a higher clack | Switches, tabs, checkboxes |
+| <SoundButton name="page" /> | A papery flick, a swish, and a glass tick | Pages, galleries, carousels |
+
+## Feedback
+
+| Sound | Character | Good for |
+| --- | --- | --- |
+| <SoundButton name="success" /> | A warm rising triad | Completed actions |
+| <SoundButton name="error" /> | A low knock and a falling third | Recoverable errors, validation |
+| <SoundButton name="loading" /> | A sine rising a fifth over a breath of noise | Work starting |
+| <SoundButton name="ready" /> | A focus tick opening into an open fifth | Content ready |
+| <SoundButton name="notification" /> | A physical bell with a slow beating tail | Messages, activity |
+
+## Money
+
+| Sound | Character | Good for |
+| --- | --- | --- |
+| <SoundButton name="payout" /> | A deep two-stage coin: body, then a strike an octave up | Payouts, rewards, wins |
+| <SoundButton name="deposit" /> | A wide, metallic, inharmonic shimmer | Deposits, credits |
+| <SoundButton name="pluck" /> | A tight square-wave pluck dropping an octave | Pickups, selections |
+| <SoundButton name="loss" /> | A heavy two-stage fall | Losses, liquidations, negative outcomes |
+
+The five money sounds were fitted to reference recordings. They use stereo width, and three of them (payout, deposit, and notification) layer 14–16 voices. Pre-rendering pays off most for these: each is one node per play instead of 30–53.
+
+## Lengths
+
+Use `duration(name)` to get a sound's length in seconds, including its echo. That is useful for timing an animation to a sound.
+
+```ts
+import { duration } from '@bloxwap/sfx';
+
+duration('tick');   // ≈ 0.02
+duration('payout'); // ≈ 1.16
+```

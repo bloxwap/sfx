@@ -1,0 +1,21 @@
+---
+title: Releasing
+description: How a version of @bloxwap/sfx reaches npm.
+---
+
+Releases are published from GitHub Actions with [npm trusted publishing](https://docs.npmjs.com/trusted-publishers). No npm token is stored in the repository, and every version gets a provenance attestation.
+
+## Flow
+
+1. Open a PR that bumps `version` in `packages/sfx/package.json` and updates `CHANGELOG.md`.
+2. Merge it after the **Tests**, **Documentation**, and **Security** checks pass.
+3. Create a GitHub release tagged `v<version>`, for example `v0.1.0`.
+4. The **Publish to npm** workflow checks that the tag matches the package version, runs the full test suite (`prepublishOnly`), and publishes.
+
+Pre-release versions (`0.2.0-beta.1`) publish under the matching dist-tag (`beta`, `alpha`, `rc`) instead of `latest`.
+
+## One-time setup
+
+- On npmjs.com, add a trusted publisher to `@bloxwap/sfx`: GitHub Actions, repository `bloxwap/sfx`, workflow `publish_npm.yml`.
+- In the repository settings, set GitHub Pages to deploy from **GitHub Actions**.
+- Protect `main`, and require the **Tests** check.

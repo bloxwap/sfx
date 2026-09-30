@@ -1,0 +1,16 @@
+name: Sound request
+description: Propose a new interaction sound or a change to an existing one.
+labels: [sound]
+body:
+  - type: textarea
+    id: moment
+    attributes:
+      label: Interaction moment
+      description: Which UI moment should this sound accompany (e.g. "copy to clipboard", "order filled")?
+    validations:
+      required: true
+  - type: textarea
+    id: character
+    attributes:
+      label: Character
+      description: How should it feel? Pitch, length, brightness, references.

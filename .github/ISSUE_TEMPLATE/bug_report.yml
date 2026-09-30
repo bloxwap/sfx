@@ -1,0 +1,26 @@
+name: Bug report
+description: A sound misbehaves, an API throws, or the docs site is broken.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you expected, and what you heard or saw instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: The smallest snippet or page that reproduces it.
+      render: ts
+  - type: input
+    id: version
+    attributes:
+      label: '@bloxwap/sfx version'
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: Safari 19 / iOS 20

@@ -1,0 +1,46 @@
+---
+title: Sound design
+description: Which sound for which moment, and how much sound is too much.
+---
+
+Interface sounds work when they confirm something the user did, or tell them something they would otherwise miss. They fail when every surface makes noise. A few principles:
+
+1. **Sound the verbs, not the nouns.** A press, a toggle, a completed payment. Not "a card exists".
+2. **Quieter than you think.** Start with `setVolume(0.5)` and go down, not up.
+3. **Short beats long.** Controls should use the sub-50 ms sounds (`tick`, `press`, `release`, `toggle`). Save the longer sounds for outcomes.
+4. **Match the valence.** Rising sounds (`success`, `ready`, `chime`) feel positive and falling ones (`error`, `droplet`, `loss`) feel negative. Don't play a rising sound for a failure.
+5. **Always offer a mute.** Some people can't or don't want to hear your interface. See [Accessibility](/docs/guides/accessibility).
+
+## A map of moments
+
+| Moment | Sound |
+| --- | --- |
+| Hover over navigation | <SoundButton name="tick" /> or <SoundButton name="whisper" /> |
+| Hover over a primary call to action | <SoundButton name="chime" /> |
+| Press and release a button | <SoundButton name="press" /> + <SoundButton name="release" /> |
+| Flip a switch, change tabs | <SoundButton name="toggle" /> |
+| Next page or slide | <SoundButton name="page" /> |
+| Open or expand | <SoundButton name="bloom" /> |
+| Close or dismiss | <SoundButton name="droplet" /> |
+| Start an async action | <SoundButton name="loading" /> |
+| Data arrived | <SoundButton name="ready" /> |
+| Action succeeded | <SoundButton name="success" /> |
+| Action failed (recoverable) | <SoundButton name="error" /> |
+| New message or alert | <SoundButton name="notification" /> |
+| Select or pick up an item | <SoundButton name="pluck" /> |
+| Funds received | <SoundButton name="deposit" /> |
+| Reward, win, or payout | <SoundButton name="payout" /> |
+| Loss or liquidation | <SoundButton name="loss" /> |
+| Delight moments (use sparingly) | <SoundButton name="sparkle" /> |
+
+## Variation without new sounds
+
+`play()` accepts a playback `rate` and a stereo `pan`. Small changes keep a repeated sound from feeling mechanical, and they add almost no cost:
+
+```ts
+// A stepper that rises in pitch as the value grows.
+play('tick', { rate: 0.9 + value / 50 });
+
+// A sound that comes from the side of the screen where it happened.
+play('notification', { pan: toast.side === 'left' ? -0.6 : 0.6 });
+```

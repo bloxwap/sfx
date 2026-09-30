@@ -1,0 +1,69 @@
+---
+title: Declarative binding
+description: Wire sounds with data-sound-* attributes and one bind() call.
+---
+
+`bind()` turns HTML attributes into sounds. It attaches one capture-phase listener per event type to a root element (by default the document). Each event is resolved when it fires, so elements added, removed, or changed later just work. There is no MutationObserver and there are no per-element listeners.
+
+```ts
+import { bind } from '@bloxwap/sfx';
+
+const unbind = bind();          // the whole document
+const unbindPanel = bind(panel); // or just one subtree
+```
+
+## Attributes
+
+| Attribute | Plays on | Default sound |
+| --- | --- | --- |
+| `data-sound-hover` | `pointerenter` from a mouse on a fine pointer | `chime` |
+| `data-sound-press` | primary-button `pointerdown`, and Enter/Space keydown | `press` |
+| `data-sound-release` | primary-button `pointerup`, and Enter/Space keyup | `release` |
+| `data-sound-toggle` | `click`, including clicks from the keyboard | `toggle` |
+
+Give the attribute a value to pick a sound:
+
+```html
+<a data-sound-hover="tick">Markets</a>
+<button data-sound-press="press" data-sound-release="release">Buy</button>
+<button data-sound-toggle="page">Next</button>
+```
+
+An empty or unknown value falls back to the default. Attributes are read when the event fires, so you can change them at any time.
+
+## The rules
+
+- **Nearest wins.** The handler walks up from the event target to the nearest element with the attribute. That element must be inside the bound root.
+- **Hover is for mice.** Touch and pen never trigger hover sounds, and neither does a mouse on a device whose main pointer is coarse. Moving between an element's own children doesn't replay its hover sound.
+- **Hover is throttled.** At most one hover sound plays every 150 ms across the whole page, so sweeping across a menu doesn't machine-gun. Change the interval with `bind(root, { hoverInterval })`.
+- **Primary button only.** Right-clicks and middle-clicks are silent.
+- **Keyboard parity.** Enter and Space play press on keydown and release on keyup. Key repeat is ignored, and a keyup only plays if it pairs with a keydown on the same element. Turn this off with `bind(root, { keyboard: false })`.
+- **Disabled is silent.** Nothing plays for elements that are `:disabled`, or inside `aria-disabled="true"` or `inert`.
+- **One sound per event.** If nested roots are both bound, an event still plays once.
+- **Audio unlock.** The first pointer or key press anywhere in the root creates and resumes the audio context, so the first real sound plays without delay.
+
+## Unbinding
+
+`bind()` is idempotent per root: calling it twice returns the same `unbind` function. Call `unbind()` to remove the listeners, for example when a component unmounts.
+
+```ts
+const unbind = bind(dialog);
+// …
+unbind();
+```
+
+## Mixing with play()
+
+Use attributes for direct manipulation, such as hover, press, and toggle. Use `play()` for outcomes the element can't know about, such as a request finishing:
+
+```html
+<button data-sound-press data-sound-release id="deposit">Deposit</button>
+```
+
+```ts
+document.querySelector('#deposit')!.addEventListener('click', async () => {
+  play('loading');
+  const ok = await submit();
+  play(ok ? 'deposit' : 'error');
+});
+```

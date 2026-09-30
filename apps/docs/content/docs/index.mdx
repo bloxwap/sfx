@@ -1,0 +1,35 @@
+---
+title: Introduction
+description: Interface sounds for the web, synthesized with Web Audio. No audio files, zero dependencies.
+---
+
+`@bloxwap/sfx` gives your interface nineteen short sounds for hovers, presses, toggles, confirmations, errors, loading states, and money moments. Every sound is a small recipe of oscillators and filtered noise. No audio files are downloaded, and the package has no runtime dependencies.
+
+<SoundButton name="chime" /> <SoundButton name="toggle" /> <SoundButton name="success" /> <SoundButton name="payout" />
+
+## Start here
+
+| Your goal | Guide |
+| --- | --- |
+| Add sounds to a page in two minutes | [Quick start](/docs/getting-started) |
+| Hear every sound | [Sound catalog](/docs/sounds) |
+| Wire sounds with HTML attributes | [Declarative binding](/docs/guides/binding) |
+| Use it in a React component | [React](/docs/guides/react) |
+| Use it with Vue, Svelte, Astro, or plain HTML | [Other frameworks](/docs/guides/frameworks) |
+| Pick the right sound for each moment | [Sound design](/docs/guides/sound-design) |
+| Respect user preferences | [Accessibility and preferences](/docs/guides/accessibility) |
+| Look up a function | [API reference](/docs/api) |
+
+## How it works
+
+Each sound is described as data: layers of sine, triangle, sawtooth, or square oscillators and band-filtered noise, each with an exponential attack and decay, a start offset, an optional pitch glide, and an optional stereo position. Some sounds add a darkening echo.
+
+The first time a sound is needed, the engine renders its recipe once with an `OfflineAudioContext` and keeps the result. After that, playing it creates **one** `AudioBufferSourceNode` that feeds a shared master bus, which applies your volume and a limiter. The layered sounds build up to 53 nodes when synthesized live, so this makes a play 5–75× cheaper on the main thread. See [Performance](/docs/performance).
+
+## What is included
+
+- `play(name, options)` with per-play volume, playback rate, and stereo pan.
+- `bind()`: delegated handling for `data-sound-hover`, `-press`, `-release`, and `-toggle` attributes, including keyboard support.
+- `preload()`, which renders sounds before they are needed, even before the first user gesture.
+- Master volume, a global mute, voice limits, `stopAll()`, and an output tap for visualizers.
+- SSR-safe imports, and a `play()` that never throws.

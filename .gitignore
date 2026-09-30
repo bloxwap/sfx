@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-test/
+coverage/
+*.tsbuildinfo
+.DS_Store
+apps/docs/.next/
+apps/docs/.source/
+apps/docs/out/
+apps/docs/next-env.d.ts
+*.tgz

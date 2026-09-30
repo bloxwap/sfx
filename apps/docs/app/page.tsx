@@ -25,7 +25,7 @@ export default function Home() {
         <div className="preview-intro preview-intro--section">
           <p className="eyebrow">LIVE · WEB AUDIO</p>
           <h2 id="board-title">Sound board</h2>
-          <p>Click a pad, press its key, or turn on Play on hover. Change the volume, rate, and pan, then copy the call.</p>
+          <p>Hover or click a pad, or press its key. Change the volume, rate, and pan, then copy the call.</p>
         </div>
         <SoundBoard />
       </section>

@@ -9,29 +9,32 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { OfflineAudioContext } from 'node-web-audio-api';
-import { encodeWav, trimSilence } from '../dist/wav.js';
+import { encodeWav, trimSilence, type AudioBufferLike } from '../dist/wav.js';
 import { duration, sounds } from '../dist/index.js';
-import { HELP, run } from '../bin/cli.mjs';
+import { HELP, run, type RunDeps } from '../dist/cli/index.js';
+import { asReal } from './fake-audio.ts';
+
+type RunLoaded = Awaited<ReturnType<NonNullable<RunDeps['load']>>>;
 
 /** An AudioBuffer-like over plain arrays. */
-const audio = (channels, sampleRate = 48000) => ({
+const audio = (channels: number[][], sampleRate = 48000): AudioBufferLike => ({
   numberOfChannels: channels.length,
   sampleRate,
-  length: channels[0].length,
-  getChannelData: (c) => Float32Array.from(channels[c]),
+  length: channels[0]!.length,
+  getChannelData: (c) => Float32Array.from(channels[c]!),
 });
 
-const ascii = (view, at) => String.fromCharCode(...new Uint8Array(view.buffer, at, 4));
-const int24 = (view, at) => (view.getUint8(at) | (view.getUint8(at + 1) << 8) | (view.getInt8(at + 2) << 16));
+const ascii = (view: DataView, at: number) => String.fromCharCode(...new Uint8Array(view.buffer, at, 4));
+const int24 = (view: DataView, at: number) => (view.getUint8(at) | (view.getUint8(at + 1) << 8) | (view.getInt8(at + 2) << 16));
 
 /** A file's bytes as a standalone ArrayBuffer. */
-const bytes = (file) => {
+const bytes = (file: string): ArrayBuffer => {
   const data = readFileSync(file);
   return data.buffer.slice(data.byteOffset, data.byteOffset + data.length);
 };
 
 /** Decodes with an independent reader (node-web-audio-api) to prove the files are valid WAV. */
-async function decode(wav, sampleRate = 48000) {
+async function decode(wav: ArrayBuffer, sampleRate = 48000): Promise<AudioBuffer> {
   return new OfflineAudioContext(1, 1, sampleRate).decodeAudioData(wav.slice(0));
 }
 
@@ -135,7 +138,9 @@ describe('encodeWav', () => {
 
   test('rejects formats it cannot write', () => {
     const ok = audio([[0]]);
+    // @ts-expect-error an unsupported bit depth
     assert.throws(() => encodeWav(ok, { bitDepth: 8 }), /bitDepth must be 16, 24 or 32/);
+    // @ts-expect-error an unsupported channel count
     assert.throws(() => encodeWav(ok, { channels: 3 }), /channels must be 1 or 2/);
     assert.throws(() => encodeWav({ ...ok, numberOfChannels: 0 }), /numberOfChannels/);
     assert.throws(() => encodeWav({ ...ok, numberOfChannels: 33 }), /numberOfChannels/);
@@ -152,7 +157,7 @@ describe('encodeWav', () => {
   test('an independent decoder reads every bit depth back', async () => {
     const left = [0, 0.5, -0.5, 0.25];
     const right = [0.125, -1, 1, 0];
-    for (const bitDepth of [16, 24, 32]) {
+    for (const bitDepth of [16, 24, 32] as const) {
       const decoded = await decode(encodeWav(audio([left, right], 48000), { bitDepth }));
       assert.equal(decoded.numberOfChannels, 2);
       assert.equal(decoded.length, 4);
@@ -216,12 +221,13 @@ describe('trimSilence', () => {
 
 describe('sfx-wav CLI', () => {
   const temp = () => mkdtempSync(join(tmpdir(), 'sfx-wav-'));
-  const ctx = (extra = {}) => {
-    const out = { logs: [], errors: [] };
-    out.deps = { log: (m) => out.logs.push(m), error: (m) => out.errors.push(m), ...extra };
-    return out;
+  const ctx = (extra: RunDeps = {}) => {
+    const logs: string[] = [];
+    const errors: string[] = [];
+    const deps: RunDeps = { log: (m) => logs.push(m), error: (m) => errors.push(m), ...extra };
+    return { logs, errors, deps };
   };
-  const header = (file) => new DataView(bytes(file));
+  const header = (file: string) => new DataView(bytes(file));
 
   test('--help prints usage and needs no audio module', async () => {
     for (const flag of ['--help', '-h']) {
@@ -268,7 +274,7 @@ describe('sfx-wav CLI', () => {
       const tap = await decode(bytes(join(dir, 'tap.wav')));
       assert.equal(tap.length, Math.ceil((0.09 + duration('release') + 0.1) * 48000));
       const left = tap.getChannelData(0);
-      const energy = (from, to) => left.slice(Math.round(from * 48000), Math.round(to * 48000)).reduce((a, s) => Math.max(a, Math.abs(s)), 0);
+      const energy = (from: number, to: number) => left.slice(Math.round(from * 48000), Math.round(to * 48000)).reduce((a, s) => Math.max(a, Math.abs(s)), 0);
       assert.ok(energy(0, 0.02) > 0.01, 'press at 0');
       assert.ok(energy(0.06, 0.089) < 1e-3, 'quiet between press and release');
       assert.ok(energy(0.09, 0.12) > 0.01, 'release at 90 ms');
@@ -313,7 +319,7 @@ describe('sfx-wav CLI', () => {
   });
 
   test('bad input exits 2 with a message, before loading audio', async () => {
-    const cases = [
+    const cases: [string[], RegExp][] = [
       [['--nope'], /Unknown option/],
       [['extra'], /positional/],
       [['--out'], /argument missing/],
@@ -359,8 +365,8 @@ describe('sfx-wav CLI', () => {
   test('render and write failures exit 1', async () => {
     const dir = temp();
     try {
-      class Broken { constructor() { this.currentTime = 0; } createGain() { throw new Error('no nodes'); } }
-      const broken = ctx({ load: async () => ({ OfflineAudioContext: Broken }) });
+      class Broken { currentTime = 0; createGain(): never { throw new Error('no nodes'); } }
+      const broken = ctx({ load: async () => ({ OfflineAudioContext: asReal<RunLoaded['OfflineAudioContext']>(Broken) }) });
       assert.equal(await run(['--out', dir, '--sounds', 'tick'], broken.deps), 1);
       assert.equal(broken.errors[0], 'sfx-wav: could not render "tick"');
 
@@ -382,8 +388,8 @@ describe('sfx-wav CLI', () => {
     const dir = temp();
     try {
       class Silent extends OfflineAudioContext {
-        async startRendering() {
-          return { numberOfChannels: 2, sampleRate: 48000, length: 480, getChannelData: () => new Float32Array(480) };
+        override async startRendering() {
+          return asReal<AudioBuffer>({ numberOfChannels: 2, sampleRate: 48000, length: 480, getChannelData: () => new Float32Array(480) });
         }
       }
       const io = ctx({ load: async () => ({ OfflineAudioContext: Silent }) });
@@ -395,9 +401,9 @@ describe('sfx-wav CLI', () => {
   });
 
   test('the bin runs the CLI and sets the exit code', async () => {
-    const bin = fileURLToPath(new URL('../bin/sfx-wav.mjs', import.meta.url));
+    const bin = fileURLToPath(new URL('../dist/cli/sfx-wav.js', import.meta.url));
     const { stdout } = await promisify(execFile)(process.execPath, [bin, '--help']);
     assert.match(stdout, /Usage: sfx-wav/);
-    await assert.rejects(promisify(execFile)(process.execPath, [bin, '--bit-depth', '8']), (error) => error.code === 2 && /--bit-depth/.test(error.stderr));
+    await assert.rejects(promisify(execFile)(process.execPath, [bin, '--bit-depth', '8']), (error: { code: number; stderr: string }) => error.code === 2 && /--bit-depth/.test(error.stderr));
   });
 });

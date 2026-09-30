@@ -6,9 +6,9 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../out/', import.meta.url));
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://bloxwap.github.io';
-const failures = [];
-const exists = async (path) => { try { return (await stat(path)).isFile(); } catch { return false; } };
-async function walk(path) {
+const failures: string[] = [];
+const exists = async (path: string): Promise<boolean> => { try { return (await stat(path)).isFile(); } catch { return false; } };
+async function walk(path: string): Promise<string[]> {
   const entries = await readdir(path, { withFileTypes: true });
   return (await Promise.all(entries.map(async (entry) => entry.isDirectory()
     ? walk(join(path, entry.name)) : [join(path, entry.name)]))).flat();
@@ -27,13 +27,13 @@ for (const file of files) {
   const html = await readFile(file, 'utf8');
   const name = relative(root, file).split(sep).join('/');
   if (name === 'index.html' || (name.startsWith('docs/') && name.endsWith('/index.html'))) {
-    const meta = new Map([...html.matchAll(/<meta\b[^>]*>/g)].map(([tag]) => {
-      const attrs = Object.fromEntries([...tag.matchAll(/([\w:-]+)="([^"]*)"/g)].map(([, key, value]) => [key, value.replaceAll('&amp;', '&')]));
+    const meta = new Map([...html.matchAll(/<meta\b[^>]*>/g)].map(([tag]): [string | undefined, string | undefined] => {
+      const attrs: Record<string, string> = Object.fromEntries([...tag.matchAll(/([\w:-]+)="([^"]*)"/g)].map(([, key, value]) => [key, value!.replaceAll('&amp;', '&')]));
       return [attrs.property ?? attrs.name, attrs.content];
     }));
     const route = name === 'index.html' ? '/' : `/${name.slice(0, -'index.html'.length)}`;
     const imagePath = route === '/' ? '/og/home.png' : route === '/docs/' ? '/og/docs/index.png' : `/og${route.slice(0, -1)}.png`;
-    const absolute = (path) => new URL(`${basePath}${path}`, siteUrl).href;
+    const absolute = (path: string): string => new URL(`${basePath}${path}`, siteUrl).href;
     for (const [key, expected] of Object.entries({
       'og:site_name': '@bloxwap/sfx', 'og:url': absolute(route), 'og:image': absolute(imagePath),
       'og:image:width': '1200', 'og:image:height': '630', 'twitter:card': 'summary_large_image',

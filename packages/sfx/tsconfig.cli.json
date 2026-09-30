@@ -1,0 +1,9 @@
+{
+  // The sfx-wav CLI: compiled with the library into dist/cli, with Node's types (the library build has none).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["src/cli"],
+  "exclude": []
+}

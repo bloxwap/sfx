@@ -3,11 +3,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Window } from 'happy-dom';
-import { FakeAudioContext, installAudio, setActivation } from './fake-audio.mjs';
+import { FakeAudioContext, asReal, globals, installAudio, setActivation } from './fake-audio.ts';
 
 const dom = new Window();
-globalThis.document = dom.document;
-delete globalThis.matchMedia;
+globals.document = dom.document;
+delete globals.matchMedia;
 installAudio({ offline: false });
 setActivation(true);
 
@@ -18,7 +18,7 @@ test('hover sounds play where matchMedia is unavailable', async () => {
   root.innerHTML = '<a data-sound-hover="tick">x</a>';
   document.body.append(root);
   const unbind = bind(root);
-  root.firstElementChild.dispatchEvent(new dom.PointerEvent('pointerenter', { pointerType: 'mouse' }));
+  root.firstElementChild!.dispatchEvent(asReal<Event>(new dom.PointerEvent('pointerenter', { pointerType: 'mouse' })));
   unbind();
   assert.deepEqual(FakeAudioContext.instances[0].of('oscillator').map((node) => node.frequency.events[0][1]), [2600]);
   // The fake clock never advances, so the live voice's cleanup timer would keep re-arming.

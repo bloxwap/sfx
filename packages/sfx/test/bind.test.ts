@@ -1,47 +1,47 @@
 import { beforeEach, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Window } from 'happy-dom';
-import { FakeAudioContext, installAudio, setActivation, tick } from './fake-audio.mjs';
+import { FakeAudioContext, asReal, globals, installAudio, setActivation, tick } from './fake-audio.ts';
 
 // A DOM for the binding tests. happy-dom's window becomes the global scope the library sees.
 const dom = new Window();
-for (const key of ['document', 'Node', 'Element', 'HTMLElement', 'Event', 'PointerEvent', 'KeyboardEvent', 'MouseEvent']) {
-  globalThis[key] = dom[key];
+for (const key of ['document', 'Node', 'Element', 'HTMLElement', 'Event', 'PointerEvent', 'KeyboardEvent', 'MouseEvent'] as const) {
+  globals[key] = dom[key];
 }
 let fine = true;
-globalThis.matchMedia = () => ({ get matches() { return fine; } });
+globals.matchMedia = () => ({ get matches() { return fine; } });
 let clock = 10_000;
 Object.defineProperty(globalThis, 'performance', { value: { now: () => clock }, configurable: true, writable: true });
 
 const { bind, configure, dispose, setEnabled } = await import('../dist/index.js');
 
 /** Count of sounds played, by the recipe fingerprint each leaves in the fake context. */
-function played() {
+function played(): number {
   const ctx = FakeAudioContext.instances.at(-1);
   if (!ctx) return 0;
   // Each live-synthesized play creates one mix gain wired to the bus, then its level gain.
   return ctx.of('gain').filter((node) => node.outputs[0] === ctx.of('gain')[0]).length;
 }
 /** Frequencies of oscillators started so far (identifies which recipe played). */
-const tones = () => (FakeAudioContext.instances.at(-1)?.of('oscillator') ?? []).map((node) => node.frequency.events[0][1]);
+const tones = (): number[] => (FakeAudioContext.instances.at(-1)?.of('oscillator') ?? []).map((node) => node.frequency.events[0][1]);
 
-function pointer(type, target, init = {}) {
-  const event = new dom.PointerEvent(type, { bubbles: type !== 'pointerenter', cancelable: true, pointerType: 'mouse', button: 0, ...init });
+function pointer(type: string, target: EventTarget, init: PointerEventInit = {}): Event {
+  const event = asReal<Event>(new dom.PointerEvent(type, asReal({ bubbles: type !== 'pointerenter', cancelable: true, pointerType: 'mouse', button: 0, ...init })));
   target.dispatchEvent(event);
   return event;
 }
-const key = (type, target, init) => target.dispatchEvent(new dom.KeyboardEvent(type, { bubbles: true, ...init }));
-const click = (target) => target.dispatchEvent(new dom.MouseEvent('click', { bubbles: true }));
+const key = (type: string, target: EventTarget, init: KeyboardEventInit): boolean => target.dispatchEvent(asReal<Event>(new dom.KeyboardEvent(type, asReal({ bubbles: true, ...init }))));
+const click = (target: EventTarget): boolean => target.dispatchEvent(asReal<Event>(new dom.MouseEvent('click', { bubbles: true })));
 
-function element(html) {
+function element(html: string): Element {
   const host = document.createElement('div');
   host.innerHTML = html;
-  const node = host.firstElementChild;
+  const node = host.firstElementChild!;
   document.body.append(node);
   return node;
 }
 
-let root;
+let root: Element;
 beforeEach(async () => {
   await dispose();
   installAudio({ offline: false });
@@ -56,9 +56,9 @@ beforeEach(async () => {
 
 describe('bind()', () => {
   test('uses one capture listener per event type, and binding again is a no-op', () => {
-    const added = [];
+    const added: [string, boolean | AddEventListenerOptions | undefined][] = [];
     const original = root.addEventListener.bind(root);
-    root.addEventListener = (type, listener, capture) => { added.push([type, capture]); original(type, listener, capture); };
+    root.addEventListener = (type: string, listener: EventListenerOrEventListenerObject, capture?: boolean | AddEventListenerOptions) => { added.push([type, capture]); original(type, listener, capture); };
     const unbind = bind(root);
     assert.equal(bind(root), unbind, 'same root returns the same unbind');
     assert.ok(added.every(([, capture]) => capture === true));
@@ -79,27 +79,28 @@ describe('bind()', () => {
   });
 
   test('without a DOM it returns a no-op', () => {
-    const saved = globalThis.document;
-    delete globalThis.document;
+    const saved = globals.document;
+    delete globals.document;
     try {
       const unbind = bind();
       assert.equal(typeof unbind, 'function');
       assert.doesNotThrow(unbind);
     } finally {
-      globalThis.document = saved;
+      globals.document = saved;
     }
+    // @ts-expect-error not a DOM node: bind() must still return a no-op
     assert.doesNotThrow(() => bind({})());
   });
 
   test('attribute values pick the sound; empty or invalid values use the default', () => {
     const unbind = bind(root);
     root.innerHTML = '<button id="a" data-sound-toggle="droplet"></button><button id="b" data-sound-toggle="toString"></button><button id="c" data-sound-hover></button>';
-    click(root.querySelector('#a'));
+    click(root.querySelector('#a')!);
     assert.deepEqual(tones(), [1200], 'droplet');
-    click(root.querySelector('#b'));
+    click(root.querySelector('#b')!);
     assert.equal(played(), 2, 'toggle fallback (noise only)');
     assert.deepEqual(tones(), [1200]);
-    pointer('pointerenter', root.querySelector('#c'));
+    pointer('pointerenter', root.querySelector('#c')!);
     assert.deepEqual(tones(), [1200, 1046.5, 1568], 'hover falls back to chime');
     unbind();
   });
@@ -107,7 +108,7 @@ describe('bind()', () => {
   test('attributes are read when the event fires', () => {
     const unbind = bind(root);
     root.innerHTML = '<button>Go</button>';
-    const button = root.firstElementChild;
+    const button = root.firstElementChild!;
     click(button);
     assert.equal(played(), 0);
     button.setAttribute('data-sound-toggle', '');
@@ -121,22 +122,22 @@ describe('bind()', () => {
 
   test('the nearest carrier wins, and carriers outside the root are ignored', () => {
     const outer = element('<div data-sound-toggle="droplet"><section><span>inside</span></section></div>');
-    const inner = outer.querySelector('section');
+    const inner = outer.querySelector('section')!;
     const unbind = bind(inner);
-    click(inner.querySelector('span'));
+    click(inner.querySelector('span')!);
     assert.equal(played(), 0, 'carrier is outside the bound root');
     inner.setAttribute('data-sound-toggle', 'tick');
-    click(inner.querySelector('span'));
+    click(inner.querySelector('span')!);
     assert.deepEqual(tones(), [2600], 'nearest carrier (tick) inside the root');
     unbind();
   });
 
   test('events whose target is not an element are ignored', () => {
     const unbind = bind(root);
-    root.dispatchEvent(new dom.MouseEvent('click'));
+    root.dispatchEvent(asReal<Event>(new dom.MouseEvent('click')));
     const text = document.createTextNode('x');
     root.append(text);
-    text.dispatchEvent(new dom.MouseEvent('click', { bubbles: true }));
+    text.dispatchEvent(asReal<Event>(new dom.MouseEvent('click', { bubbles: true })));
     assert.equal(played(), 0);
     unbind();
   });
@@ -146,7 +147,7 @@ describe('hover', () => {
   test('mouse on a fine pointer only', () => {
     const unbind = bind(root);
     root.innerHTML = '<a data-sound-hover="tick">x</a>';
-    const link = root.firstElementChild;
+    const link = root.firstElementChild!;
     pointer('pointerenter', link, { pointerType: 'touch' });
     pointer('pointerenter', link, { pointerType: 'pen' });
     assert.equal(played(), 0);
@@ -178,8 +179,8 @@ describe('hover', () => {
   test('hoverInterval is configurable', () => {
     const unbind = bind(root, { hoverInterval: 0 });
     root.innerHTML = '<a data-sound-hover="tick">1</a>';
-    pointer('pointerenter', root.firstElementChild);
-    pointer('pointerenter', root.firstElementChild);
+    pointer('pointerenter', root.firstElementChild!);
+    pointer('pointerenter', root.firstElementChild!);
     assert.equal(played(), 2);
     unbind();
   });
@@ -187,8 +188,8 @@ describe('hover', () => {
   test('moving between an element’s own children does not replay it', () => {
     const unbind = bind(root);
     root.innerHTML = '<a data-sound-hover="tick"><b><i>x</i></b></a>';
-    const link = root.firstElementChild;
-    pointer('pointerenter', link.querySelector('i'), { relatedTarget: link });
+    const link = root.firstElementChild!;
+    pointer('pointerenter', link.querySelector('i')!, { relatedTarget: link });
     assert.equal(played(), 0);
     pointer('pointerenter', link, { relatedTarget: root });
     assert.equal(played(), 1);
@@ -200,7 +201,7 @@ describe('press and release', () => {
   test('pointer down and up play press and release, for touch too', () => {
     const unbind = bind(root);
     root.innerHTML = '<button data-sound-press data-sound-release>Save</button>';
-    const button = root.firstElementChild;
+    const button = root.firstElementChild!;
     pointer('pointerdown', button, { pointerType: 'touch' });
     assert.deepEqual(tones(), [], 'press is noise only');
     pointer('pointerup', button, { pointerType: 'touch' });
@@ -212,8 +213,8 @@ describe('press and release', () => {
   test('secondary buttons are ignored', () => {
     const unbind = bind(root);
     root.innerHTML = '<button data-sound-press data-sound-release>Save</button>';
-    pointer('pointerdown', root.firstElementChild, { button: 2 });
-    pointer('pointerup', root.firstElementChild, { button: 1 });
+    pointer('pointerdown', root.firstElementChild!, { button: 2 });
+    pointer('pointerup', root.firstElementChild!, { button: 1 });
     assert.equal(played(), 0);
     unbind();
   });
@@ -221,7 +222,7 @@ describe('press and release', () => {
   test('disabled, aria-disabled and inert controls are silent', () => {
     const unbind = bind(root);
     root.innerHTML = '<button disabled data-sound-toggle>a</button><div aria-disabled="true"><span data-sound-toggle>b</span></div><div inert><span data-sound-toggle>c</span></div>';
-    click(root.querySelector('button'));
+    click(root.querySelector('button')!);
     click(root.querySelectorAll('span')[0]);
     click(root.querySelectorAll('span')[1]);
     assert.equal(played(), 0);
@@ -250,7 +251,7 @@ describe('press and release', () => {
   test('keyboard: false leaves keys silent', () => {
     const unbind = bind(root, { keyboard: false });
     root.innerHTML = '<button data-sound-press>Save</button>';
-    key('keydown', root.firstElementChild, { key: 'Enter' });
+    key('keydown', root.firstElementChild!, { key: 'Enter' });
     assert.equal(played(), 0);
     unbind();
   });
@@ -263,7 +264,7 @@ describe('multiple roots', () => {
     const unbindOuter = bind(root);
     const unbindInner = bind(inner);
     inner.innerHTML = '<button data-sound-toggle data-sound-press data-sound-release data-sound-hover>x</button>';
-    const button = inner.firstElementChild;
+    const button = inner.firstElementChild!;
     click(button);
     pointer('pointerdown', button);
     pointer('pointerup', button);
@@ -281,7 +282,7 @@ describe('multiple roots', () => {
     const second = bind(root);
     first();
     root.innerHTML = '<button data-sound-toggle>x</button>';
-    click(root.firstElementChild);
+    click(root.firstElementChild!);
     assert.equal(played(), 1);
     second();
   });
@@ -290,9 +291,9 @@ describe('multiple roots', () => {
 describe('unlock on first gesture', () => {
   test('the first pointer or key press resumes a suspended context, then the listener detaches', async () => {
     FakeAudioContext.next = { state: 'suspended' };
-    const removed = [];
+    const removed: string[] = [];
     const original = root.removeEventListener.bind(root);
-    root.removeEventListener = (type, listener, capture) => { removed.push(type); original(type, listener, capture); };
+    root.removeEventListener = (type: string, listener: EventListenerOrEventListenerObject, capture?: boolean | EventListenerOptions) => { removed.push(type); original(type, listener, capture); };
     const unbind = bind(root);
     pointer('pointerdown', root);
     await tick();

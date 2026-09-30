@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { duration, isSound, sounds } from '../dist/index.js';
-import { echoTail, recipes, sourceEnd } from '../dist/recipes.js';
+import { duration, isSound, sounds, type SoundName } from '../dist/index.js';
+import { echoTail, recipes, sourceEnd, type NoiseLayer, type ToneLayer } from '../dist/recipes.js';
 
-const ORDER = [
+const ORDER: SoundName[] = [
   'chime', 'sparkle', 'droplet', 'bloom', 'whisper', 'tick', 'press', 'release', 'toggle', 'success',
   'error', 'page', 'loading', 'ready', 'payout', 'deposit', 'pluck', 'notification', 'loss',
 ];
@@ -31,7 +31,7 @@ test('recipe levels', () => {
 });
 
 test('ring-out times match the reference (source end + echo tail + two 50 ms pads)', () => {
-  const expected = {
+  const expected: Record<SoundName, number> = {
     chime: 1176, sparkle: 918, droplet: 844, bloom: 1400, whisper: 300, tick: 119, press: 121, release: 157,
     toggle: 145, success: 1004, error: 344, page: 222, loading: 965, ready: 1137, payout: 1258, deposit: 516,
     pluck: 129, notification: 912, loss: 576,
@@ -62,9 +62,9 @@ test('every layer is well formed', () => {
 });
 
 test('reference-matched recipes keep their signature details', () => {
-  const tones = (name) => recipes[name].layers.filter((layer) => 'wave' in layer);
-  const noises = (name) => recipes[name].layers.filter((layer) => 'noise' in layer);
-  for (const name of ['payout', 'deposit', 'pluck', 'notification', 'loss']) assert.equal(recipes[name].echo, undefined, name);
+  const tones = (name: SoundName) => recipes[name].layers.filter((layer): layer is ToneLayer => 'wave' in layer);
+  const noises = (name: SoundName) => recipes[name].layers.filter((layer): layer is NoiseLayer => 'noise' in layer);
+  for (const name of ['payout', 'deposit', 'pluck', 'notification', 'loss'] as const) assert.equal(recipes[name].echo, undefined, name);
 
   assert.equal(recipes.payout.layers.length, 16);
   assert.ok(tones('payout').some((l) => l.freq === 1168.75 && l.attack === 0.008));
@@ -74,17 +74,17 @@ test('reference-matched recipes keep their signature details', () => {
   assert.equal(recipes.deposit.layers.length, 14);
   assert.ok(noises('deposit').some((l) => l.freq === 9100) && noises('deposit').some((l) => l.freq === 14420));
   assert.ok(recipes.deposit.layers.some((l) => l.decay === 0.39));
-  assert.ok(recipes.deposit.layers.some((l) => l.pan <= -0.7) && recipes.deposit.layers.some((l) => l.pan >= 0.7));
+  assert.ok(recipes.deposit.layers.some((l) => l.pan! <= -0.7) && recipes.deposit.layers.some((l) => l.pan! >= 0.7));
 
   assert.equal(recipes.pluck.layers.length, 8);
   assert.ok(tones('pluck').some((l) => l.freq === 523.25 && l.to === 261.63 && l.wave === 'square'));
   assert.ok(recipes.pluck.layers.every((l) => Math.abs(l.pan ?? 0) <= 0.5));
 
   assert.equal(recipes.notification.layers.length, 14);
-  const tone = (hz) => tones('notification').find((l) => l.freq === hz);
+  const tone = (hz: number) => tones('notification').find((l) => l.freq === hz)!;
   assert.equal(tone(873).decay, 0.78);
   assert.equal(tone(885).decay, 0.8);
-  assert.ok(tone(3485).pan < -0.5 && tone(3575).pan > 0.5);
+  assert.ok(tone(3485).pan! < -0.5 && tone(3575).pan! > 0.5);
 
   assert.equal(recipes.loss.layers.length, 11);
   for (const [from, to] of [[260, 52], [800, 200], [400, 52], [600, 147]]) {

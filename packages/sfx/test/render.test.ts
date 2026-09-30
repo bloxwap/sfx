@@ -5,29 +5,29 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { OfflineAudioContext } from 'node-web-audio-api';
 import { synthesize } from '../dist/engine.js';
-import { duration, recipes, sounds } from '../dist/recipes.js';
+import { duration, recipes, sounds, type SoundName } from '../dist/recipes.js';
 
 const SAMPLE_RATE = 48000;
-const buffers = new Map();
+const buffers = new Map<SoundName, [Float32Array, Float32Array]>();
 
-async function render(name) {
+async function render(name: SoundName): Promise<[Float32Array, Float32Array]> {
   if (!buffers.has(name)) {
     const ctx = new OfflineAudioContext(2, Math.ceil((duration(name) + 0.1) * SAMPLE_RATE), SAMPLE_RATE);
     synthesize(ctx, recipes[name], ctx.destination, 0);
     const buffer = await ctx.startRendering();
     buffers.set(name, [buffer.getChannelData(0).slice(), buffer.getChannelData(1).slice()]);
   }
-  return buffers.get(name);
+  return buffers.get(name)!;
 }
 
-const rms = (data, from = 0, to = data.length) => {
+const rms = (data: Float32Array, from = 0, to = data.length): number => {
   let sum = 0;
   for (let i = from; i < to; i++) sum += data[i] * data[i];
   return Math.sqrt(sum / Math.max(1, to - from));
 };
 
 /** Magnitude of one frequency (Goertzel), normalized by length. */
-function magnitude(data, hz, from, to) {
+function magnitude(data: Float32Array, hz: number, from: number, to: number): number {
   const k = (2 * Math.PI * hz) / SAMPLE_RATE;
   const coefficient = 2 * Math.cos(k);
   let s1 = 0;
@@ -69,7 +69,7 @@ test('centered sounds are mono; panned recipes are stereo', async () => {
 
 test('tonal sounds carry their fundamental', async () => {
   // [sound, expected Hz, window start s, window end s, off-pitch Hz for comparison]
-  const cases = [
+  const cases: [SoundName, number, number, number, number][] = [
     ['chime', 1046.5, 0.005, 0.08, 1300],
     ['chime', 1568, 0.1, 0.2, 1300],
     ['success', 1318.51, 0.13, 0.25, 1000],
@@ -99,7 +99,7 @@ test('glides land on their target pitch', async () => {
 });
 
 test('two-stage sounds strike again at 125 ms', async () => {
-  for (const name of ['payout', 'loss']) {
+  for (const name of ['payout', 'loss'] as const) {
     const [left] = await render(name);
     const window = Math.floor(0.01 * SAMPLE_RATE);
     const before = rms(left, Math.floor(0.11 * SAMPLE_RATE), Math.floor(0.11 * SAMPLE_RATE) + window);

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { duration, isSound, sounds, type SoundName } from '../dist/index.js';
+import { duration, isSound, sounds, type BuiltinSoundName as SoundName } from '../dist/index.js';
 import { echoTail, recipes, sourceEnd, type NoiseLayer, type ToneLayer } from '../dist/recipes.js';
 
 const ORDER: SoundName[] = [

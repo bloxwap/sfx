@@ -119,7 +119,7 @@ play only for a mouse on a fine pointer, at most one every 150 ms. Controls that
 
 ```ts
 import {
-  play, preload, bind, unlock,
+  play, preload, bind, unlock, define,
   setEnabled, isEnabled, setVolume, getVolume, configure,
   stopAll, activeVoices, getOutput, dispose,
   renderTo, renderBuffer,
@@ -131,6 +131,7 @@ import {
 | Function | Description |
 | --- | --- |
 | `play(name = 'chime', options?)` | Plays a sound now. `options`: `volume` (0–2), `rate` (0.25–4), `pan` (-1–1), `delay` (seconds, 0–10), `minInterval` (ms, overrides `configure()`), `force` (skip the user-gesture check). Never throws. |
+| `define(name, recipe)` | Registers or replaces an immutable custom recipe. Built-in names are reserved. Invalid data throws `RangeError`. |
 | `preload(names?)` | Renders sounds (all of them by default) to buffers. Safe to call before any user gesture. |
 | `bind(root = document, options?)` | Wires `data-sound-*` attributes under `root`. Returns `unbind()`. Options: `keyboard`, `hoverInterval`. |
 | `unlock()` | Creates and resumes audio from inside a gesture. `bind()` calls it on the first press. |
@@ -143,6 +144,8 @@ import {
 | `renderTo(context, name, options?)` | Schedules a sound onto any `BaseAudioContext`, such as an `OfflineAudioContext`. `options`: `volume`, `rate`, `pan`, `delay`, `destination`. Returns `false` instead of throwing. |
 | `renderBuffer(name, { sampleRate }?)` | Renders one sound to a new stereo `AudioBuffer` (3000–768000 Hz). Resolves `null` if it can't. |
 | `sounds` / `isSound(value)` / `duration(name)` | The catalog, a type guard, and each sound's length in seconds. |
+
+Define custom sounds with `define('coin', { level: 0.6, layers: [{ wave: 'sine', freq: 880, at: 0, attack: 0.006, decay: 0.15, peak: 0.2 }] })`. Then `play('coin')` and `data-sound-press="coin"` use the recipe.
 
 The raw recipe data is available from `@bloxwap/sfx/recipes`.
 

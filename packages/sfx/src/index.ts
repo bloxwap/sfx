@@ -1,5 +1,6 @@
 export {
   play,
+  define,
   preload,
   unlock,
   setEnabled,
@@ -18,4 +19,4 @@ export {
   type EngineOptions,
 } from './engine.js';
 export { bind, type BindOptions } from './bind.js';
-export { sounds, isSound, duration, type SoundName } from './recipes.js';
+export { sounds, isSound, duration, type SoundName, type BuiltinSoundName, type Recipe, type Layer, type ToneLayer, type NoiseLayer, type Echo } from './recipes.js';

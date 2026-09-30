@@ -68,3 +68,33 @@ interface NoiseLayer {
 - `sourceEnd(recipe)` returns the seconds until the last layer's envelope ends.
 - `echoTail(recipe)` returns the seconds of echo after that, until the repeats fall below -60 dB.
 - `duration(name)` from the main entry returns the sum of the two.
+
+
+## Define your own sounds
+
+```ts
+import { define, play, preload, type Recipe } from '@bloxwap/sfx';
+
+const coin = {
+  level: 0.6,
+  layers: [{ wave: 'sine', freq: 880, at: 0, attack: 0.006, decay: 0.15, peak: 0.2 }],
+} satisfies Recipe;
+
+define('coin', coin);
+await preload(['coin']);
+play('coin');
+```
+
+Use `data-sound-press="coin"` after defining it. `SoundName` accepts custom strings;
+`isSound()` checks whether a name has actually been registered. `sounds` and `recipes`
+remain the built-in catalog; `getRecipe(name)` from the recipes entry resolves either kind.
+`preload()` without arguments warms the built-ins; pass custom names to warm your own.
+
+`define()` copies and freezes the data. Invalid timing, frequencies, filters, echo parameters,
+reserved names and attempts to replace built-ins throw `RangeError`. Defining a custom name
+again replaces its recipe and clears its old render cache. Sounds already playing finish.
+Definitions survive `dispose()`; that function releases audio resources.
+
+import { RecipeEditor } from '@/components/recipe-editor';
+
+<RecipeEditor />

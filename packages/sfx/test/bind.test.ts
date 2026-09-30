@@ -13,7 +13,7 @@ globals.matchMedia = () => ({ get matches() { return fine; } });
 let clock = 10_000;
 Object.defineProperty(globalThis, 'performance', { value: { now: () => clock }, configurable: true, writable: true });
 
-const { bind, configure, dispose, setEnabled } = await import('../dist/index.js');
+const { bind, configure, define, dispose, setEnabled } = await import('../dist/index.js');
 
 /** Count of sounds played, by the recipe fingerprint each leaves in the fake context. */
 function played(): number {
@@ -311,4 +311,15 @@ describe('unlock on first gesture', () => {
     assert.equal(FakeAudioContext.constructed, 2);
     unbind();
   });
+});
+
+
+test('attributes resolve user-defined sound names', async () => {
+  define('bound-coin', { level: 1, layers: [{ wave: 'sine', freq: 777, at: 0, attack: 0.01, decay: 0.1, peak: 0.1 }] });
+  root.innerHTML = '<button data-sound-press="bound-coin">Custom</button>';
+  const unbind = bind(root);
+  pointer('pointerdown', root.firstElementChild!);
+  assert.ok(tones().includes(777));
+  unbind();
+  await dispose();
 });

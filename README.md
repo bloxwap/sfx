@@ -150,7 +150,7 @@ npm test            # build and run the test suite
 npm run coverage    # tests with a 100% line/branch/function gate
 npm run bench       # play() cost: live synthesis vs. pre-rendered buffers
 npm run size        # gzip bundle-size budget
-npm run docs:dev    # docs and sound board at http://localhost:3903
+npm run dev         # docs and sound board at http://localhost:3903 (or bun dev)
 ```
 
 Releases publish to npm from GitHub Actions with trusted publishing when a GitHub release tagged

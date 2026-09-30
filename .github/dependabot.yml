@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+  # One workspace lockfile covers packages/sfx and apps/docs.
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    groups:
+      docs-toolchain:
+        patterns: ['next', 'react', 'react-dom', 'fumadocs-*', 'tailwindcss', '@tailwindcss/*', 'lucide-react']

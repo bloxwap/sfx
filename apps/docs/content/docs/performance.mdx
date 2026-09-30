@@ -1,0 +1,52 @@
+---
+title: Performance
+description: How @bloxwap/sfx keeps every play to one audio node, and what that buys.
+---
+
+Interface sounds fire on hover, on every press, and in bursts. That makes the cost per play the number that matters.
+
+## Render once, play a buffer
+
+Synthesizing a sound live means building its whole graph every time: oscillators, noise sources, filters, envelope gains, panners, and echo networks. The simple controls need 4–13 nodes, and the layered money sounds need 30–53. Each node is a main-thread allocation, a set of parameter automations, and work for the audio thread.
+
+`@bloxwap/sfx` renders each recipe once, into a stereo buffer, with an `OfflineAudioContext`. This happens off the main thread, before any user gesture, when you call `preload()`, or in the background after a sound's first live play. From then on, a play is:
+
+1. one `AudioBufferSourceNode` pointed at the cached buffer;
+2. connected to the shared master bus;
+3. started.
+
+A gain node or panner is added only when you pass a `volume` or `pan` that changes something. The voice cleans itself up with `onended`, so no timers are involved.
+
+## Benchmark
+
+This is the main-thread cost of one play with real Web Audio nodes ([node-web-audio-api](https://github.com/ircam-ismm/node-web-audio-api)), measured by `npm run bench` in CI. Absolute numbers depend on the machine; the ratio is what the CI gate checks.
+
+| Sound | Live nodes | Live µs | Buffered µs | Speedup |
+| --- | ---: | ---: | ---: | ---: |
+| tick | 6 | 63.7 | 7.7 | 8.2× |
+| press | 4 | 45.8 | 12.1 | 3.8× |
+| toggle | 7 | 62.9 | 10.4 | 6.0× |
+| chime | 9 | 82.3 | 8.8 | 9.4× |
+| success | 11 | 95.0 | 8.6 | 11.0× |
+| ready | 12 | 117.0 | 7.1 | 16.5× |
+| pluck | 30 | 284.5 | 7.5 | 37.8× |
+| loss | 33 | 301.2 | 8.4 | 35.7× |
+| notification | 43 | 381.6 | 8.3 | 46.1× |
+| payout | 51 | 505.1 | 9.8 | 51.3× |
+| deposit | 53 | 565.0 | 7.5 | 75.7× |
+| **mean (all 19)** | **17.1** | **164.0** | **9.9** | **16.6×** |
+
+Rendering each sound once takes 0.6–6 ms of audio-thread time.
+
+## Everything else on the hot path
+
+- **One shared noise buffer.** Live synthesis reads one second of white noise per context from random offsets. It never allocates and fills a new buffer for each layer.
+- **One master bus.** Volume and a hard-knee limiter are shared by every voice. There is no compressor per play.
+- **Voice stealing.** At most 24 voices (configurable) sound at once, and the oldest is cut first.
+- **Retrigger guard.** Repeats of the same sound within 16 ms are dropped, so a handler that fires twice doesn't double the level.
+- **Delegated binding.** `bind()` adds eight listeners to one root, whatever the number of elements. It keeps no per-element state and uses no MutationObserver. The hover media query is parsed once, and its `matches` stays live.
+- **Coalesced resume.** When the audio context is waking up, one `resume()` is shared, duplicate requests are merged, and requests older than 250 ms are dropped instead of playing as a burst.
+
+## Size
+
+About 5 kB gzipped for the whole package. Roughly 2 kB of that is the recipe data for all nineteen sounds. `npm run size` enforces the budget in CI.

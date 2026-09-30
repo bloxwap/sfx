@@ -1,0 +1,77 @@
+---
+title: Quick start
+description: Install @bloxwap/sfx, bind your interface, and play your first sound.
+---
+
+## Install
+
+```sh
+npm install @bloxwap/sfx
+```
+
+The package is ESM-only and works in every modern browser. On the server, importing it does nothing, so it is safe in Next.js, Remix, Astro, and SvelteKit.
+
+## Bind attributes
+
+Add `data-sound-*` attributes to your markup:
+
+```html
+<nav>
+  <a href="/" data-sound-hover="tick">Home</a>
+  <a href="/docs" data-sound-hover="tick">Docs</a>
+</nav>
+
+<button data-sound-press data-sound-release>Save</button>
+<button role="switch" aria-checked="false" data-sound-toggle>Dark mode</button>
+```
+
+Then call `bind()` once, after the DOM exists:
+
+```ts
+import { bind } from '@bloxwap/sfx';
+
+bind();
+```
+
+That's it. One listener per event type, attached to the document, handles every element with a `data-sound-*` attribute, including elements you add later. See [Declarative binding](/docs/guides/binding) for the details.
+
+## Play from code
+
+Use `play()` for moments that don't map to a single element, such as the result of a network request:
+
+```ts
+import { play } from '@bloxwap/sfx';
+
+async function deposit(amount: number) {
+  play('loading');
+  try {
+    await api.deposit(amount);
+    play('deposit');
+  } catch {
+    play('error');
+  }
+}
+```
+
+`play()` never throws. If the name is unknown, sound is muted, the page hasn't had a user gesture yet, or the browser has no Web Audio, it does nothing.
+
+## Warm up (optional)
+
+The first play of each sound is synthesized live while its buffer renders in the background. To make every play equally cheap, render the sounds you use ahead of time. This works before any user gesture:
+
+```ts
+import { preload } from '@bloxwap/sfx';
+
+preload(['tick', 'press', 'release', 'success', 'error']);
+```
+
+## Volume and mute
+
+```ts
+import { setEnabled, setVolume } from '@bloxwap/sfx';
+
+setVolume(0.6);    // master volume, 0–1
+setEnabled(false); // mute everything (sounds already playing finish)
+```
+
+Where to go next: the [sound catalog](/docs/sounds), the [React guide](/docs/guides/react), and the [API reference](/docs/api).

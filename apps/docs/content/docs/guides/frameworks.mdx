@@ -1,0 +1,66 @@
+---
+title: Other frameworks
+description: Plain HTML, Vue, Svelte, and Astro.
+---
+
+`bind()` works with any framework, because it listens on a root element and reads attributes when events fire.
+
+## Plain HTML
+
+```html
+<script type="module">
+  import { bind } from 'https://esm.sh/@bloxwap/sfx';
+  bind();
+</script>
+
+<button data-sound-press data-sound-release>Save</button>
+```
+
+## Vue
+
+```vue
+<script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { bind, play } from '@bloxwap/sfx';
+
+const root = ref<HTMLElement | null>(null);
+let unbind = () => {};
+onMounted(() => { if (root.value) unbind = bind(root.value); });
+onBeforeUnmount(() => unbind());
+</script>
+
+<template>
+  <div ref="root">
+    <button data-sound-toggle @click="play('success')">Save</button>
+  </div>
+</template>
+```
+
+## Svelte
+
+```svelte
+<script lang="ts">
+  import { bind } from '@bloxwap/sfx';
+
+  function sounds(node: HTMLElement) {
+    return { destroy: bind(node) };
+  }
+</script>
+
+<div use:sounds>
+  <button data-sound-press data-sound-release>Save</button>
+</div>
+```
+
+## Astro
+
+```astro
+<button data-sound-press data-sound-release>Save</button>
+
+<script>
+  import { bind } from '@bloxwap/sfx';
+  bind();
+</script>
+```
+
+Astro bundles the script and runs it once per page, which is exactly what `bind()` needs. With view transitions, the document root persists, so there is nothing to rebind.

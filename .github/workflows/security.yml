@@ -1,0 +1,30 @@
+name: Security
+
+on:
+  pull_request:
+  # Weekly: advisories for already-merged dependencies appear between PRs.
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: npm audit (runtime + tooling)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      # The published package has zero runtime dependencies; this gates the build and docs toolchain.
+      - run: npm audit --audit-level=high
+      - name: Published package has no runtime dependencies
+        run: |
+          node -e "const p=require('./packages/sfx/package.json'); const d=Object.keys(p.dependencies??{}); if(d.length){console.error('runtime deps:',d);process.exit(1)} console.log('0 runtime dependencies')"

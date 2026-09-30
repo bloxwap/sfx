@@ -1,0 +1,87 @@
+---
+title: React
+description: Bind a component subtree, play sounds from handlers, and clean up on unmount.
+---
+
+`@bloxwap/sfx` has no React dependency. The two patterns below cover most apps.
+
+## Bind a subtree
+
+`bind()` returns its own cleanup, so it fits `useEffect` directly:
+
+```tsx
+'use client';
+
+import { useEffect, useRef } from 'react';
+import { bind } from '@bloxwap/sfx';
+
+export function Toolbar({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => (ref.current ? bind(ref.current) : undefined), []);
+  return <div ref={ref}>{children}</div>;
+}
+```
+
+Or bind the whole document once, near the root of your app:
+
+```tsx
+'use client';
+
+import { useEffect } from 'react';
+import { bind, preload } from '@bloxwap/sfx';
+
+export function Sounds() {
+  useEffect(() => {
+    preload(['tick', 'press', 'release', 'toggle']);
+    return bind();
+  }, []);
+  return null;
+}
+```
+
+Then use attributes in any component:
+
+```tsx
+<button data-sound-press data-sound-release onClick={save}>Save</button>
+```
+
+## Play from handlers
+
+```tsx
+import { play } from '@bloxwap/sfx';
+
+function DepositButton({ amount }: { amount: number }) {
+  async function onClick() {
+    play('loading');
+    try {
+      await deposit(amount);
+      play('deposit');
+    } catch {
+      play('error');
+    }
+  }
+  return <button onClick={onClick}>Deposit</button>;
+}
+```
+
+## A mute preference
+
+```tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import { setEnabled } from '@bloxwap/sfx';
+
+export function useSoundPreference() {
+  const [on, setOn] = useState(() => typeof localStorage === 'undefined' || localStorage.getItem('sound') !== 'off');
+  useEffect(() => {
+    setEnabled(on);
+    try { localStorage.setItem('sound', on ? 'on' : 'off'); } catch {}
+  }, [on]);
+  return [on, setOn] as const;
+}
+```
+
+## Server rendering
+
+Importing `@bloxwap/sfx` on the server is safe: it touches no browser globals until you call `play()` or `bind()`. Call those only from effects and event handlers, which never run on the server.

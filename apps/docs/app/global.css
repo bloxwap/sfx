@@ -1,0 +1,499 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+@import '../styles/tokens.generated.css';
+
+@theme inline {
+  --font-sans: var(--font-docs-sans), ui-rounded, system-ui, sans-serif;
+  --font-mono: var(--font-docs-mono), ui-monospace, monospace;
+}
+
+/* Keep Fumadocs surfaces and states on the shared Bloxwap palette. */
+:root,
+.dark,
+.dark #nd-sidebar {
+  --color-fd-background: var(--bloxwap-black);
+  --color-fd-foreground: var(--foreground);
+  --color-fd-card: var(--bloxwap-black);
+  --color-fd-card-foreground: var(--foreground);
+  --color-fd-popover: var(--popover);
+  --color-fd-popover-foreground: var(--popover-foreground);
+  --color-fd-muted: var(--muted);
+  --color-fd-muted-foreground: var(--muted-foreground);
+  --color-fd-secondary: var(--card);
+  --color-fd-secondary-foreground: var(--foreground);
+  --color-fd-border: var(--border);
+  --color-fd-primary: var(--bloxwap-green);
+  --color-fd-primary-foreground: var(--bloxwap-black);
+  --color-fd-accent: var(--card);
+  --color-fd-accent-foreground: var(--foreground);
+  --color-fd-ring: var(--bloxwap-green);
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+html > body[data-scroll-locked] {
+  margin-right: 0 !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--bloxwap-green) 25%, transparent);
+  color: var(--foreground);
+}
+
+:focus-visible {
+  outline: 2px solid var(--bloxwap-green);
+  outline-offset: 3px;
+}
+
+#nd-page {
+  max-width: 52rem;
+}
+
+#nd-page[data-full='true'] {
+  max-width: 73rem;
+}
+
+#nd-page h1 {
+  font-family: var(--font-docs-display), var(--font-sans);
+  font-size: clamp(1.875rem, 3vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+
+#nd-page > p {
+  font-size: 1.125rem;
+  line-height: 1.6;
+}
+
+.prose {
+  line-height: 1.75;
+}
+
+.prose h2 {
+  font-family: var(--font-docs-display), var(--font-sans);
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.prose h3 {
+  font-weight: 700;
+}
+
+.prose a:not([data-card]):not(.not-prose a) {
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-underline-offset: 0.2em;
+}
+
+.prose a:not([data-card]):hover {
+  color: var(--bloxwap-green);
+}
+
+.prose [data-card='true'] {
+  box-shadow: none;
+  padding: 1.25rem;
+}
+
+.prose [data-card='true']:hover {
+  border-color: color-mix(in srgb, var(--bloxwap-green) 40%, var(--border));
+}
+
+.prose [data-card='true'] h3 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+#nd-sidebar {
+  border-color: var(--border);
+}
+
+#nd-sidebar a[data-active='true'] {
+  background: color-mix(in srgb, var(--bloxwap-green) 8%, transparent);
+  color: var(--bloxwap-green);
+}
+
+/* Fumadocs' sidebar icon-link bar ships as a stroked box; with GitHub its only link, drop the box and keep the icon. */
+#nd-sidebar div:has(> a[href="https://github.com/bloxwap/sfx"]) {
+  border: 0;
+  background: none;
+}
+
+.docs-sidebar-footer {
+  padding-top: var(--space-xs);
+}
+
+.docs-app-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-full);
+  transition: background-color var(--duration-fast) var(--ease-spring), color var(--duration-fast) var(--ease-spring);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.docs-app-link:hover {
+  background: var(--card);
+  color: var(--bloxwap-green);
+}
+
+/*
+ * Scale layer from the monorepo's plain-UI system (packages/plain-ui/scripts/gen-tokens-css.mjs,
+ * values from @workspace/tokens). The palette and radius steps come from tokens.generated.css;
+ * the shared --text-* names repeat Tailwind's identical rem values.
+ */
+:root {
+  --radius-2xl: 1rem;
+  --radius-full: 9999px;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+  --text-6xl: 3.75rem;
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1rem;
+  --space-xl: 1.25rem;
+  --space-2xl: 1.5rem;
+  --space-3xl: 2rem;
+  --space-4xl: 2.5rem;
+  --space-5xl: 3rem;
+  --space-6xl: 4rem;
+  --duration-fast: 180ms;
+  --duration-base: 260ms;
+  --duration-slow: 320ms;
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-standard: ease-out;
+  --icon-md: 16px;
+  --control-h: 3rem;
+  --control-h-sm: 2.25rem;
+  --control-h-md: 2.75rem;
+  --control-min-w: 6rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+}
+
+/*
+ * Buttons: plain-UI's .btn family (www button.tsx: pill, h-12, text-base semibold, pressed scale).
+ * The primary fill is brand green with black text, as in www's .nav-cta/.submit and the app's CTAs.
+ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  height: var(--control-h);
+  min-width: var(--control-min-w);
+  padding: 0 var(--space-xl);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: var(--bloxwap-green);
+  color: var(--bloxwap-black);
+  font: 600 var(--text-base) / 1 var(--font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+  touch-action: manipulation;
+  transition:
+    background-color var(--duration-fast) var(--ease-spring),
+    color var(--duration-fast) var(--ease-spring),
+    border-color var(--duration-fast) var(--ease-spring),
+    transform var(--duration-fast) var(--ease-spring);
+}
+.btn:hover { background: color-mix(in oklab, var(--bloxwap-green) 90%, transparent); color: var(--bloxwap-black); }
+.btn:active { transform: scale(0.98); }
+.btn:disabled, .btn[aria-disabled='true'] { opacity: 0.5; pointer-events: none; }
+.btn svg { flex: none; width: var(--icon-md); height: var(--icon-md); }
+.btn--secondary { background: var(--card); color: var(--foreground); }
+.btn--secondary:hover { background: var(--muted); color: var(--foreground); }
+.btn--ghost { background: transparent; color: var(--muted-foreground); min-width: 0; }
+.btn--ghost:hover { background: var(--card); color: var(--foreground); }
+.btn--sm { height: var(--control-h-sm); min-width: 5rem; padding: 0 var(--space-md); font-size: var(--text-sm); }
+.btn--ghost.btn--sm { min-width: 0; padding: 0 var(--space-sm); }
+.btn--icon { width: var(--control-h-sm); height: var(--control-h-sm); min-width: 0; padding: 0; }
+
+/* Site layout on the scale above; typography, surfaces, and states follow workers/docs. */
+.brand { display: inline-flex; align-items: center; gap: var(--space-md); }
+.brand img { flex: none; width: 28px; height: 28px; }
+.brand-product { border-left: 1px solid var(--border); padding-left: var(--space-md); color: var(--muted-foreground); font-size: var(--text-sm); }
+.hero h1, .principles h2, .start-grid h2, .guide-links h3, .not-found h1 {
+  font-family: var(--font-docs-display), var(--font-sans);
+}
+/* Same box as the Fumadocs header (max-w --fd-layout-width, 16px padding), so content lines up with the nav. */
+.home { width: 100%; max-width: var(--fd-layout-width, 1400px); padding: var(--space-5xl) var(--space-lg) 0; margin: 0 auto; }
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: var(--space-6xl); padding-bottom: var(--space-5xl); }
+.hero--single { grid-template-columns: minmax(0, 1fr); max-width: 47.5rem; }
+.hero-copy { min-width: 0; }
+.eyebrow { display: flex; align-items: center; gap: var(--space-sm); color: var(--color-fd-muted-foreground); font: var(--text-2xs) / 1.5 var(--font-mono); letter-spacing: .09em; }
+.status-dot { width: 6px; height: 6px; border-radius: var(--radius-full); background: var(--color-fd-primary); }
+.hero h1 { margin: var(--space-xl) 0 0; font-size: clamp(var(--text-5xl), 4.4vw, 4rem); line-height: 1.07; font-weight: 700; letter-spacing: -.04em; }
+.hero h1 span { color: var(--color-fd-foreground); }
+.hero-description { max-width: 35rem; margin-top: var(--space-xl); color: var(--color-fd-muted-foreground); line-height: 1.75; font-size: var(--text-lg); }
+.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-md); margin: var(--space-2xl) 0 var(--space-xl); }
+.package-install { width: fit-content; max-width: 100%; margin-top: var(--space-2xl); }
+.install-tabs { display: inline-flex; max-width: 100%; gap: var(--space-xs); padding: var(--space-xs); border-radius: var(--radius-full); background: var(--card); }
+.install-tabs button {
+  min-width: 0; height: 2rem; padding: 0 var(--space-lg); border-radius: var(--radius-full);
+  color: var(--muted-foreground); font: 600 var(--text-sm) / 1 var(--font-mono); cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-spring), color var(--duration-fast) var(--ease-spring);
+}
+.install-tabs button:hover { color: var(--foreground); }
+.install-tabs button[aria-selected='true'] { background: var(--muted); color: var(--foreground); }
+.install-command {
+  display: flex; align-items: center; gap: var(--space-lg); min-width: 0; margin-top: var(--space-md);
+  padding: var(--space-xs) var(--space-xs) var(--space-xs) var(--space-xl); border-radius: var(--radius-full);
+  background: var(--card); font: 600 var(--text-sm) / 1.5 var(--font-mono);
+}
+.install-prompt { flex: none; color: var(--muted-foreground); user-select: none; }
+.install-command code { min-width: 0; overflow-wrap: anywhere; user-select: all; }
+.install-command .btn { margin-left: auto; }
+.install-platforms, .install-feedback { margin-top: var(--space-lg); color: var(--muted-foreground); font-size: var(--text-sm); line-height: 1.5; }
+.install-feedback { display: block; }
+
+/* Hero code window: zero-stroke fill card with the Bloxwap code palette (as on the Hyperliquid SDK site). */
+.code-window { min-width: 0; margin: 0; overflow: hidden; border-radius: var(--radius-xl); background: var(--card); color: var(--foreground); }
+.code-toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-md);
+  padding: var(--space-lg) var(--space-2xl) 0; font: var(--text-2xs) / 1.5 var(--font-mono); color: var(--muted-foreground);
+}
+.window-dots { display: flex; gap: var(--space-xs); }
+.window-dots > i { width: 6px; height: 6px; border-radius: var(--radius-full); background: var(--muted); }
+.code-language { color: color-mix(in oklab, var(--bloxwap-blue) 60%, var(--foreground)); }
+.code-actions { display: flex; align-items: center; gap: var(--space-xs); margin-right: calc(-1 * var(--space-md)); }
+.code-toolbar { min-height: var(--control-h-sm); }
+.code-window pre { margin: 0; overflow-x: auto; padding: var(--space-xl) var(--space-2xl); font: var(--text-xs) / 1.85 var(--font-mono); tab-size: 2; scrollbar-width: none; }
+.code-window pre::-webkit-scrollbar { display: none; }
+.syntax-keyword { color: color-mix(in oklab, var(--bloxwap-pink) 70%, var(--foreground)); }
+.syntax-string { color: var(--bloxwap-green); }
+.syntax-type { color: color-mix(in oklab, var(--bloxwap-blue) 60%, var(--foreground)); }
+.syntax-muted { color: var(--muted-foreground); }
+.code-status {
+  display: flex; align-items: center; gap: var(--space-sm); margin: 0;
+  padding: 0 var(--space-2xl) var(--space-lg); font: var(--text-2xs) / 1.5 var(--font-mono); color: var(--muted-foreground);
+}
+.code-status > span { width: 6px; height: 6px; border-radius: var(--radius-full); background: var(--bloxwap-green); }
+
+/*
+ * Entrance: three attention layers ~200 ms apart on one curve (MOT-2), as on the Hyperliquid SDK site:
+ * headline, then its copy and actions, then the code window, then the playground.
+ */
+@keyframes landing-rise {
+  from { opacity: 0; translate: 0 8px; }
+}
+.hero-copy > *, .code-window, .hero-preview { animation: landing-rise 600ms var(--ease-spring) both; }
+.hero-copy > h1 { animation-delay: 60ms; }
+.hero-copy > :not(.eyebrow, h1) { animation-delay: 200ms; }
+.code-window { animation-delay: 360ms; }
+.hero-preview { animation-delay: 520ms; }
+@media (prefers-reduced-motion: reduce) {
+  .hero-copy > *, .code-window, .hero-preview { animation: none; }
+}
+
+/* Search (header and docs sidebar): a zero-stroke filled pill at the small control height, with key chips one step lighter than the box. */
+button[data-search-full] {
+  height: var(--control-h-sm); gap: var(--space-sm); padding: 0 var(--space-xs) 0 var(--space-md);
+  border: 0; border-radius: var(--radius-full); background: var(--card); color: var(--muted-foreground); font-size: var(--text-sm);
+  transition: background-color var(--duration-fast) var(--ease-spring), color var(--duration-fast) var(--ease-spring);
+}
+button[data-search-full]:hover { background: var(--muted); color: var(--foreground); }
+button[data-search-full] kbd {
+  display: inline-grid; place-items: center; min-width: 1.5rem; height: 1.5rem; padding: 0 var(--space-xs);
+  border: 0; border-radius: var(--radius-full); background: color-mix(in oklab, var(--card) 80%, var(--foreground)); color: var(--foreground);
+  font: var(--text-2xs) / 1 var(--font-mono);
+}
+.hero-preview {
+  min-width: 0;
+  padding-bottom: var(--space-6xl);
+  scroll-margin-top: 5rem;
+}
+.preview-intro { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-lg); margin-bottom: var(--space-2xl); }
+.preview-intro h2 { margin: 0; font-size: var(--text-3xl); letter-spacing: -.04em; line-height: 1.2; font-weight: 700; }
+.preview-intro > p:not(.eyebrow) { margin: 0; max-width: 25rem; color: var(--color-fd-muted-foreground); font-size: var(--text-sm); line-height: 1.7; }
+.preview-intro--section { align-items: center; text-align: center; }
+.preview-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-xs); }
+.preview-intro > .preview-actions:not(:first-child) { margin-top: var(--space-xs); }
+/* Cards, not rules: zero-stroke fill cards (plain-UI .card fill, --radius-xl, --space-xl, no border); hover shifts the fill. */
+.principles { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-md); padding: var(--space-lg) 0 var(--space-3xl); }
+.principles > div, .guide-links a {
+  background: var(--card);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+}
+.feature-number { color: var(--color-fd-primary); font: var(--text-2xs) var(--font-mono); }
+.principles h2 { font-size: var(--text-base); font-weight: 700; margin: var(--space-md) 0 var(--space-sm); }
+.principles p { font-size: var(--text-sm); color: var(--color-fd-muted-foreground); line-height: 1.7; }
+.start-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6xl); padding: var(--space-5xl) 0 var(--space-6xl); }
+.start-grid h2 { margin: var(--space-xl) 0; font-size: var(--text-3xl); letter-spacing: -.04em; line-height: 1.2; font-weight: 700; }
+.start-grid > div > p:last-child { color: var(--color-fd-muted-foreground); font-size: var(--text-sm); max-width: 25rem; line-height: 1.7; }
+.guide-links { display: grid; gap: var(--space-md); }
+.guide-links a {
+  display: flex; align-items: center; gap: var(--space-xl);
+  transition: background-color var(--duration-fast) var(--ease-spring);
+}
+.guide-links a:hover { background: var(--muted); }
+.guide-links a > span { font: var(--text-2xs) var(--font-mono); color: var(--color-fd-muted-foreground); }
+.guide-links a > svg { flex: none; margin-left: auto; width: var(--icon-md); height: var(--icon-md); color: var(--color-fd-muted-foreground); transition: color var(--duration-fast) var(--ease-spring), transform var(--duration-fast) var(--ease-spring); }
+.guide-links a:hover > svg { color: var(--color-fd-primary); transform: translateX(2px); }
+.guide-links h3 { font-size: var(--text-sm); margin-bottom: var(--space-xs); font-weight: 700; transition: color var(--duration-fast) var(--ease-spring); }
+.guide-links a:hover h3 { color: var(--color-fd-primary); }
+.guide-links p { color: var(--color-fd-muted-foreground); font-size: var(--text-xs); }
+/* Full-bleed rule; content inset to the header's box so both edges line up with the nav. */
+/* The bloxwap.com footer (monorepo workers/www), inset to the header's box. The home page ends with it. */
+.site-footer { margin-top: auto; padding: var(--space-5xl) max(var(--space-lg), calc((100% - var(--fd-layout-width, 1400px)) / 2 + var(--space-lg))) var(--space-4xl); }
+/* Page end: Edit on GitHub as a quiet ghost pill, prev/next as zero-stroke fill cards (the landing's card style). */
+#nd-page .edit-on-github {
+  align-self: flex-start; height: var(--control-h-sm); padding: 0 var(--space-md); border: 0; border-radius: var(--radius-full);
+  background: transparent; color: var(--muted-foreground); font-size: var(--text-sm);
+  transition: background-color var(--duration-fast) var(--ease-spring), color var(--duration-fast) var(--ease-spring);
+}
+#nd-page .edit-on-github:hover { background: var(--card); color: var(--foreground); }
+.page-nav > a {
+  padding: var(--space-xl) var(--space-2xl); border: 0; border-radius: var(--radius-xl); background: var(--card);
+  transition: background-color var(--duration-fast) var(--ease-spring), color var(--duration-fast) var(--ease-spring);
+}
+.page-nav > a:hover { background: var(--muted); color: var(--bloxwap-green); }
+.footer-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: var(--space-2xl); row-gap: var(--space-4xl); }
+.footer-brand { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-md); }
+.footer-brand p { margin: 0; color: var(--color-fd-muted-foreground); font-size: var(--text-sm); }
+.footer-lockup { display: flex; align-items: center; gap: var(--space-sm); }
+.footer-icon { width: 36px; height: 36px; border-radius: 10px; }
+/* The wordmark's box reserves descender room for the "p"; shift it so the cap height (not the box) centers on the icon: (143/2 - (149-74.6)/2) / 223.6 of the viewBox. */
+.footer-wordmark { width: auto; height: 32px; transform: translateY(15.3%); }
+.footer-col h2 { margin: 0 0 var(--space-md); color: var(--color-fd-muted-foreground); font: 700 var(--text-2xs) / 1.5 var(--font-sans); letter-spacing: .14em; text-transform: uppercase; }
+.footer-col a, .footer-base a { transition: color var(--duration-fast) var(--ease-spring), opacity var(--duration-fast) var(--ease-spring); }
+.footer-col a { display: block; width: fit-content; padding: var(--space-xs) 0; color: var(--color-fd-foreground); font-size: var(--text-sm); opacity: .8; }
+.footer-col a:hover, .footer-base a:hover { color: var(--color-fd-primary); opacity: 1; }
+.footer-base { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-sm); margin-top: var(--space-4xl); color: var(--color-fd-muted-foreground); font-size: var(--text-xs); }
+.footer-legal { display: inline-flex; align-items: center; gap: var(--space-sm); }
+@media (max-width: 860px) {
+  .footer-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: var(--space-xl); }
+  .footer-brand { grid-column: 1 / -1; }
+  .footer-col a { padding: var(--space-md) 0; }
+}
+@media (max-width: 480px) { .footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.docs-sidebar-links { display: flex; align-items: center; gap: var(--space-lg); padding-top: var(--space-lg); font-size: var(--text-xs); color: var(--color-fd-muted-foreground); }
+.docs-sidebar-links a { transition: color var(--duration-fast) var(--ease-spring); }
+.docs-sidebar-links a:hover { color: var(--color-fd-foreground); }
+.not-found { max-width: 37.5rem; padding: 7.5rem var(--space-2xl); margin: 0 auto; }
+.not-found h1 { font-size: var(--text-4xl); margin: var(--space-2xl) 0; }
+.not-found .btn { margin-top: var(--space-3xl); }
+.not-found-links { display: flex; flex-wrap: wrap; gap: var(--space-sm) var(--space-xl); margin-top: var(--space-3xl); font: var(--text-2xs) / 1.5 var(--font-mono); letter-spacing: .09em; }
+.not-found-links a { color: var(--color-fd-muted-foreground); transition: color var(--duration-fast) var(--ease-spring); }
+.not-found-links a:hover { color: var(--color-fd-foreground); }
+@media (max-width: 800px) {
+  .home { padding-top: var(--space-3xl); }
+  .hero { grid-template-columns: minmax(0, 1fr); gap: var(--space-3xl); padding-bottom: var(--space-3xl); }
+  .hero h1 { font-size: var(--text-6xl); }
+}
+@media (max-width: 600px) {
+  .home { padding: var(--space-3xl) var(--space-lg) 0; }
+  .hero h1 { font-size: var(--text-5xl); }
+  /* Share the row when both fit; otherwise each takes a full-width row (app pattern: full-width primary). */
+  .hero-actions > .btn { flex: 1 1 auto; }
+  .install-command { gap: var(--space-sm); padding-left: var(--space-lg); font-size: clamp(var(--text-xs), 3.4vw, var(--text-sm)); }
+  .principles { grid-template-columns: 1fr; }
+  .start-grid { grid-template-columns: 1fr; gap: var(--space-3xl); }
+  .start-grid { padding: var(--space-4xl) 0; }
+}
+
+/* Sound board: a zero-stroke card with a scope, mixer sliders, and grouped pads. */
+.board { display: flex; flex-direction: column; gap: var(--space-2xl); padding: var(--space-2xl); border-radius: var(--radius-xl); background: var(--card); }
+.board-toolbar { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--space-2xl); align-items: stretch; }
+.board-scope { width: 100%; height: 100%; min-height: 9rem; border-radius: var(--radius-lg, 0.75rem); background: var(--bloxwap-black); color: var(--bloxwap-green); }
+.board-controls { display: flex; flex-direction: column; justify-content: center; gap: var(--space-md); }
+.board-slider { display: grid; grid-template-columns: 4rem minmax(0, 1fr) 3.5rem; align-items: center; gap: var(--space-md); font: 600 var(--text-xs) / 1 var(--font-mono); color: var(--muted-foreground); }
+.board-slider output { text-align: right; color: var(--foreground); }
+.board-slider input { width: 100%; accent-color: var(--bloxwap-green); }
+.board-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); margin-top: var(--space-xs); }
+.board-status { display: inline-flex; align-items: center; gap: var(--space-xs); margin-left: auto; color: var(--muted-foreground); font: var(--text-2xs) / 1 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
+.board-status svg { width: 12px; height: 12px; color: var(--bloxwap-green); }
+.board-groups { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-xl); }
+.board-group h3 { margin: 0 0 var(--space-md); color: var(--muted-foreground); font: 700 var(--text-2xs) / 1.5 var(--font-sans); letter-spacing: .14em; text-transform: uppercase; }
+.board-pads { display: grid; gap: var(--space-sm); }
+@keyframes pad-hit { from { box-shadow: inset 0 0 0 2px var(--pad), 0 0 24px -4px var(--pad); background: color-mix(in oklab, var(--pad) 22%, var(--muted)); } }
+.pad {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%;
+  padding: var(--space-md) var(--space-lg); border-radius: var(--radius-lg, 0.75rem); background: var(--muted); text-align: left; cursor: pointer;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  transition: background-color var(--duration-fast) var(--ease-spring), transform var(--duration-fast) var(--ease-spring);
+}
+.pad:hover { background: color-mix(in oklab, var(--pad) 10%, var(--muted)); }
+.pad:active { transform: scale(0.98); }
+.pad--hit { animation: pad-hit 420ms var(--ease-standard); }
+.pad--last .pad-name { color: var(--pad); }
+.pad-name { font: 700 var(--text-sm) / 1.4 var(--font-mono); transition: color var(--duration-fast) var(--ease-spring); }
+.pad-description { color: var(--muted-foreground); font-size: var(--text-xs); line-height: 1.4; padding-right: 1.75rem; }
+.pad-key {
+  position: absolute; top: var(--space-md); right: var(--space-md); display: grid; place-items: center; min-width: 1.25rem; height: 1.25rem;
+  border-radius: 0.375rem; background: color-mix(in oklab, var(--card) 60%, transparent); color: var(--muted-foreground); font: var(--text-2xs) / 1 var(--font-mono);
+}
+.board-snippet { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-xs) var(--space-xs) var(--space-xs) var(--space-xl); border-radius: var(--radius-full); background: var(--bloxwap-black); font: 600 var(--text-sm) / 1.5 var(--font-mono); }
+.board-snippet code { min-width: 0; overflow-wrap: anywhere; color: var(--bloxwap-green); }
+.board-snippet .btn { margin-left: auto; }
+.board-hint { margin: calc(-1 * var(--space-md)) 0 0; color: var(--muted-foreground); font-size: var(--text-xs); }
+@media (prefers-reduced-motion: reduce) { .pad--hit { animation: none; } }
+
+/* Binding demo: a miniature product UI. */
+.demo-app { display: flex; flex-direction: column; gap: var(--space-xl); padding: var(--space-2xl); border-radius: var(--radius-xl); background: var(--card); }
+.demo-tabs { display: inline-flex; width: fit-content; gap: var(--space-xs); padding: var(--space-xs); border-radius: var(--radius-full); background: var(--muted); }
+.demo-tabs button { height: 2rem; padding: 0 var(--space-lg); border-radius: var(--radius-full); color: var(--muted-foreground); font: 600 var(--text-sm) / 1 var(--font-sans); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-spring), color var(--duration-fast) var(--ease-spring); }
+.demo-tabs button:hover { color: var(--foreground); }
+.demo-tabs button[aria-pressed='true'] { background: var(--card); color: var(--foreground); }
+.demo-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); }
+.demo-card { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-xl); border-radius: var(--radius-lg, 0.75rem); background: var(--muted); }
+.demo-card h3 { margin: 0; font-weight: 700; }
+.demo-card p { margin: 0; color: var(--muted-foreground); font-size: var(--text-sm); line-height: 1.6; }
+.demo-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); }
+.demo-row input { flex: 1 1 8rem; min-width: 0; height: var(--control-h-sm); padding: 0 var(--space-lg); border-radius: var(--radius-full); background: var(--card); font: 600 var(--text-sm) / 1 var(--font-mono); }
+.demo-status { min-height: 1.6em; }
+.demo-status--done { color: var(--bloxwap-green) !important; }
+.demo-status--failed { color: var(--bloxwap-pink) !important; }
+.demo-switch { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); font-size: var(--text-sm); font-weight: 600; }
+.demo-switch button { position: relative; width: 2.75rem; height: 1.5rem; border-radius: var(--radius-full); background: var(--card); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-spring); }
+.demo-switch button i { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: var(--radius-full); background: var(--muted-foreground); transition: transform var(--duration-fast) var(--ease-spring), background-color var(--duration-fast) var(--ease-spring); }
+.demo-switch button[aria-checked='true'] { background: color-mix(in oklab, var(--bloxwap-green) 30%, var(--card)); }
+.demo-switch button[aria-checked='true'] i { transform: translateX(1.25rem); background: var(--bloxwap-green); }
+.demo-caption { margin: 0; color: var(--muted-foreground); font-size: var(--text-xs); }
+.demo-caption code { font-family: var(--font-mono); color: var(--foreground); }
+
+/* Inline listen button in docs tables and prose. */
+.sound-button { display: inline-flex; align-items: center; gap: var(--space-xs); height: 1.75rem; padding: 0 var(--space-md) 0 var(--space-sm); border-radius: var(--radius-full); background: var(--card); color: var(--foreground); cursor: pointer; vertical-align: middle; transition: background-color var(--duration-fast) var(--ease-spring), color var(--duration-fast) var(--ease-spring); }
+.sound-button:hover { background: var(--muted); color: var(--bloxwap-green); }
+.sound-button svg { width: 12px; height: 12px; color: var(--bloxwap-green); }
+.sound-button code { font: 600 var(--text-xs) / 1 var(--font-mono); background: none; padding: 0; border: 0; }
+
+@media (max-width: 1000px) {
+  .board-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  .board { padding: var(--space-lg); }
+  .board-toolbar { grid-template-columns: minmax(0, 1fr); }
+  .board-scope { min-height: 6rem; }
+  .demo-grid { grid-template-columns: minmax(0, 1fr); }
+  .demo-app { padding: var(--space-lg); }
+  .pad-key { display: none; }
+}
+@media (max-width: 420px) { .board-groups { grid-template-columns: minmax(0, 1fr); } }

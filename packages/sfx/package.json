@@ -1,0 +1,73 @@
+{
+  "name": "@bloxwap/sfx",
+  "version": "0.1.0",
+  "description": "Interface sound effects for the web, synthesized live with Web Audio. No audio files, zero runtime dependencies.",
+  "type": "module",
+  "sideEffects": false,
+  "license": "MIT",
+  "author": "Bloxwap",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bloxwap/sfx.git",
+    "directory": "packages/sfx"
+  },
+  "homepage": "https://bloxwap.github.io/sfx/",
+  "bugs": {
+    "url": "https://github.com/bloxwap/sfx/issues"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./recipes": {
+      "types": "./dist/recipes.d.ts",
+      "import": "./dist/recipes.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.map",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test \"test/**/*.test.mjs\"",
+    "coverage": "npm run build && node --enable-source-maps --test --experimental-test-coverage --test-coverage-exclude='test/**' --test-coverage-exclude='**/node_modules/**' --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-branches=100 \"test/**/*.test.mjs\"",
+    "bench": "npm run build && node bench/schedule.bench.mjs",
+    "size": "npm run build && node scripts/size.mjs",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm test"
+  },
+  "keywords": [
+    "web-audio",
+    "sound",
+    "sfx",
+    "ui-sounds",
+    "sound-effects",
+    "interaction-feedback",
+    "interface-sounds",
+    "hover",
+    "click",
+    "synthesis"
+  ],
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "happy-dom": "^20.14.5",
+    "node-web-audio-api": "^2.2.0",
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

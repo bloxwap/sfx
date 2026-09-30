@@ -1,0 +1,29 @@
+{
+  "name": "bloxwap-sfx-workspace",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm --workspace @bloxwap/sfx run build",
+    "test": "npm --workspace @bloxwap/sfx run test",
+    "coverage": "npm --workspace @bloxwap/sfx run coverage",
+    "typecheck": "npm --workspace @bloxwap/sfx run typecheck",
+    "bench": "npm --workspace @bloxwap/sfx run bench",
+    "size": "npm --workspace @bloxwap/sfx run size",
+    "docs:dev": "npm --workspace @bloxwap/sfx-docs run dev",
+    "docs:build": "npm --workspace @bloxwap/sfx-docs run build",
+    "docs:check": "npm --workspace @bloxwap/sfx-docs run check",
+    "docs:preview": "npm --workspace @bloxwap/sfx-docs run preview",
+    "pack:sfx": "npm pack --workspace @bloxwap/sfx --pack-destination packages/sfx"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "overrides": {
+    "mdast-util-to-markdown": "2.1.2",
+    "mdast-util-gfm-strikethrough": "2.0.0"
+  }
+}

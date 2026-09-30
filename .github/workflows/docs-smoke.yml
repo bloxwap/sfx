@@ -1,0 +1,40 @@
+name: Live docs smoke
+on:
+  workflow_run:
+    workflows: [Documentation]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - name: Start native audio backend
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pulseaudio
+          pulseaudio --start
+          pactl load-module module-null-sink sink_name=sfx
+          pactl set-default-sink sfx
+      - name: Verify the deployed docs in three browsers
+        run: xvfb-run -a npm run test:browser -- docs
+        env:
+          DOCS_URL: https://bloxwap.github.io/sfx/
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: live-docs-traces
+          path: test-results/

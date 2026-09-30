@@ -209,3 +209,28 @@ Guides, the full API reference, and a live sound board: **https://bloxwap.github
 ## License
 
 MIT
+
+
+## Category volume and reduced-motion preferences
+
+```ts
+import { configure, setVolume, getVolume, play } from '@bloxwap/sfx';
+
+configure({ respectReducedMotion: true }); // opt-in startup master volume of 0.5
+setVolume(0.8);                           // an explicit master setting takes priority
+setVolume(0.4, { category: 'hover' });
+setVolume(0.7, { category: 'money' });
+getVolume({ category: 'hover' });          // 0.4
+play('tick', { category: 'hover' });       // override its default control group
+```
+
+The defaults match the sound board: hover/ambience, controls, feedback and money. Every category
+starts at 1; category volume multiplies the per-play volume before the shared master volume.
+Category changes affect subsequent plays; sounds already playing finish at their original gain.
+Custom sounds default to feedback. `categoryOf(name)`, `categories` and `soundCategories` expose
+the group assignments. Offline exports ignore preference and category volumes.
+
+Reduced-motion handling is off by default. Call `configure({ respectReducedMotion: true })`
+before setting a master volume to start at 0.5 when `prefers-reduced-motion: reduce` matches.
+An explicitly chosen master volume is preserved. This is a startup preset; it does not track
+later media-query changes or override a user's volume choice.

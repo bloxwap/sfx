@@ -355,3 +355,19 @@ export function registerRecipe<Name extends string>(name: Name, recipe: Recipe):
   }));
   return name;
 }
+
+export const categories = ['hover', 'controls', 'feedback', 'money'] as const;
+export type SoundCategory = typeof categories[number];
+/** Default groups match the documentation sound board. Custom sounds default to feedback. */
+export const soundCategories: Readonly<Partial<Record<SoundName, SoundCategory>>> = Object.freeze({
+  chime: 'hover', sparkle: 'hover', droplet: 'hover', bloom: 'hover', whisper: 'hover',
+  tick: 'controls', press: 'controls', release: 'controls', toggle: 'controls', page: 'controls',
+  success: 'feedback', error: 'feedback', loading: 'feedback', ready: 'feedback', notification: 'feedback',
+  payout: 'money', deposit: 'money', pluck: 'money', loss: 'money',
+});
+export function isCategory(value: unknown): value is SoundCategory {
+  return typeof value === 'string' && (categories as readonly string[]).includes(value);
+}
+export function categoryOf(name: SoundName): SoundCategory {
+  return Object.prototype.hasOwnProperty.call(soundCategories, name) ? soundCategories[name]! : 'feedback';
+}

@@ -46,6 +46,7 @@
   "files": [
     "dist",
     "!dist/**/*.map",
+    "CHANGELOG.md",
     "LICENSE",
     "README.md"
   ],
@@ -59,7 +60,9 @@
     "size": "npm run build && node scripts/size.ts",
     "prepack": "npm run build",
     "prepublishOnly": "npm test",
-    "coverage:lcov": "npm run build && node -e \"require('node:fs').mkdirSync('coverage', {recursive:true})\" && node --enable-source-maps --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/lcov.info --test --experimental-test-coverage --test-coverage-exclude='test/**' --test-coverage-exclude='src/cli/sfx-wav.ts' --test-coverage-exclude='**/node_modules/**' --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-branches=100 \"test/**/*.test.ts\""
+    "coverage:lcov": "npm run build && node -e \"require('node:fs').mkdirSync('coverage', {recursive:true})\" && node --enable-source-maps --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/lcov.info --test --experimental-test-coverage --test-coverage-exclude='test/**' --test-coverage-exclude='src/cli/sfx-wav.ts' --test-coverage-exclude='**/node_modules/**' --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-branches=100 \"test/**/*.test.ts\"",
+    "test:browser": "npm run build && playwright test",
+    "smoke:registry": "node scripts/registry-smoke.ts"
   },
   "keywords": [
     "web-audio",
@@ -86,15 +89,16 @@
     }
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^24.13.6",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
     "esbuild": "^0.28.2",
     "happy-dom": "^20.14.5",
     "node-web-audio-api": "^2.2.0",
-    "typescript": "^6.0.3",
-    "@types/react": "^19.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "@types/react-dom": "^19.2.0"
+    "typescript": "^6.0.3"
   },
   "engines": {
     "node": ">=18"

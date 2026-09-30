@@ -12,6 +12,6 @@
     // Tests pass explicit undefined options on purpose, to check the runtime defaults.
     "exactOptionalPropertyTypes": false
   },
-  "include": ["test", "bench", "scripts"],
+  "include": ["test", "bench", "scripts", "playwright.config.ts"],
   "exclude": []
 }

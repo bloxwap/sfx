@@ -7,7 +7,7 @@ Releases are published from GitHub Actions with [npm trusted publishing](https:/
 
 ## Flow
 
-1. Open a PR that bumps `version` in `packages/sfx/package.json` and updates `CHANGELOG.md`.
+1. Open a PR that bumps `version` in `packages/sfx/package.json` and updates `packages/sfx/CHANGELOG.md`.
 2. Merge it after the **Tests**, **Documentation**, and **Security** checks pass.
 3. Create a GitHub release tagged `v<version>`, for example `v0.1.0`.
 4. The **Publish to npm** workflow checks that the tag matches the package version, runs the full test suite (`prepublishOnly`), and publishes.

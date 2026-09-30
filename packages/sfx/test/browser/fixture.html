@@ -4,7 +4,7 @@
 <button id="toggle" data-sound-toggle>Toggle</button>
 <button id="disabled" data-sound-press disabled>Disabled</button>
 <script type="module">
-import * as sfx from "/packages/sfx/dist/index.js";
+import * as sfx from "/dist/index.js";
 window.stats = { contexts: 0, starts: 0, resumes: 0 };
 const Native = window.AudioContext;
 window.AudioContext = class extends Native {

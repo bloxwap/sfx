@@ -30,11 +30,11 @@ jobs:
           pactl load-module module-null-sink sink_name=sfx
           pactl set-default-sink sfx
       - name: Verify the deployed docs in three browsers
-        run: xvfb-run -a npm run test:browser -- docs
+        run: xvfb-run -a npm run docs:smoke
         env:
           DOCS_URL: https://bloxwap.github.io/sfx/
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: live-docs-traces
-          path: test-results/
+          path: apps/docs/test-results/

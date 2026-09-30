@@ -1,7 +1,9 @@
-import { echoTail, getRecipe, isSound, recipes, registerRecipe, sourceEnd, type Recipe, type SoundName } from './recipes.js';
+import { categoryOf, echoTail, getRecipe, isCategory, isSound, recipes, registerRecipe, sourceEnd, type Recipe, type SoundName, type SoundCategory } from './recipes.js';
 
 /** Per-play adjustments. All are optional and cheap: they add at most two nodes to a voice. */
 export interface PlayOptions {
+  /** Override the default group for this play (custom sounds default to feedback). */
+  category?: SoundCategory;
   /** Linear gain for this play, 0–2. Default 1. */
   volume?: number;
   /** Playback rate: 2 is an octave up and twice as fast. Clamped to 0.25–4. Default 1. */
@@ -30,6 +32,8 @@ export interface RenderOptions extends Pick<PlayOptions, 'volume' | 'rate' | 'pa
 
 /** Engine tuning. Every field is optional; call once at startup or whenever you need. */
 export interface EngineOptions {
+  /** Opt-in startup volume of 0.5 for reduced-motion users, unless a master volume was set explicitly. */
+  respectReducedMotion?: boolean;
   /** Most voices sounding at once; the oldest is cut when a new one starts. Default 24. */
   maxVoices?: number;
   /** Milliseconds within which a repeat of the same sound is dropped. Default 16 (one frame). */
@@ -57,6 +61,8 @@ const STALE_MS = 250;
 
 let enabled = true;
 let volume = 1;
+let explicitVolume = false;
+const categoryVolumes: Record<SoundCategory, number> = { hover: 1, controls: 1, feedback: 1, money: 1 };
 let maxVoices = 24;
 let minInterval = 16;
 let eager = false;
@@ -327,8 +333,10 @@ function schedule(ctx: Ctx, name: SoundName, options: PlayOptions | undefined, d
 function start(ctx: AudioContext, name: SoundName, options: PlayOptions | undefined): void {
   const destination = bus as GainNode;
   const buffer = rendered.get(name);
-  const gain = clamp(options?.volume, 0, 2, 1);
+  const multiplier = categoryVolumes[isCategory(options?.category) ? options.category : categoryOf(name)];
+  const gain = clamp(options?.volume, 0, 2, 1) * multiplier;
   if (gain === 0) return;
+  if (multiplier !== 1) options = { ...options, volume: gain };
   const rate = clamp(options?.rate, 0.25, 4, 1);
   if (buffer) {
     // Hot path: one buffer source per play (plus a gain/panner only when asked for).
@@ -501,8 +509,15 @@ export function isEnabled(): boolean {
 }
 
 /** Sets the master volume, 0–1. Changes glide over a few milliseconds to avoid clicks. */
-export function setVolume(value: number): void {
+export interface VolumeOptions { category?: SoundCategory }
+
+export function setVolume(value: number, options?: VolumeOptions): void {
   if (typeof value !== 'number' || Number.isNaN(value)) return;
+  if (options?.category !== undefined) {
+    if (isCategory(options.category)) categoryVolumes[options.category] = clamp(value, 0, 1, categoryVolumes[options.category]);
+    return;
+  }
+  explicitVolume = true;
   volume = clamp(value, 0, 1, volume);
   if (context && bus) {
     const param = bus.gain;
@@ -511,12 +526,13 @@ export function setVolume(value: number): void {
   }
 }
 
-export function getVolume(): number {
-  return volume;
+export function getVolume(options?: VolumeOptions): number {
+  return isCategory(options?.category) ? categoryVolumes[options.category] : volume;
 }
 
 /** Tunes voice limits and resume behavior. Unknown or invalid fields are ignored. */
 export function configure(options: EngineOptions): void {
+  if (options.respectReducedMotion === true && !explicitVolume && typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) setVolume(0.5);
   if (typeof options.maxVoices === 'number' && options.maxVoices >= 1) maxVoices = Math.floor(options.maxVoices);
   if (typeof options.minInterval === 'number' && options.minInterval >= 0) minInterval = options.minInterval;
   if (options.resume === 'queue' || options.resume === 'eager') eager = options.resume === 'eager';

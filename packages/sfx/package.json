@@ -34,7 +34,11 @@
       "types": "./dist/wav.d.ts",
       "import": "./dist/wav.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js"
+    }
   },
   "bin": {
     "sfx-wav": "./dist/cli/sfx-wav.js"
@@ -70,10 +74,14 @@
     "synthesis"
   ],
   "peerDependencies": {
-    "node-web-audio-api": "^2.0.0"
+    "node-web-audio-api": "^2.0.0",
+    "react": "^18.0.0 || ^19.0.0"
   },
   "peerDependenciesMeta": {
     "node-web-audio-api": {
+      "optional": true
+    },
+    "react": {
       "optional": true
     }
   },
@@ -82,7 +90,11 @@
     "esbuild": "^0.28.2",
     "happy-dom": "^20.14.5",
     "node-web-audio-api": "^2.2.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "@types/react": "^19.2.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "@types/react-dom": "^19.2.0"
   },
   "engines": {
     "node": ">=18"

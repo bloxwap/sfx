@@ -78,6 +78,13 @@ play('press');
 play('release', { delay: 0.09 });
 ```
 
+## React
+
+Optional React 18/19 bindings live at `@bloxwap/sfx/react`: `useBindSounds(ref, options)`,
+`useSound(name, options)`, `useSoundPreference()`, and `<SoundProvider enabled volume>`.
+Mute and volume preferences persist in localStorage and synchronize across tabs. The core bundle
+has no React imports. See the [React guide](https://bloxwap.github.io/sfx/docs/guides/react/).
+
 ## Attributes
 
 | Attribute            | Plays on                         | Default sound |

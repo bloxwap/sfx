@@ -50,6 +50,8 @@ test('play before a gesture stays silent; a real click unlocks cached playback',
 
 test('bind handles native hover, pointer, keyboard, toggle, disabled and teardown', async ({ page }) => {
   await page.locator('#unlock').click();
+  await expect.poll(() => page.evaluate(() => (window as any).context.state)).toBe('running');
+  expect(await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches), 'Desktop test browser has a fine pointer').toBe(true);
   await page.evaluate(async () => { const w = window as any; await w.sfx.preload(); w.sfx.configure({ minInterval: 0 }); });
   const starts = () => page.evaluate(() => (window as any).stats.starts);
   let before = await starts();

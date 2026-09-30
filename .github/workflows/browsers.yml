@@ -27,7 +27,8 @@ jobs:
           pulseaudio --start
           pactl load-module module-null-sink sink_name=sfx
           pactl set-default-sink sfx
-      - run: npm run test:browser
+      # Headful Firefox under Xvfb exposes desktop fine-pointer media queries.
+      - run: xvfb-run -a npm run test:browser
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

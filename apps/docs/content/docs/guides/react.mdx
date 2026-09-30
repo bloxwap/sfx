@@ -1,87 +1,73 @@
 ---
 title: React
-description: Bind a component subtree, play sounds from handlers, and clean up on unmount.
+description: Optional hooks for binding sounds, stable play handlers, and persisted preferences.
 ---
 
-`@bloxwap/sfx` has no React dependency. The two patterns below cover most apps.
+The optional `@bloxwap/sfx/react` entry supports React 18 and 19. React is an optional peer;
+importing the core package keeps React out of its bundle.
 
 ## Bind a subtree
 
-`bind()` returns its own cleanup, so it fits `useEffect` directly:
-
 ```tsx
 'use client';
+import { useRef } from 'react';
+import { useBindSounds } from '@bloxwap/sfx/react';
 
-import { useEffect, useRef } from 'react';
-import { bind } from '@bloxwap/sfx';
-
-export function Toolbar({ children }: { children: React.ReactNode }) {
+export function Toolbar() {
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => (ref.current ? bind(ref.current) : undefined), []);
-  return <div ref={ref}>{children}</div>;
+  useBindSounds(ref, { keyboard: true, hoverInterval: 150 });
+  return <div ref={ref}><button data-sound-press data-sound-release>Save</button></div>;
 }
 ```
 
-Or bind the whole document once, near the root of your app:
-
-```tsx
-'use client';
-
-import { useEffect } from 'react';
-import { bind, preload } from '@bloxwap/sfx';
-
-export function Sounds() {
-  useEffect(() => {
-    preload(['tick', 'press', 'release', 'toggle']);
-    return bind();
-  }, []);
-  return null;
-}
-```
-
-Then use attributes in any component:
-
-```tsx
-<button data-sound-press data-sound-release onClick={save}>Save</button>
-```
+The hook binds after mount, rebinds when options change, and cleans up on unmount.
+This also works with React Strict Mode. Use `bind()` directly if you prefer your own effect.
 
 ## Play from handlers
 
 ```tsx
-import { play } from '@bloxwap/sfx';
+'use client';
+import { useSound } from '@bloxwap/sfx/react';
 
-function DepositButton({ amount }: { amount: number }) {
-  async function onClick() {
-    play('loading');
-    try {
-      await deposit(amount);
-      play('deposit');
-    } catch {
-      play('error');
-    }
-  }
-  return <button onClick={onClick}>Deposit</button>;
+export function ConfirmButton() {
+  const confirm = useSound('success', { volume: 0.8 });
+  return <button onClick={() => confirm({ pan: -0.2 })}>Confirm</button>;
 }
 ```
 
-## A mute preference
+`useSound(name, options?)` returns a stable callback while its arguments stay unchanged.
+Per-call options override the defaults. Audio unlock still requires a real user gesture.
+
+## Persist mute and volume
 
 ```tsx
 'use client';
+import { SoundProvider, useSoundPreference } from '@bloxwap/sfx/react';
 
-import { useEffect, useState } from 'react';
-import { setEnabled } from '@bloxwap/sfx';
+function Preferences() {
+  const { enabled, volume, setEnabled, setVolume } = useSoundPreference();
+  return <>
+    <button onClick={() => setEnabled(!enabled)}>{enabled ? 'Mute' : 'Enable sound'}</button>
+    <input aria-label="Sound volume" type="range" min={0} max={1} step={0.01}
+      value={volume} onChange={event => setVolume(Number(event.target.value))} />
+  </>;
+}
 
-export function useSoundPreference() {
-  const [on, setOn] = useState(() => typeof localStorage === 'undefined' || localStorage.getItem('sound') !== 'off');
-  useEffect(() => {
-    setEnabled(on);
-    try { localStorage.setItem('sound', on ? 'on' : 'off'); } catch {}
-  }, [on]);
-  return [on, setOn] as const;
+export function App() {
+  return <SoundProvider><Preferences /></SoundProvider>;
 }
 ```
 
+Preferences use the `bloxwap:sfx` localStorage key. Consumers and browser tabs stay synchronized;
+unavailable or invalid storage falls back safely. Volume is clamped to 0–1. The hook can also be
+used without a provider.
+
+`<SoundProvider enabled volume>` can override the stored settings while mounted. Omit a prop to
+use its persisted value. Mount one provider near the root: the audio engine is shared across the app.
+When the provider unmounts, it restores the saved preference.
+
 ## Server rendering
 
-Importing `@bloxwap/sfx` on the server is safe: it touches no browser globals until you call `play()` or `bind()`. Call those only from effects and event handlers, which never run on the server.
+Both entry points import safely during SSR. The React entry carries `'use client'` for Next.js.
+Server output and initial hydration use deterministic defaults; persisted preferences load after
+mount. Audio and binding run in effects or user event handlers.

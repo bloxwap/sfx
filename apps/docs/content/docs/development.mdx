@@ -23,10 +23,10 @@ npm run dev         # this site at http://localhost:3903 (or bun dev)
 
 ## Tests
 
-- `test/engine.test.mjs` drives the engine against a recording fake of the Web Audio API: gating, the master bus, rendering, voices, suspended contexts, and cleanup.
-- `test/bind.test.mjs` uses happy-dom for attributes, hover rules, keyboard support, disabled controls, and multiple roots.
-- `test/render.test.mjs` renders every recipe with a real Web Audio implementation and checks the audio: finite, audible, below full scale, decaying to silence, mono or stereo as designed, and at the right pitch.
-- `test/recipes.test.mjs` checks the catalog, levels, and ring-out times.
+- `test/engine.test.ts` drives the engine against a recording fake of the Web Audio API: gating, the master bus, rendering, voices, suspended contexts, and cleanup.
+- `test/bind.test.ts` uses happy-dom for attributes, hover rules, keyboard support, disabled controls, and multiple roots.
+- `test/render.test.ts` renders every recipe with a real Web Audio implementation and checks the audio: finite, audible, below full scale, decaying to silence, mono or stereo as designed, and at the right pitch.
+- `test/recipes.test.ts` checks the catalog, levels, and ring-out times.
 
 ## Changing a sound
 

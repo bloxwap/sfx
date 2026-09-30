@@ -1,0 +1,17 @@
+{
+  // Tests, benchmark and scripts: type-checked only; Node runs the .ts files directly (type stripping).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "noEmit": true,
+    "rootDir": ".",
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    // happy-dom's bundled declarations don't compile against every @types/node release.
+    "skipLibCheck": true,
+    // Tests pass explicit undefined options on purpose, to check the runtime defaults.
+    "exactOptionalPropertyTypes": false
+  },
+  "include": ["test", "bench", "scripts"],
+  "exclude": []
+}

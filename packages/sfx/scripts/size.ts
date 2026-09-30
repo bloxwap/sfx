@@ -5,7 +5,7 @@ import { brotliCompressSync, gzipSync } from 'node:zlib';
 
 const BUDGET_GZIP = 5632;
 
-const entries = [
+const entries: [label: string, contents: string][] = [
   ['full bundle', `export * from './dist/index.js';`],
   ['play() only', `export { play } from './dist/index.js';`],
   ['bind() only', `export { bind } from './dist/index.js';`],

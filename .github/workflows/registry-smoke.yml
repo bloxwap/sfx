@@ -27,6 +27,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run smoke:registry -- "$SMOKE_VERSION"
+      - name: Verify the published version
+        run: |
+          if [ -z "$SMOKE_VERSION" ]; then
+            SMOKE_VERSION=$(npm view @bloxwap/sfx version)
+          fi
+          npm run smoke:registry -- "$SMOKE_VERSION"
         env:
-          SMOKE_VERSION: ${{ inputs.version || '0.1.0' }}
+          SMOKE_VERSION: ${{ inputs.version }}

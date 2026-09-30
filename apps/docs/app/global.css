@@ -438,7 +438,7 @@ button[data-search-full] kbd {
 .board-groups { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-xl); }
 .board-group h3 { margin: 0 0 var(--space-md); color: var(--muted-foreground); font: 700 var(--text-2xs) / 1.5 var(--font-sans); letter-spacing: .14em; text-transform: uppercase; }
 .board-pads { display: grid; gap: var(--space-sm); }
-@keyframes pad-hit { from { box-shadow: inset 0 0 0 2px var(--pad), 0 0 24px -4px var(--pad); background: color-mix(in oklab, var(--pad) 22%, var(--muted)); } }
+@keyframes pad-hit { from { opacity: 1; } to { opacity: 0; } }
 .pad {
   position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%;
   padding: var(--space-md) var(--space-lg); border-radius: var(--radius-lg, 0.75rem); background: var(--muted); text-align: left; cursor: pointer;
@@ -447,7 +447,12 @@ button[data-search-full] kbd {
 }
 .pad:hover { background: color-mix(in oklab, var(--pad) 10%, var(--muted)); }
 .pad:active { transform: scale(0.98); }
-.pad--hit { animation: pad-hit 420ms var(--ease-standard); }
+/* The flash is a keyed overlay, so a replay restarts it without remounting the pad under the pointer. */
+.pad-flash {
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0;
+  box-shadow: inset 0 0 0 2px var(--pad), 0 0 24px -4px var(--pad); background: color-mix(in oklab, var(--pad) 12%, transparent);
+  animation: pad-hit 420ms var(--ease-standard);
+}
 .pad--last .pad-name { color: var(--pad); }
 .pad-name { font: 700 var(--text-sm) / 1.4 var(--font-mono); transition: color var(--duration-fast) var(--ease-spring); }
 .pad-description { color: var(--muted-foreground); font-size: var(--text-xs); line-height: 1.4; padding-right: 1.75rem; }
@@ -459,7 +464,7 @@ button[data-search-full] kbd {
 .board-snippet code { min-width: 0; overflow-wrap: anywhere; color: var(--bloxwap-green); }
 .board-snippet .btn { margin-left: auto; }
 .board-hint { margin: calc(-1 * var(--space-md)) 0 0; color: var(--muted-foreground); font-size: var(--text-xs); }
-@media (prefers-reduced-motion: reduce) { .pad--hit { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .pad-flash { animation: none; } }
 
 /* Binding demo: a miniature product UI. */
 .demo-app { display: flex; flex-direction: column; gap: var(--space-xl); padding: var(--space-2xl); border-radius: var(--radius-xl); background: var(--card); }

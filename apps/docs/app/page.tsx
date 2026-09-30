@@ -22,7 +22,7 @@ export default function Home() {
         <HeroCode />
       </section>
       <section id="board" className="hero-preview" aria-labelledby="board-title">
-        <div className="preview-intro">
+        <div className="preview-intro preview-intro--section">
           <p className="eyebrow">LIVE · WEB AUDIO</p>
           <h2 id="board-title">Sound board</h2>
           <p>Click a pad, press its key, or turn on Play on hover. Change the volume, rate, and pan, then copy the call.</p>

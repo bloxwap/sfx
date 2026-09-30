@@ -33,7 +33,7 @@ export function SoundBoard() {
   const [flash, setFlash] = useState<Record<string, number>>({});
   const [master, setMaster] = useState(DEFAULTS.master);
   const [muted, setMuted] = useState(false);
-  const [hoverPlay, setHoverPlay] = useState(false);
+  const [hoverPlay, setHoverPlay] = useState(true);
   const [rate, setRate] = useState(DEFAULTS.rate);
   const [pan, setPan] = useState(DEFAULTS.pan);
   const [gain, setGain] = useState(DEFAULTS.gain);

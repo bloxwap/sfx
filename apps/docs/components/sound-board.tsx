@@ -28,6 +28,7 @@ export function SoundBoard() {
   const [flash, setFlash] = useState<Record<string, number>>({});
   const [master, setMaster] = useState(DEFAULTS.master);
   const [muted, setMuted] = useState(false);
+  const [hoverPlay, setHoverPlay] = useState(false);
   const [rate, setRate] = useState(DEFAULTS.rate);
   const [pan, setPan] = useState(DEFAULTS.pan);
   const [gain, setGain] = useState(DEFAULTS.gain);
@@ -161,6 +162,10 @@ export function SoundBoard() {
           <button type="button" className="btn btn--secondary btn--sm" onClick={playAll}>{sequence ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}{sequence ? 'Stop' : 'Play all'}</button>
           <button type="button" className="btn btn--secondary btn--sm" aria-pressed={muted} onClick={() => setMuted((m) => !m)}>{muted ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}{muted ? 'Muted' : 'Sound on'}</button>
           <button type="button" className="btn btn--secondary btn--sm" onClick={reset} disabled={!changed} title="Reset master, voice, rate and pan to their defaults"><RotateCcw aria-hidden="true" />Reset</button>
+          <label className="board-switch">
+            <button type="button" role="switch" aria-checked={hoverPlay} onClick={() => setHoverPlay((on) => !on)}><i /></button>
+            Play on hover
+          </label>
           <span className="board-status" title="Sounds are rendered once, then every play is a single buffer node"><Zap aria-hidden="true" />{ready ? 'Pre-rendered' : 'Live synth'}</span>
         </div>
       </div>
@@ -175,6 +180,7 @@ export function SoundBoard() {
             className={`pad${flash[name] ? ' pad--hit' : ''}${last === name ? ' pad--last' : ''}`}
             style={{ '--pad': group.color } as React.CSSProperties}
             onPointerDown={(event) => { if (event.button === 0) { event.preventDefault(); trigger(name); } }}
+            onPointerEnter={(event) => { if (hoverPlay && event.pointerType === 'mouse' && event.buttons === 0) trigger(name); }}
             onKeyDown={(event) => { if ((event.key === 'Enter' || event.key === ' ') && !event.repeat) { event.preventDefault(); trigger(name); } }}
             aria-label={`Play ${name}: ${describe(name)}`}
           >

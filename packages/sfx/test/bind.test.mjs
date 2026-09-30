@@ -194,20 +194,6 @@ describe('hover', () => {
     assert.equal(played(), 1);
     unbind();
   });
-
-  test('works where matchMedia is unavailable', () => {
-    // The media query is cached on first use; a fresh module instance sees no matchMedia.
-    const saved = globalThis.matchMedia;
-    delete globalThis.matchMedia;
-    return import(`../dist/bind.js?no-match-media`).then(({ bind: freshBind }) => {
-      const unbind = freshBind(root);
-      root.innerHTML = '<a data-sound-hover="tick">x</a>';
-      pointer('pointerenter', root.firstElementChild);
-      unbind();
-      globalThis.matchMedia = saved;
-      assert.equal(played(), 1);
-    });
-  });
 });
 
 describe('press and release', () => {

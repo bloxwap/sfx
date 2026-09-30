@@ -11,9 +11,9 @@ delete globalThis.matchMedia;
 installAudio({ offline: false });
 setActivation(true);
 
-const { bind } = await import('../dist/index.js');
+const { bind, dispose } = await import('../dist/index.js');
 
-test('hover sounds play where matchMedia is unavailable', () => {
+test('hover sounds play where matchMedia is unavailable', async () => {
   const root = document.createElement('div');
   root.innerHTML = '<a data-sound-hover="tick">x</a>';
   document.body.append(root);
@@ -21,4 +21,6 @@ test('hover sounds play where matchMedia is unavailable', () => {
   root.firstElementChild.dispatchEvent(new dom.PointerEvent('pointerenter', { pointerType: 'mouse' }));
   unbind();
   assert.deepEqual(FakeAudioContext.instances[0].of('oscillator').map((node) => node.frequency.events[0][1]), [2600]);
+  // The fake clock never advances, so the live voice's cleanup timer would keep re-arming.
+  await dispose();
 });

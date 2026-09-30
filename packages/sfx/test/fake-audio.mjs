@@ -155,3 +155,34 @@ export function setActivation(hasBeenActive) {
 }
 
 export const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+/** A minimal EventTarget that records listeners and dispatches synchronously. */
+export class FakeEventTarget {
+  constructor() { this.listeners = new Map(); }
+  addEventListener(type, listener) {
+    if (!this.listeners.has(type)) this.listeners.set(type, new Set());
+    this.listeners.get(type).add(listener);
+  }
+  removeEventListener(type, listener) { this.listeners.get(type)?.delete(listener); }
+  count(type) { return this.listeners.get(type)?.size ?? 0; }
+  total() { return [...this.listeners.values()].reduce((sum, set) => sum + set.size, 0); }
+  dispatch(type) { for (const listener of [...(this.listeners.get(type) ?? [])]) listener(); }
+}
+
+/**
+ * Gives the fake window (globalThis) addEventListener/removeEventListener and, unless `document` is
+ * false, a document with a settable visibilityState. Returns the targets and a remover.
+ */
+export function installEvents({ document = true } = {}) {
+  const win = new FakeEventTarget();
+  globalThis.addEventListener = win.addEventListener.bind(win);
+  globalThis.removeEventListener = win.removeEventListener.bind(win);
+  const doc = document ? Object.assign(new FakeEventTarget(), { visibilityState: 'visible' }) : undefined;
+  if (doc) globalThis.document = doc;
+  const uninstall = () => {
+    delete globalThis.addEventListener;
+    delete globalThis.removeEventListener;
+    delete globalThis.document;
+  };
+  return { win, doc, uninstall };
+}

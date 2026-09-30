@@ -8,6 +8,24 @@ export interface PlayOptions {
   rate?: number;
   /** Stereo position from -1 (left) to 1 (right). Default 0. */
   pan?: number;
+  /**
+   * Seconds to wait before the sound starts, scheduled on the audio clock so main-thread jank cannot
+   * shift it. Clamped to 0–10. Default 0. For a key tap: `play('press'); play('release', { delay: 0.09 })`.
+   */
+  delay?: number;
+  /** Overrides configure({ minInterval }) for this call: milliseconds within which a repeat of this sound is dropped. */
+  minInterval?: number;
+  /**
+   * Plays even before the page has seen a user gesture, for capture or kiosk browsers (OBS, CEF) that
+   * never get one. Muting, invalid names and the retrigger guard still apply.
+   */
+  force?: boolean;
+}
+
+/** Options for renderTo(): the per-play adjustments plus where to connect the sound. */
+export interface RenderOptions extends Pick<PlayOptions, 'volume' | 'rate' | 'pan' | 'delay'> {
+  /** Node the sound connects to. Default: the context's destination. */
+  destination?: AudioNode;
 }
 
 /** Engine tuning. Every field is optional; call once at startup or whenever you need. */
@@ -16,6 +34,13 @@ export interface EngineOptions {
   maxVoices?: number;
   /** Milliseconds within which a repeat of the same sound is dropped. Default 16 (one frame). */
   minInterval?: number;
+  /**
+   * What play() does while the context is suspended. 'queue' (default) waits for the resume, plays each
+   * sound once and drops requests older than 250 ms. 'eager' schedules the sound at once and resumes
+   * alongside it, for the lowest first-sound latency; sounds requested during a long suspension then
+   * play together when it ends.
+   */
+  resume?: 'queue' | 'eager';
 }
 
 type Ctx = BaseAudioContext;
@@ -34,12 +59,14 @@ let enabled = true;
 let volume = 1;
 let maxVoices = 24;
 let minInterval = 16;
+let eager = false;
 
 let context: AudioContext | null = null;
 let bus: GainNode | null = null;
 let output: AudioNode | null = null;
 let resuming: Promise<void> | null = null;
 let queued: { name: SoundName; options: PlayOptions | undefined; at: number }[] = [];
+let listeners: (() => void)[] = [];
 
 const voices = new Set<Voice>();
 const lastPlayed = new Map<SoundName, number>();
@@ -49,8 +76,11 @@ const noiseBuffers = new WeakMap<Ctx, AudioBuffer>();
 
 /** Milliseconds from a monotonic clock where available. */
 export const now = (): number => (typeof performance === 'undefined' ? Date.now() : performance.now());
-const clamp = (value: number, min: number, max: number, fallback: number): number =>
-  Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;
+/** Clamps a number into range; anything non-finite (including undefined) becomes `fallback`. */
+const clamp = (value: unknown, min: number, max: number, fallback: number): number =>
+  Number.isFinite(value) ? Math.min(max, Math.max(min, value as number)) : fallback;
+/** Neither running nor closed: suspended, or WebKit's 'interrupted'. */
+const asleep = (ctx: AudioContext): boolean => ctx.state !== 'running' && ctx.state !== 'closed';
 
 function contextConstructor(): ContextConstructor | undefined {
   if (typeof window === 'undefined') return undefined;
@@ -100,7 +130,28 @@ function audio(): AudioContext | null {
   context = ctx;
   bus = gain;
   output = last;
+  listeners = [
+    listen(typeof document === 'undefined' ? undefined : document, 'visibilitychange', onVisibility),
+    listen(window, 'pageshow', wake),
+    listen(window, 'focus', wake),
+  ];
   return ctx;
+}
+
+/** Resumes a context the browser suspended or interrupted (backgrounding, a phone call) once the page is back. */
+function wake(): void {
+  if (context && asleep(context) && activated()) void resume(context);
+}
+
+function onVisibility(): void {
+  if (document.visibilityState === 'visible') wake();
+}
+
+/** Adds a listener where the target supports it; returns its remover. */
+function listen(target: EventTarget | undefined, type: string, listener: () => void): () => void {
+  if (typeof target?.addEventListener !== 'function') return () => {};
+  target.addEventListener(type, listener);
+  return () => target.removeEventListener(type, listener);
 }
 
 /** One second of white noise per context, shared by every noise layer (each reads from a random offset). */
@@ -200,39 +251,45 @@ function length(recipe: Recipe): number {
   return sourceEnd(recipe) + PAD + echoTail(recipe) + PAD;
 }
 
-/** Renders a sound once to a stereo buffer. Resolves null where offline rendering is unavailable. */
+/** Renders a sound to a fresh stereo buffer. Resolves null where offline rendering is unavailable or fails. */
+async function bake(name: SoundName, sampleRate: number): Promise<AudioBuffer | null> {
+  const Offline = offlineConstructor();
+  if (!Offline) return null;
+  const recipe = recipes[name];
+  try {
+    const offline = new Offline(2, Math.ceil(length(recipe) * sampleRate), sampleRate);
+    synthesize(offline, recipe, offline.destination, 0);
+    return await offline.startRendering();
+  } catch {
+    return null;
+  }
+}
+
+/** Renders a sound once for playback at the live context's rate, sharing a render already in flight. */
 function render(name: SoundName): Promise<AudioBuffer | null> {
   const done = rendered.get(name);
   if (done) return Promise.resolve(done);
   let pending = rendering.get(name);
-  if (pending) return pending;
-  const Offline = offlineConstructor();
-  if (!Offline) return Promise.resolve(null);
-  const recipe = recipes[name];
-  const sampleRate = context?.sampleRate ?? FALLBACK_RATE;
-  pending = (async () => {
-    try {
-      const offline = new Offline(2, Math.ceil(length(recipe) * sampleRate), sampleRate);
-      synthesize(offline, recipe, offline.destination, 0);
-      const buffer = await offline.startRendering();
-      rendered.set(name, buffer);
+  if (!pending) {
+    pending = bake(name, context?.sampleRate ?? FALLBACK_RATE).then((buffer) => {
+      // Skip the store when dispose() ran meanwhile: the buffer may be at the old context's rate.
+      if (rendering.get(name) === pending) {
+        rendering.delete(name);
+        if (buffer) rendered.set(name, buffer);
+      }
       return buffer;
-    } catch {
-      return null;
-    } finally {
-      rendering.delete(name);
-    }
-  })();
-  rendering.set(name, pending);
+    });
+    rendering.set(name, pending);
+  }
   return pending;
 }
 
-/** Adds the per-play gain and panner only when they change something. */
-function route(ctx: AudioContext, source: AudioNode, options: PlayOptions | undefined, destination: AudioNode): AudioNode[] {
+/** Adds the per-play panner only when it changes something. */
+function route(ctx: Ctx, source: AudioNode, options: PlayOptions | undefined, destination: AudioNode): AudioNode[] {
   const extra: AudioNode[] = [];
   let tail = source;
-  const pan = options?.pan === undefined ? 0 : clamp(options.pan, -1, 1, 0);
-  if (pan !== 0 && typeof ctx.createStereoPanner === 'function') {
+  const pan = clamp(options?.pan, -1, 1, 0);
+  if (pan !== 0 && typeof (ctx as { createStereoPanner?: unknown }).createStereoPanner === 'function') {
     const panner = ctx.createStereoPanner();
     panner.pan.value = pan;
     tail = tail.connect(panner);
@@ -253,12 +310,26 @@ function register(voice: Voice): void {
   voices.add(voice);
 }
 
+/**
+ * Synthesizes a sound into `destination`, starting `delay` seconds after the context's current time.
+ * Returns every node it created (for teardown) and the seconds until it has rung out.
+ */
+function schedule(ctx: Ctx, name: SoundName, options: PlayOptions | undefined, destination: AudioNode): [AudioNode[], number] {
+  const recipe = recipes[name];
+  const rate = clamp(options?.rate, 0.25, 4, 1);
+  const delay = clamp(options?.delay, 0, 10, 0);
+  const mix = ctx.createGain();
+  const nodes = [mix, ...route(ctx, mix, options, destination)];
+  nodes.push(...synthesize(ctx, recipe, mix, ctx.currentTime + delay, rate, clamp(options?.volume, 0, 2, 1)));
+  return [nodes, delay + length(recipe) / rate];
+}
+
 function start(ctx: AudioContext, name: SoundName, options: PlayOptions | undefined): void {
   const destination = bus as GainNode;
   const buffer = rendered.get(name);
-  const gain = options?.volume === undefined ? 1 : clamp(options.volume, 0, 2, 1);
+  const gain = clamp(options?.volume, 0, 2, 1);
   if (gain === 0) return;
-  const rate = options?.rate === undefined ? 1 : clamp(options.rate, 0.25, 4, 1);
+  const rate = clamp(options?.rate, 0.25, 4, 1);
   if (buffer) {
     // Hot path: one buffer source per play (plus a gain/panner only when asked for).
     const source = ctx.createBufferSource();
@@ -285,26 +356,29 @@ function start(ctx: AudioContext, name: SoundName, options: PlayOptions | undefi
       for (const node of nodes) node.disconnect();
     };
     register(voice);
-    source.start();
+    source.start(ctx.currentTime + clamp(options?.delay, 0, 10, 0));
     return;
   }
   // First play of this sound: synthesize it live now, and render its buffer for next time.
-  const recipe = recipes[name];
-  const mix = ctx.createGain();
-  const extra = route(ctx, mix, options, destination);
-  const nodes = synthesize(ctx, recipe, mix, ctx.currentTime, rate, gain);
+  const [nodes, seconds] = schedule(ctx, name, options, destination);
+  const end = ctx.currentTime + seconds;
   let timer: ReturnType<typeof setTimeout> | undefined;
   const voice: Voice = {
     name,
     stop() {
       clearTimeout(timer);
       voices.delete(voice);
-      mix.disconnect();
       for (const node of nodes) node.disconnect();
-      for (const node of extra) node.disconnect();
     },
   };
-  timer = setTimeout(voice.stop, (length(recipe) / rate) * 1000);
+  // Tear down by the audio clock, which stands still while the context is suspended, so a sound
+  // scheduled before (or paused by) a suspension is not cut off when it finally plays.
+  const done = (): void => {
+    const left = end - ctx.currentTime;
+    if (left > 0 && ctx.state !== 'closed') timer = setTimeout(done, left * 1000);
+    else voice.stop();
+  };
+  timer = setTimeout(done, seconds * 1000);
   register(voice);
   void render(name);
 }
@@ -338,21 +412,24 @@ function resume(ctx: AudioContext): Promise<void> {
 }
 
 /**
- * Plays a sound now. Never throws: unknown names, a muted engine, a page without a user gesture yet,
- * or a browser without Web Audio all make it a silent no-op.
+ * Plays a sound now (or after `options.delay`). Never throws: unknown names, a muted engine, a page
+ * without a user gesture yet (unless `options.force`), or a browser without Web Audio all make it a
+ * silent no-op.
  */
 export function play(name: SoundName = 'chime', options?: PlayOptions): void {
-  if (!enabled || !isSound(name) || !activated()) return;
+  if (!enabled || !isSound(name) || !(options?.force || activated())) return;
   const t = now();
   const last = lastPlayed.get(name);
-  if (last !== undefined && t - last < minInterval) return;
+  const gap = options?.minInterval;
+  if (last !== undefined && t - last < (typeof gap === 'number' && gap >= 0 ? gap : minInterval)) return;
   const ctx = audio();
   if (!ctx) return;
   lastPlayed.set(name, t);
   if (ctx.state !== 'running') {
-    if (queued.length < 16) queued.push({ name, options, at: t });
+    const wait = !eager || !asleep(ctx);
+    if (wait && queued.length < 16) queued.push({ name, options, at: t });
     void resume(ctx);
-    return;
+    if (wait) return;
   }
   try {
     start(ctx, name, options);
@@ -370,6 +447,31 @@ export async function preload(names: readonly SoundName[] = Object.keys(recipes)
 }
 
 /**
+ * Schedules a sound onto any context, such as an OfflineAudioContext baking a video soundtrack, at its
+ * current time plus `options.delay`. Ignores muting, activation, voices and caches. Returns false for
+ * an unknown name or when the context rejects the graph; never throws.
+ */
+export function renderTo(target: BaseAudioContext, name: SoundName, options?: RenderOptions): boolean {
+  if (!isSound(name)) return false;
+  try {
+    schedule(target, name, options, options?.destination ?? target.destination);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Renders one sound to a new stereo AudioBuffer, separate from play()'s cache. `sampleRate` is clamped
+ * to 3000–768000 Hz and defaults to the live context's rate, else 48 kHz. Resolves null for an unknown
+ * name or where offline rendering is unavailable or fails.
+ */
+export async function renderBuffer(name: SoundName, options?: { sampleRate?: number }): Promise<AudioBuffer | null> {
+  if (!isSound(name)) return null;
+  return bake(name, clamp(options?.sampleRate, 3000, 768000, context?.sampleRate ?? FALLBACK_RATE));
+}
+
+/**
  * Creates and resumes the audio context. Call it from a user gesture (bind() does this for you on the
  * first pointer or key press) so the first sound starts without delay. Resolves true when running.
  */
@@ -381,11 +483,17 @@ export async function unlock(): Promise<boolean> {
   return ctx.state === 'running';
 }
 
-/** Turns all future playback on or off. Sounds already playing finish. Non-booleans are ignored. */
+/**
+ * Turns all future playback on or off. Sounds already playing finish, but muting a suspended context
+ * also drops the sounds waiting on it. Non-booleans are ignored.
+ */
 export function setEnabled(value: boolean): void {
   if (typeof value !== 'boolean') return;
   enabled = value;
-  if (!value) queued = [];
+  if (value) return;
+  // In 'eager' mode sounds requested during a suspension are already scheduled; none has been heard yet.
+  if (context && asleep(context)) stopAll();
+  else queued = [];
 }
 
 export function isEnabled(): boolean {
@@ -407,10 +515,11 @@ export function getVolume(): number {
   return volume;
 }
 
-/** Tunes voice limits. Unknown or invalid fields are ignored. */
+/** Tunes voice limits and resume behavior. Unknown or invalid fields are ignored. */
 export function configure(options: EngineOptions): void {
   if (typeof options.maxVoices === 'number' && options.maxVoices >= 1) maxVoices = Math.floor(options.maxVoices);
   if (typeof options.minInterval === 'number' && options.minInterval >= 0) minInterval = options.minInterval;
+  if (options.resume === 'queue' || options.resume === 'eager') eager = options.resume === 'eager';
 }
 
 /** Stops every sound that is currently playing. */
@@ -433,9 +542,14 @@ export function getOutput(): AudioNode | null {
   return output;
 }
 
-/** Stops everything, closes the audio context and forgets rendered buffers. The next play starts fresh. */
+/**
+ * Stops everything, closes the audio context, removes its page listeners and forgets rendered buffers.
+ * The next play starts fresh.
+ */
 export async function dispose(): Promise<void> {
   stopAll();
+  for (const remove of listeners) remove();
+  listeners = [];
   const ctx = context;
   context = null;
   bus = null;

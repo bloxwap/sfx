@@ -1,4 +1,4 @@
 {
   "title": "Guides",
-  "pages": ["binding", "react", "frameworks", "sound-design", "accessibility"]
+  "pages": ["binding", "react", "frameworks", "sound-design", "accessibility", "native"]
 }

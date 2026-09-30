@@ -44,3 +44,18 @@ play('tick', { rate: 0.9 + value / 50 });
 // A sound that comes from the side of the screen where it happened.
 play('notification', { pan: toast.side === 'left' ? -0.6 : 0.6 });
 ```
+
+## Combine sounds with delay
+
+`delay` starts a sound a number of seconds from now. It is scheduled on the audio clock, so the gap stays exact even when the main thread is busy. That lets you build a compound sound from two short ones.
+
+A tap is a press followed by a release. `bind()` plays them on pointer down and up, but some actions fire only once, such as a keyboard shortcut or a gesture recognizer's tap. Play both from one handler:
+
+```ts
+play('press');
+play('release', { delay: 0.09 });
+```
+
+90 ms is roughly how long a quick tap holds the button down. The delayed sound counts as playing from the moment you call `play()`, so `stopAll()` cancels it too. `delay` is clamped to 0–10 seconds.
+
+Native apps can bake the same tap into one file with [`sfx-wav --combo`](/docs/guides/native#combos-the-tap-sound).

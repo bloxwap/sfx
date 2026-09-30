@@ -8,9 +8,12 @@ import {
   play, preload, bind, unlock,
   setEnabled, isEnabled, setVolume, getVolume, configure,
   stopAll, activeVoices, getOutput, dispose,
+  renderTo, renderBuffer,
   sounds, isSound, duration,
-  type SoundName, type PlayOptions, type BindOptions, type EngineOptions,
+  type SoundName, type PlayOptions, type BindOptions, type EngineOptions, type RenderOptions,
 } from '@bloxwap/sfx';
+
+import { encodeWav, trimSilence } from '@bloxwap/sfx/wav';
 ```
 
 ## play()
@@ -19,23 +22,30 @@ import {
 function play(name?: SoundName, options?: PlayOptions): void;
 
 interface PlayOptions {
-  volume?: number; // 0–2, default 1
-  rate?: number;   // 0.25–4, default 1 (2 = an octave up, twice as fast)
-  pan?: number;    // -1 (left) to 1 (right), default 0
+  volume?: number;      // 0–2, default 1
+  rate?: number;        // 0.25–4, default 1 (2 = an octave up, twice as fast)
+  pan?: number;         // -1 (left) to 1 (right), default 0
+  delay?: number;       // seconds, 0–10, default 0
+  minInterval?: number; // ms, default: configure({ minInterval })
+  force?: boolean;      // play before the first user gesture, default false
 }
 ```
 
-Plays a sound now. `name` defaults to `'chime'`. Out-of-range options are clamped, and non-finite values fall back to their defaults. A volume of 0 plays nothing.
+Plays a sound now, or `delay` seconds from now. `name` defaults to `'chime'`. Out-of-range `volume`, `rate`, `pan`, and `delay` values are clamped, and non-finite values fall back to their defaults. A volume of 0 plays nothing.
+
+- `delay` is scheduled on the audio clock, so a busy main thread can't shift it. The sound counts as a voice from the moment you call `play()`, so `stopAll()` cancels it and voice stealing can cut it before it starts. A request that waits for a suspended context takes its delay from when the context resumes.
+- `minInterval` replaces the [`configure()`](#configure) value for this call only. A negative or non-numeric value uses the configured one. The time of each accepted call is recorded when you call `play()`, not when a delayed sound starts.
+- `force` skips the user-gesture check, for capture and kiosk browsers such as OBS or CEF that never see a gesture. Muting, unknown names, and the retrigger guard still apply. In a normal browser the audio context stays suspended until a gesture, so `force` doesn't help there.
 
 `play()` never throws. It does nothing when:
 
 - `name` is not a sound (including inherited keys like `"toString"`);
 - sound is disabled with `setEnabled(false)`;
-- the page hasn't had a user gesture yet (where `navigator.userActivation` is available);
+- the page hasn't had a user gesture yet (where `navigator.userActivation` is available), unless `force` is set;
 - the same sound played less than `minInterval` ms ago (default 16);
 - there is no Web Audio (on the server, or in old browsers).
 
-If the audio context is suspended, `play()` resumes it and plays once it is running. One resume is shared, requests for the same sound are merged, and requests older than 250 ms are dropped.
+If the audio context is suspended, what happens depends on `configure({ resume })`. By default (`'queue'`), `play()` resumes it and plays once it is running. One resume is shared, requests for the same sound are merged, and requests older than 250 ms are dropped. With `'eager'`, the sound is scheduled at once and plays as soon as the context runs.
 
 ## preload()
 
@@ -73,7 +83,7 @@ function setEnabled(enabled: boolean): void;
 function isEnabled(): boolean;
 ```
 
-Global mute. It affects future plays only: sounds already playing finish, and queued sounds are dropped. Non-boolean arguments are ignored. Enabled by default, and not persisted.
+Global mute. It affects future plays only: sounds already playing finish, and queued sounds are dropped. While the context is suspended nothing is audible yet, so muting then also stops every voice, including sounds that `'eager'` mode has already scheduled. Non-boolean arguments are ignored. Enabled by default, and not persisted.
 
 ## setVolume() / getVolume()
 
@@ -90,12 +100,20 @@ Sets the master volume. Changes glide over about 10 ms to avoid clicks. Non-numb
 function configure(options: EngineOptions): void;
 
 interface EngineOptions {
-  maxVoices?: number;   // default 24
-  minInterval?: number; // ms, default 16
+  maxVoices?: number;           // default 24
+  minInterval?: number;         // ms, default 16
+  resume?: 'queue' | 'eager';   // default 'queue'
 }
 ```
 
-`maxVoices` caps how many sounds play at once; when a new one starts at the cap, the oldest is cut. `minInterval` drops repeats of the *same* sound that arrive within that many milliseconds, which stops double-fired handlers from doubling the volume.
+`maxVoices` caps how many sounds play at once; when a new one starts at the cap, the oldest is cut. `minInterval` drops repeats of the *same* sound that arrive within that many milliseconds, which stops double-fired handlers from doubling the volume. Pass `minInterval` to `play()` to override it for one call.
+
+`resume` sets what `play()` does while the audio context is suspended or interrupted:
+
+- `'queue'` (default) waits for the resume, plays each requested sound once, and drops requests older than 250 ms. Nothing plays late.
+- `'eager'` schedules the sound right away and resumes alongside it. The first sound after a wake-up starts sooner, but sounds requested during a long suspension all play together when it ends. Voices are still capped by `maxVoices`.
+
+A closed context always takes the queue path. Invalid fields are ignored: `maxVoices` below 1, a negative `minInterval`, or a `resume` value other than the two strings. See [Accessibility](/docs/guides/accessibility#waking-up-after-the-page-returns) for when to pick each.
 
 ## stopAll() / activeVoices()
 
@@ -128,7 +146,91 @@ if (output) {
 function dispose(): Promise<void>;
 ```
 
-Stops everything, closes the audio context, and forgets rendered buffers. The next `play()` starts fresh. Useful in tests and on single-page app teardown.
+Stops everything, closes the audio context, removes its page listeners, and forgets rendered buffers. The next `play()` starts fresh. Useful in tests and on single-page app teardown.
+
+## Page lifecycle
+
+Browsers suspend audio in the background, and WebKit can mark the context `'interrupted'` after a phone call, Siri, or the lock screen. When the shared context is created, the engine listens for `visibilitychange` (acting only when the page is visible), `pageshow`, and window `focus`. On each, it resumes a context that is neither running nor closed, provided the page has had a user gesture. The resume is the same shared one `play()` uses, so queued sounds play then. There is nothing to call; `dispose()` removes the listeners. See [Accessibility](/docs/guides/accessibility#waking-up-after-the-page-returns).
+
+## renderTo()
+
+```ts
+function renderTo(target: BaseAudioContext, name: SoundName, options?: RenderOptions): boolean;
+
+interface RenderOptions {
+  volume?: number;          // 0–2, default 1
+  rate?: number;            // 0.25–4, default 1
+  pan?: number;             // -1 to 1, default 0
+  delay?: number;           // seconds, 0–10, default 0
+  destination?: AudioNode;  // default: target.destination
+}
+```
+
+Synthesizes a sound into any context, starting at `target.currentTime + delay`. Use it with an `OfflineAudioContext` to bake sounds into a video soundtrack or a file, or with your own `AudioContext` and effects chain. Options are clamped as in `play()`.
+
+`renderTo()` works outside the engine. It ignores `setEnabled()`, the user-gesture check, `minInterval`, voices, and the buffer cache, and it skips the master volume and limiter. Returns `true` once the sound is scheduled. Returns `false` for an unknown name or when the context rejects a node or parameter. It never throws.
+
+```ts
+const ctx = new OfflineAudioContext(2, 48000, 48000); // one second
+renderTo(ctx, 'press');
+renderTo(ctx, 'release', { delay: 0.09 });
+const buffer = await ctx.startRendering();
+```
+
+For timelines longer than 10 seconds, see [Native apps and WAV export](/docs/guides/native#bake-a-soundtrack-into-a-video).
+
+## renderBuffer()
+
+```ts
+function renderBuffer(name: SoundName, options?: { sampleRate?: number }): Promise<AudioBuffer | null>;
+```
+
+Renders one sound to a new stereo `AudioBuffer` in an `OfflineAudioContext`. The buffer is the sound's [`duration()`](#sounds--issound--duration) plus 0.1 s. `sampleRate` is clamped to 3000–768000 Hz; if it is missing or non-finite, the live context's rate is used, or 48000 before there is one. Each call renders again. The result is separate from `play()`'s cache and doesn't need a user gesture.
+
+It resolves `null` for an unknown name, where `OfflineAudioContext` is missing (on the server, unless you install one on `globalThis`), or when rendering fails. It never rejects.
+
+## @bloxwap/sfx/wav
+
+```ts
+import { encodeWav, trimSilence } from '@bloxwap/sfx/wav';
+
+function encodeWav(buffer: AudioBufferLike, options?: WavOptions): ArrayBuffer;
+function trimSilence(buffer: AudioBufferLike, options?: TrimOptions): TrimmedAudio;
+
+interface AudioBufferLike {
+  numberOfChannels: number;
+  sampleRate: number;
+  length: number; // frames per channel
+  getChannelData(channel: number): Float32Array;
+}
+
+interface WavOptions {
+  bitDepth?: 16 | 24 | 32; // default 16
+  channels?: 1 | 2;        // default: the buffer's
+}
+
+interface TrimOptions {
+  thresholdDb?: number; // default -60, relative to the peak
+  padMs?: number;       // default 20
+}
+
+interface TrimmedAudio extends AudioBufferLike {
+  channels: Float32Array[];
+}
+```
+
+A separate entry point, so the main bundle doesn't grow. It has no dependencies and runs in browsers and Node. Any `AudioBuffer` works as input.
+
+`encodeWav()` writes a RIFF/WAVE file with little-endian, interleaved samples:
+
+- 16- and 24-bit are integer PCM (format 1) with a 44-byte header. 32-bit is IEEE float (format 3) with a `fact` chunk, for a 58-byte header.
+- Samples are clamped to -1–1, and `NaN` becomes 0. -1 maps to the lowest integer value and 1 to the highest.
+- `channels: 1` averages every channel into mono. `channels: 2` copies a mono source to both sides, or keeps the first two channels of a larger one.
+- An odd-sized data chunk (24-bit mono with an odd length) gets a pad byte.
+
+It throws a `RangeError` for a bit depth other than 16, 24, or 32, a `channels` option other than 1 or 2, a buffer with no channels or more than 32, a length that isn't a whole number of frames, a sample rate below 1 Hz or too high for the header, or audio over WAV's 4 GiB limit.
+
+`trimSilence()` cuts the tail after the last sample, in any channel, that is within `thresholdDb` of the peak, then keeps `padMs` more. It only trims the end, never makes the audio longer, and copies the samples. Non-finite options use the defaults. The result satisfies `AudioBufferLike`, so it goes straight into `encodeWav()`.
 
 ## sounds / isSound() / duration()
 

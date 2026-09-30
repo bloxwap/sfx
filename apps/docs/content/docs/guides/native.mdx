@@ -1,0 +1,138 @@
+---
+title: Native apps and WAV export
+description: Render the same sounds to WAV files for iOS, Android, and desktop apps, or into a video soundtrack.
+---
+
+A native app can't run the web engine, but it can ship the same sounds as files. `@bloxwap/sfx` renders its recipes offline and writes them as WAV, so your web and native apps sound identical.
+
+## The sfx-wav CLI
+
+The package ships an `sfx-wav` command. It renders with [`node-web-audio-api`](https://www.npmjs.com/package/node-web-audio-api), an optional peer dependency, so install both:
+
+```sh
+npm install --save-dev @bloxwap/sfx node-web-audio-api
+npx sfx-wav --out assets/sfx --sounds tick,toggle,success,error
+```
+
+That writes one file per sound and prints a summary:
+
+```text
+file         duration ms  peak dBFS
+tick.wav             119      -17.1
+toggle.wav           145      -16.5
+success.wav         1004      -15.5
+error.wav            344      -15.0
+
+Wrote 4 files to /path/to/assets/sfx
+```
+
+Each file lasts the sound's [`duration()`](/docs/api#sounds--issound--duration) plus a 0.1 s tail. The peak is measured on what is written, after any mono downmix, and reads `-inf` for silence. Sounds with noise layers start from a random point in the noise, so their peak can vary by several dB between runs (`tick` and `tap` by 5 dB or more). Treat it as a rough check, not a level reference.
+
+| Flag | Default | Meaning |
+| --- | --- | --- |
+| `--out <dir>` | `./sfx` | Output directory, created if missing. |
+| `--sounds <a,b,c>` | all 19 | Sounds to render. Pass `""` to render only `--combo` files. |
+| `--sample-rate <hz>` | `48000` | A whole number from 3000 to 768000. |
+| `--bit-depth <16\|24\|32>` | `16` | 16- or 24-bit integer PCM, or 32-bit float. |
+| `--channels <1\|2>` | `2` | Mono averages both channels. |
+| `--trim` | off | Cuts the tail below -60 dB, keeping 20 ms. |
+| `--combo <name=sound@s,...>` | none | Mixes sounds into one file. Repeatable. |
+| `-h`, `--help` | | Prints usage and the sound list. |
+
+The command exits with 0 on success, 1 if rendering or writing fails or `node-web-audio-api` can't be loaded, and 2 for bad flags. Flags are checked before any audio is rendered, so a typo such as an unknown sound writes nothing.
+
+## Combos: the tap sound
+
+On the web, a button plays `press` on pointer down and `release` on pointer up. A native tap handler often fires once, so bake both into one file with `--combo`:
+
+```sh
+npx sfx-wav --out assets/sfx --sounds "" --combo tap=press@0,release@0.09
+```
+
+`tap.wav` holds `press` at 0 s and `release` at 90 ms. Each part is `sound@seconds`; the offset defaults to 0 and can be up to 10. The name before `=` becomes the file name, so it may only use letters, digits, `_`, `-`, and `.`, and can't start with a dot. Two outputs with the same name are an error, and names are compared ignoring case, because macOS and Windows file systems would write `Tap.wav` and `tap.wav` to the same file.
+
+This is the same as `play('press'); play('release', { delay: 0.09 })` on the web. See [Sound design](/docs/guides/sound-design#combine-sounds-with-delay).
+
+## Trimming and formats
+
+Recipes leave room for their echo to decay, so the end of a file is often near-silent. `--trim` cuts everything after the last sample within 60 dB of the peak and keeps 20 ms after it. `success.wav` drops from 1004 ms to about 570 ms, and `tap.wav` from 247 ms to about 220 ms. It never trims the start, so timing stays exact.
+
+Pick the format your platform prefers:
+
+- **16-bit** is the smallest and plays everywhere. It's the default.
+- **24-bit** keeps more detail in quiet tails, if you plan to process the files further.
+- **32-bit** float keeps the render's full precision. Some older players and decoders don't support it.
+
+Use `--channels 1` if your app only plays mono. Many sounds pan their layers, so mono loses that width. Set `--sample-rate` to your audio engine's output rate to skip resampling at runtime.
+
+## From code
+
+The WAV encoder lives at `@bloxwap/sfx/wav`, a separate entry point with no dependencies. It runs in browsers and Node, and takes any `AudioBuffer`. In a browser, pair it with [`renderBuffer()`](/docs/api#renderbuffer) to offer a download:
+
+```ts
+import { renderBuffer } from '@bloxwap/sfx';
+import { encodeWav, trimSilence } from '@bloxwap/sfx/wav';
+
+const buffer = await renderBuffer('success', { sampleRate: 44100 });
+if (buffer) {
+  const wav = encodeWav(trimSilence(buffer), { bitDepth: 24 });
+  const url = URL.createObjectURL(new Blob([wav], { type: 'audio/wav' }));
+  Object.assign(document.createElement('a'), { href: url, download: 'success.wav' }).click();
+  URL.revokeObjectURL(url);
+}
+```
+
+`renderBuffer()` needs a global `OfflineAudioContext`. Node doesn't have one, so in a Node script use `node-web-audio-api` and [`renderTo()`](/docs/api#renderto), which takes the context directly:
+
+```ts
+import { OfflineAudioContext } from 'node-web-audio-api';
+import { writeFile } from 'node:fs/promises';
+import { duration, renderTo } from '@bloxwap/sfx';
+import { encodeWav } from '@bloxwap/sfx/wav';
+
+const sampleRate = 48000;
+const ctx = new OfflineAudioContext(2, Math.ceil((duration('payout') + 0.1) * sampleRate), sampleRate);
+renderTo(ctx, 'payout');
+await writeFile('payout.wav', new Uint8Array(encodeWav(await ctx.startRendering())));
+```
+
+## Bake a soundtrack into a video
+
+Screen recordings and product videos often need interface sounds on exact frames. Render them with `renderTo()` into an `OfflineAudioContext` as long as the video, then add the WAV as the audio track.
+
+`delay` is capped at 10 s. For longer timelines, pause the render near each cue with `suspend()` and schedule from there:
+
+```ts
+import { renderTo } from '@bloxwap/sfx';
+import { encodeWav } from '@bloxwap/sfx/wav';
+
+// Cues from your edit, in seconds.
+const cues = [
+  { at: 0.4, sound: 'press' },
+  { at: 0.49, sound: 'release' },
+  { at: 6.2, sound: 'success' },
+  { at: 14.8, sound: 'payout' },
+] as const;
+
+const sampleRate = 48000;
+const ctx = new OfflineAudioContext(2, Math.ceil(18 * sampleRate), sampleRate); // an 18 s video
+
+// Group cues into 5 s windows, well inside the 10 s delay cap.
+for (const [start, group] of Map.groupBy(cues, (cue) => Math.floor(cue.at / 5) * 5)) {
+  const schedule = () => {
+    for (const cue of group) renderTo(ctx, cue.sound, { delay: cue.at - ctx.currentTime });
+  };
+  if (start === 0) schedule();
+  else ctx.suspend(start).then(() => { schedule(); return ctx.resume(); });
+}
+
+const wav = encodeWav(await ctx.startRendering());
+```
+
+Then mux it with the video, for example with ffmpeg:
+
+```sh
+ffmpeg -i video.mp4 -i soundtrack.wav -map 0:v -map 1:a -c:v copy -c:a aac -shortest out.mp4
+```
+
+`renderTo()` bypasses the engine, so the master volume and limiter don't apply. If cues overlap and clip, lower their `volume`, or pass a `destination` that runs through your own `DynamicsCompressorNode`.

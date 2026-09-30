@@ -11,7 +11,10 @@ export {
   activeVoices,
   getOutput,
   dispose,
+  renderTo,
+  renderBuffer,
   type PlayOptions,
+  type RenderOptions,
   type EngineOptions,
 } from './engine.js';
 export { bind, type BindOptions } from './bind.js';

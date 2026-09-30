@@ -13,8 +13,9 @@ Install: `npm install @bloxwap/sfx`
 - [React](https://bloxwap.github.io/sfx/docs/guides/react/)
 - [Other frameworks](https://bloxwap.github.io/sfx/docs/guides/frameworks/): Vue, Svelte, Astro, plain HTML
 - [Sound design](https://bloxwap.github.io/sfx/docs/guides/sound-design/): which sound for which moment
-- [Accessibility and preferences](https://bloxwap.github.io/sfx/docs/guides/accessibility/)
-- [API reference](https://bloxwap.github.io/sfx/docs/api/)
+- [Accessibility and preferences](https://bloxwap.github.io/sfx/docs/guides/accessibility/): gestures, waking up after interruptions, mute
+- [Native apps and WAV export](https://bloxwap.github.io/sfx/docs/guides/native/): the sfx-wav CLI, @bloxwap/sfx/wav, video soundtracks
+- [API reference](https://bloxwap.github.io/sfx/docs/api/): play, configure, renderTo, renderBuffer, encodeWav, and every other export
 - [Recipes](https://bloxwap.github.io/sfx/docs/api/recipes/): the sound data format
 - [Performance](https://bloxwap.github.io/sfx/docs/performance/)
 

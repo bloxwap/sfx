@@ -4,10 +4,10 @@ import { ImageResponse } from 'next/og';
 import { sounds } from '@bloxwap/sfx';
 import { socialImageSize } from './social';
 
-// Modeled on GitHub's repository cards: a light canvas, owner/repo title, muted description, the
+// Modeled on GitHub's repository cards, in dark mode: the site's black canvas, owner/repo title, muted description, the
 // logo tile top right, a stats row, and a color bar along the bottom (the Bloxwap brand palette).
-const ink = '#1f2328';
-const muted = '#59636e';
+const ink = '#f5f7fa';
+const muted = '#a1a1a1';
 const bar: [color: string, share: number][] = [['#00ff3f', 62], ['#35b5ff', 14], ['#b300ff', 10], ['#ff479c', 8], ['#fffb38', 6]];
 const fonts = Promise.all([
   readFile(join(process.cwd(), 'fonts/Nunito-Bold.ttf')),
@@ -53,7 +53,7 @@ export async function renderSocialCard(options: {
   const fontSize = options.home || title.length <= 20 ? 84 : title.length <= 34 ? 72 : 60;
 
   return new ImageResponse(
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', background: '#ffffff', color: ink, fontFamily: 'Nunito' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', background: '#0a0a0a', color: ink, fontFamily: 'Nunito' }}>
       <div style={{ display: 'flex', flex: 1, padding: '76px 80px 0' }}>
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, paddingRight: 64 }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', fontSize, lineHeight: 1.12, letterSpacing: -1 }}>

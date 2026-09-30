@@ -18,7 +18,8 @@
     "docs:build": "npm --workspace @bloxwap/sfx-docs run build",
     "docs:check": "npm --workspace @bloxwap/sfx-docs run check",
     "docs:preview": "npm --workspace @bloxwap/sfx-docs run preview",
-    "pack:sfx": "npm pack --workspace @bloxwap/sfx --pack-destination packages/sfx"
+    "pack:sfx": "npm pack --workspace @bloxwap/sfx --pack-destination packages/sfx",
+    "coverage:lcov": "npm --workspace @bloxwap/sfx run coverage:lcov"
   },
   "engines": {
     "node": ">=24"

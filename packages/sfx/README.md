@@ -9,6 +9,7 @@
   <a href="https://www.npmjs.com/package/@bloxwap/sfx"><img alt="npm version" src="https://img.shields.io/npm/v/@bloxwap/sfx?color=blue&style=flat-square"></a>
   <a href="https://www.npmjs.com/package/@bloxwap/sfx"><img alt="npm downloads" src="https://img.shields.io/npm/dm/@bloxwap/sfx.svg?style=flat-square"></a>
   <a href="https://github.com/bloxwap/sfx/actions/workflows/tests.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/bloxwap/sfx/tests.yml?branch=main&label=tests&style=flat-square"></a>
+  <a href="https://codecov.io/gh/bloxwap/sfx"><img alt="Coverage" src="https://codecov.io/gh/bloxwap/sfx/graph/badge.svg"></a>
   <a href="https://bundlejs.com/?q=@bloxwap/sfx"><img alt="Bundle size" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdeno.bundlejs.com%2F%3Fq%3D%40bloxwap%2Fsfx&amp;query=%24.size.compressedSize&amp;label=minzipped+size&amp;style=flat-square&amp;color=blue"></a>
 </p>
 

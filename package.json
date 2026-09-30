@@ -23,9 +23,5 @@
   },
   "engines": {
     "node": ">=24"
-  },
-  "overrides": {
-    "mdast-util-to-markdown": "2.1.2",
-    "mdast-util-gfm-strikethrough": "2.0.0"
   }
 }

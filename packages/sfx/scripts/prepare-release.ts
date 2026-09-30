@@ -28,7 +28,8 @@ const repository = `${env.GITHUB_SERVER_URL}/${env.GITHUB_REPOSITORY}`;
 const workflow = env.GITHUB_WORKFLOW_REF!.replace(`${env.GITHUB_REPOSITORY}/`, '');
 const separator = workflow.lastIndexOf('@');
 // The workflow comes from main; its package source comes from the checked-out release tag.
-// Record both explicitly instead of claiming that GITHUB_SHA is the package source commit.
+// npm requires the certificate-bound workflow repository to be the first dependency.
+// Record the separately checked-out package source as a second dependency.
 const statement = {
   _type: 'https://in-toto.io/Statement/v1',
   subject: [subject],
@@ -39,9 +40,13 @@ const statement = {
       externalParameters: {
         workflow: { ref: workflow.slice(separator + 1), repository, path: workflow.slice(0, separator) },
         source_ref: tag,
+        source_commit: commit,
       },
       internalParameters: { github: { event_name: env.GITHUB_EVENT_NAME, repository_id: env.GITHUB_REPOSITORY_ID, repository_owner_id: env.GITHUB_REPOSITORY_OWNER_ID } },
-      resolvedDependencies: [{ uri: `git+${repository}@refs/tags/${tag}`, digest: { gitCommit: commit } }],
+      resolvedDependencies: [
+        { uri: `git+${repository}@${env.GITHUB_REF}`, digest: { gitCommit: env.GITHUB_SHA } },
+        { uri: `git+${repository}@refs/tags/${tag}`, digest: { gitCommit: commit } },
+      ],
     },
     runDetails: {
       builder: { id: `https://github.com/actions/runner/${env.RUNNER_ENVIRONMENT}` },

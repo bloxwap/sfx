@@ -9,3 +9,5 @@ apps/docs/.source/
 apps/docs/out/
 apps/docs/next-env.d.ts
 *.tgz
+test-results/
+playwright-report/

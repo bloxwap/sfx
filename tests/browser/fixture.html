@@ -1,0 +1,26 @@
+<!doctype html><html lang="en"><title>SFX browser fixture</title><body>
+<button id="unlock">Unlock</button>
+<button id="control" data-sound-hover="chime" data-sound-press data-sound-release>Control</button>
+<button id="toggle" data-sound-toggle>Toggle</button>
+<button id="disabled" data-sound-press disabled>Disabled</button>
+<script type="module">
+import * as sfx from "/packages/sfx/dist/index.js";
+window.stats = { contexts: 0, starts: 0, resumes: 0 };
+const Native = window.AudioContext;
+window.AudioContext = class extends Native {
+  constructor(options) { super(options); window.stats.contexts++; window.context = this; }
+  createBufferSource() {
+    const source = super.createBufferSource();
+    const start = source.start.bind(source);
+    source.start = (...args) => { window.stats.starts++; return start(...args); };
+    return source;
+  }
+  resume() { window.stats.resumes++; return super.resume(); }
+};
+window.sfx = sfx;
+window.sfx.play('success');
+window.beforeGestureContexts = window.stats.contexts;
+window.unbind = window.sfx.bind();
+document.body.dataset.ready = 'true';
+document.querySelector('#unlock').addEventListener('click', () => window.sfx.unlock());
+</script></body></html>

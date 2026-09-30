@@ -1,0 +1,48 @@
+name: Prepare npm release
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Existing release tag matching the package version
+        default: v0.1.0
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Keep the preparation script outside the release checkout
+        run: cp packages/sfx/scripts/prepare-release.ts "$RUNNER_TEMP/sfx-prepare-release.ts"
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      # Match the CLI used for the one-time local publish with --provenance-file.
+      - run: npm install -g npm@11.15.0
+      - run: npm ci
+      - run: npm test
+      - name: Pack and sign the exact release tarball
+        run: |
+          mkdir -p "$SFX_RELEASE_DIRECTORY"
+          npm pack --workspace @bloxwap/sfx --pack-destination "$SFX_RELEASE_DIRECTORY"
+          export SFX_NPM_MODULES="$(npm root -g)"
+          node "$RUNNER_TEMP/sfx-prepare-release.ts"
+        env:
+          SFX_RELEASE_DIRECTORY: ${{ runner.temp }}/sfx-npm-release
+          SFX_SOURCE_REF: ${{ inputs.source_ref }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sfx-release-with-provenance
+          path: ${{ runner.temp }}/sfx-npm-release/
+          retention-days: 7

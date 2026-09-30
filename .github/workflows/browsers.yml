@@ -18,6 +18,15 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium firefox webkit
+      # Firefox needs a real audio backend even in headless mode. A PulseAudio null sink
+      # supplies it without changing autoplay policy or mocking Web Audio.
+      - name: Start audio backend
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pulseaudio
+          pulseaudio --start
+          pactl load-module module-null-sink sink_name=sfx
+          pactl set-default-sink sfx
       - run: npm run test:browser
       - uses: actions/upload-artifact@v7
         if: failure()

@@ -30,11 +30,19 @@
       "types": "./dist/recipes.d.ts",
       "import": "./dist/recipes.js"
     },
+    "./wav": {
+      "types": "./dist/wav.d.ts",
+      "import": "./dist/wav.js"
+    },
     "./package.json": "./package.json"
+  },
+  "bin": {
+    "sfx-wav": "./bin/sfx-wav.mjs"
   },
   "files": [
     "dist",
     "!dist/**/*.map",
+    "bin",
     "LICENSE",
     "README.md"
   ],
@@ -61,6 +69,14 @@
     "click",
     "synthesis"
   ],
+  "peerDependencies": {
+    "node-web-audio-api": "^2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "node-web-audio-api": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "esbuild": "^0.28.2",
     "happy-dom": "^20.14.5",

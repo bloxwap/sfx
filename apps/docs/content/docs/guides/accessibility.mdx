@@ -1,6 +1,6 @@
 ---
 title: Accessibility and preferences
-description: User gestures, mute controls, keyboard users, and reduced-motion preferences.
+description: User gestures, waking up after interruptions, mute controls, keyboard users, and reduced-motion preferences.
 ---
 
 ## Autoplay and the first gesture
@@ -9,9 +9,38 @@ Browsers only allow audio after the user has interacted with the page. `@bloxwap
 
 - In browsers that expose `navigator.userActivation`, `play()` does nothing until the page has had a gesture. It never creates a blocked audio context, so the console stays free of autoplay warnings.
 - `bind()` creates and resumes the audio context during the first pointer or key press, so the first sound after that plays on time.
-- If the context is still waking up, sounds requested in the meantime are played once it is running. Duplicates are merged, and anything older than 250 ms is dropped so nothing plays late.
+- If the context is still waking up, sounds requested in the meantime are played once it is running. Duplicates are merged, and anything older than 250 ms is dropped so nothing plays late. This is the default `'queue'` mode, described below.
 
 `preload()` renders sounds offline, so you can call it at startup without a gesture.
+
+## Waking up after the page returns
+
+Browsers suspend audio when a page goes to the background. iOS goes further: after a phone call, Siri, an alarm, or the lock screen, WebKit can leave the context `'interrupted'` until something resumes it. Pages restored from the back-forward cache can come back suspended too.
+
+The engine handles this for you. Once the audio context exists, it listens for the page becoming visible again (`visibilitychange`), `pageshow`, and window `focus`, and resumes a suspended or interrupted context, as long as the page has had a user gesture. Sounds queued while it slept play then. `dispose()` removes the listeners.
+
+You can choose what `play()` does while the context is asleep with `configure({ resume })`:
+
+```ts
+import { configure } from '@bloxwap/sfx';
+
+configure({ resume: 'eager' });
+```
+
+- **`'queue'`** (default) waits for the resume to finish, then plays each requested sound once. Requests older than 250 ms are dropped. The first sound after a wake-up can arrive a little late, but a sound never plays long after the action that caused it.
+- **`'eager'`** schedules the sound immediately and resumes alongside it, so the first sound starts as soon as audio runs, with no round trip through the resume promise. The cost: if the context stays asleep for a while, every sound requested in that time plays at once when it wakes, up to `maxVoices`. Muting with `setEnabled(false)` before it wakes drops them, as in `'queue'` mode.
+
+Use `'eager'` when the first sound after returning to the page matters most, such as a game or a trading screen, and your sounds are short. Keep `'queue'` when a late or stacked sound would mislead, for example an `error` that plays seconds after the problem was fixed.
+
+## Capture and kiosk browsers
+
+Browser sources in OBS, CEF-based kiosks, and similar hosts render pages without ever receiving a user gesture. Where they report `navigator.userActivation`, `play()` would stay silent forever. Pass `force` to skip the gesture check for those plays:
+
+```ts
+play('notification', { force: true });
+```
+
+These hosts usually allow audio without a gesture, so the context runs. In a normal browser, `force` doesn't bypass autoplay rules: the context stays suspended until a gesture. `setEnabled(false)`, unknown names, and the retrigger guard still apply. Because the page has no gesture, the automatic wake-up above doesn't run there either.
 
 ## Give people a mute
 

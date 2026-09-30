@@ -1,8 +1,10 @@
-import { beforeEach, describe, test } from 'node:test';
+import { afterEach, beforeEach, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FakeAudioContext, FakeOfflineAudioContext, installAudio, setActivation, tick } from './fake-audio.mjs';
+import { OfflineAudioContext as RealOfflineAudioContext } from 'node-web-audio-api';
+import { FakeAudioContext, FakeOfflineAudioContext, installAudio, installEvents, setActivation, tick } from './fake-audio.mjs';
 import {
-  activeVoices, configure, dispose, getOutput, getVolume, isEnabled, play, preload, setEnabled, setVolume, sounds, stopAll, unlock,
+  activeVoices, configure, dispose, duration, getOutput, getVolume, isEnabled, play, preload, renderBuffer, renderTo, setEnabled,
+  setVolume, sounds, stopAll, unlock,
 } from '../dist/index.js';
 
 const live = () => FakeAudioContext.instances.at(-1);
@@ -14,8 +16,32 @@ async function reset({ offline = true } = {}) {
   setActivation(undefined);
   setEnabled(true);
   setVolume(1);
-  configure({ maxVoices: 24, minInterval: 0 });
+  configure({ maxVoices: 24, minInterval: 0, resume: 'queue' });
 }
+
+/** A suspended context whose resume only completes when the returned `finish()` is called. */
+function pendingResume() {
+  const control = { finish: () => {} };
+  FakeAudioContext.next = {
+    state: 'suspended',
+    resume: (ctx) => new Promise((resolve) => { control.finish = () => { ctx.state = 'running'; resolve(); }; }),
+  };
+  return control;
+}
+
+/** Advances mock timers `ms` in 1 ms steps, moving the audio clock with them while the context runs. */
+function advance(t, ctx, ms) {
+  for (let i = 0; i < ms; i++) {
+    if (ctx.state === 'running') ctx.currentTime += 0.001;
+    t.mock.timers.tick(1);
+  }
+}
+
+const rms = (data, from, to) => {
+  let sum = 0;
+  for (let i = from; i < to; i++) sum += data[i] * data[i];
+  return Math.sqrt(sum / Math.max(1, to - from));
+};
 
 describe('play() gating', () => {
   beforeEach(() => reset());
@@ -346,13 +372,38 @@ describe('live synthesis graph', () => {
   test('the live voice is torn down after its tail', (t) => {
     t.mock.timers.enable({ apis: ['setTimeout'] });
     play('chime');
+    const ctx = live();
     assert.equal(activeVoices(), 1);
-    t.mock.timers.tick(1175);
+    advance(t, ctx, 1175);
     assert.equal(activeVoices(), 1);
-    t.mock.timers.tick(2);
+    advance(t, ctx, 2);
     assert.equal(activeVoices(), 0);
-    const level = live().of('gain')[1];
+    const level = ctx.of('gain')[1];
     assert.ok(level.disconnects > 0);
+  });
+
+  test('a live voice paused by a suspension mid-sound waits for the rest of it', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    play('chime');
+    const ctx = live();
+    advance(t, ctx, 500);
+    ctx.state = 'suspended';
+    advance(t, ctx, 1000);
+    assert.equal(activeVoices(), 1, '0.676 s of chime has not played yet');
+    ctx.state = 'running';
+    advance(t, ctx, 675);
+    assert.equal(activeVoices(), 1);
+    advance(t, ctx, 2);
+    assert.equal(activeVoices(), 0);
+  });
+
+  test('a live voice on a context that closed is torn down when its timer fires', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    play('chime');
+    const ctx = live();
+    ctx.state = 'closed';
+    t.mock.timers.tick(1177);
+    assert.equal(activeVoices(), 0);
   });
 });
 
@@ -562,5 +613,574 @@ describe('dispose()', () => {
     play('tick');
     live().close = () => Promise.reject(new Error('closed'));
     await assert.doesNotReject(dispose());
+  });
+});
+
+describe('delay option', () => {
+  beforeEach(() => reset());
+
+  test('a buffered play starts on the audio clock, delay seconds after currentTime', async () => {
+    await preload(['tick']);
+    play('tick');
+    const ctx = live();
+    ctx.currentTime = 5;
+    play('tick', { delay: 0.09 });
+    assert.equal(bufferSources(ctx).at(-1).startedAt, 5.09);
+  });
+
+  test('delay is clamped to 0–10 and non-finite values mean no delay', async () => {
+    await preload(['tick']);
+    play('tick');
+    const ctx = live();
+    ctx.currentTime = 2;
+    for (const [delay, at] of [[99, 12], [-1, 2], [Number.NaN, 2], [Number.POSITIVE_INFINITY, 2], ['0.5', 2], [undefined, 2], [10, 12], [0, 2]]) {
+      play('tick', { delay });
+      assert.equal(bufferSources(ctx).at(-1).startedAt, at, `delay ${delay}`);
+    }
+  });
+
+  test('a live play schedules every layer and envelope at currentTime + delay', async () => {
+    await reset({ offline: false });
+    play('tick');
+    const ctx = live();
+    ctx.currentTime = 1;
+    const before = ctx.nodes.length;
+    play('press', { delay: 0.25 });
+    const added = ctx.nodes.slice(before);
+    const [noise] = added.filter((node) => node.kind === 'source');
+    assert.equal(noise.startedAt, 1.25);
+    const env = added.find((node) => node.kind === 'gain' && node.gain.events.length === 3);
+    assert.deepEqual(env.gain.events[0], ['set', 0.0001, 1.25]);
+  });
+
+  test('the live voice cleanup timer is extended by the delay', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    installAudio({ offline: false });
+    play('chime', { delay: 0.5 });
+    const ctx = live();
+    assert.equal(activeVoices(), 1);
+    advance(t, ctx, 1675);
+    assert.equal(activeVoices(), 1, 'still ringing: 0.5 s delay + 1.176 s tail');
+    advance(t, ctx, 2);
+    assert.equal(activeVoices(), 0);
+  });
+
+  test('press now, release 90 ms later on the audio clock', async () => {
+    await preload(['press', 'release']);
+    play('tick');
+    const ctx = live();
+    ctx.currentTime = 3;
+    play('press');
+    play('release', { delay: 0.09 });
+    const [press, release] = bufferSources(ctx).slice(-2);
+    assert.equal(press.startedAt, 3);
+    assert.equal(release.startedAt, 3.09);
+  });
+
+  test('a request queued while suspended is delayed from the moment it plays after resume', async () => {
+    await reset({ offline: false });
+    const control = pendingResume();
+    play('press', { delay: 0.2 });
+    const ctx = live();
+    assert.equal(ctx.of('source').length, 0);
+    ctx.currentTime = 4;
+    control.finish();
+    await tick();
+    const [noise] = ctx.of('source');
+    assert.ok(Math.abs(noise.startedAt - 4.2) < 1e-9);
+  });
+});
+
+describe('minInterval option', () => {
+  beforeEach(async () => {
+    await reset();
+    await preload(['tick']);
+  });
+
+  test('a per-call minInterval overrides the global guard in both directions', () => {
+    play('tick');
+    const ctx = live();
+    play('tick', { minInterval: 10_000 });
+    assert.equal(bufferSources(ctx).length, 1, 'dropped by the per-call guard');
+    configure({ minInterval: 10_000 });
+    play('tick');
+    assert.equal(bufferSources(ctx).length, 1, 'dropped by the global guard');
+    play('tick', { minInterval: 0 });
+    assert.equal(bufferSources(ctx).length, 2, 'the per-call override lets it through');
+  });
+
+  test('invalid or negative values fall back to the global value', () => {
+    configure({ minInterval: 10_000 });
+    play('tick');
+    const ctx = live();
+    for (const minInterval of [-1, Number.NaN, '0', null]) play('tick', { minInterval });
+    assert.equal(bufferSources(ctx).length, 1);
+    configure({ minInterval: 0 });
+    for (const minInterval of [-1, Number.NaN, '0', null]) play('tick', { minInterval });
+    assert.equal(bufferSources(ctx).length, 5);
+  });
+
+  test('the override is per sound, like the global guard', () => {
+    play('tick', { minInterval: 10_000 });
+    play('press', { minInterval: 10_000 });
+    play('tick', { minInterval: 10_000 });
+    assert.equal(bufferSources(live()).length, 1, 'press rendered live, tick once from its buffer');
+    assert.equal(activeVoices(), 2);
+  });
+});
+
+describe('force option', () => {
+  beforeEach(async () => {
+    await reset();
+    setActivation(false);
+  });
+
+  test('skips the user-activation gate', () => {
+    play('tick');
+    assert.equal(FakeAudioContext.constructed, 0);
+    play('tick', { force: true });
+    assert.equal(FakeAudioContext.constructed, 1);
+    assert.equal(live().of('oscillator').length, 1);
+    assert.equal(activeVoices(), 1);
+  });
+
+  test('still respects setEnabled(false), invalid names and the retrigger guard', () => {
+    setEnabled(false);
+    play('tick', { force: true });
+    assert.equal(FakeAudioContext.constructed, 0);
+    setEnabled(true);
+    play('nope', { force: true });
+    play('toString', { force: true });
+    assert.equal(FakeAudioContext.constructed, 0);
+    configure({ minInterval: 10_000 });
+    play('tick', { force: true });
+    play('tick', { force: true });
+    assert.equal(live().of('oscillator').length, 1);
+  });
+
+  test('force: false keeps the gate', () => {
+    play('tick', { force: false });
+    assert.equal(FakeAudioContext.constructed, 0);
+  });
+
+  test('a forced play on a suspended context queues and resumes', async () => {
+    FakeAudioContext.next = { state: 'suspended' };
+    play('tick', { force: true });
+    const ctx = live();
+    assert.equal(ctx.resumes, 1);
+    await tick();
+    assert.equal(ctx.of('oscillator').length, 1);
+  });
+});
+
+describe('eager resume', () => {
+  beforeEach(async () => {
+    await reset();
+    configure({ resume: 'eager' });
+  });
+
+  test('schedules immediately and resumes concurrently with one shared promise', async () => {
+    const control = pendingResume();
+    play('tick');
+    const ctx = live();
+    assert.equal(ctx.of('oscillator').length, 1, 'scheduled while suspended');
+    play('press');
+    assert.equal(ctx.resumes, 1, 'shared resume');
+    assert.equal(activeVoices(), 2);
+    control.finish();
+    await tick();
+    assert.equal(ctx.of('oscillator').length, 1, 'nothing was queued, so nothing replays');
+    assert.equal(ctx.of('filter').length, 2);
+  });
+
+  test('buffered plays are scheduled while suspended too, and honor delay', async () => {
+    await preload(['tick']);
+    pendingResume();
+    play('tick', { delay: 0.1 });
+    const [source] = bufferSources(live());
+    assert.equal(source.startedAt, 0.1);
+    assert.equal(activeVoices(), 1);
+  });
+
+  test('voices are still capped', () => {
+    configure({ maxVoices: 1 });
+    pendingResume();
+    play('tick');
+    play('press');
+    assert.equal(activeVoices(), 1);
+  });
+
+  test('rejected or throwing resumes are swallowed', async () => {
+    FakeAudioContext.next = { state: 'suspended', resume: () => Promise.reject(new Error('blocked')) };
+    assert.doesNotThrow(() => play('tick'));
+    await tick();
+    assert.equal(live().of('oscillator').length, 1);
+    await dispose();
+    FakeAudioContext.next = { state: 'suspended', resume: () => { throw new Error('sync'); } };
+    assert.doesNotThrow(() => play('tick'));
+    await tick();
+    assert.equal(live().of('oscillator').length, 1);
+  });
+
+  test("WebKit's interrupted state is resumed eagerly too", () => {
+    FakeAudioContext.next = { state: 'interrupted' };
+    play('tick');
+    const ctx = live();
+    assert.equal(ctx.resumes, 1);
+    assert.equal(ctx.of('oscillator').length, 1);
+  });
+
+  test('a closed context is not scheduled onto', async () => {
+    FakeAudioContext.next = { state: 'closed', resume: () => Promise.reject(new Error('closed')) };
+    play('tick');
+    const ctx = live();
+    assert.equal(ctx.of('oscillator').length, 0);
+    assert.equal(ctx.resumes, 1);
+    await tick();
+    assert.equal(ctx.of('oscillator').length, 0);
+  });
+
+  test('a live voice is not torn down while its context is still asleep', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    installAudio({ offline: false });
+    FakeAudioContext.next = { state: 'suspended', resume: () => new Promise(() => {}) };
+    play('chime');
+    const ctx = live();
+    advance(t, ctx, 1177);
+    assert.equal(activeVoices(), 1, 'the clock has not run yet');
+    advance(t, ctx, 1177);
+    assert.equal(activeVoices(), 1);
+    ctx.state = 'running';
+    advance(t, ctx, 1175);
+    assert.equal(activeVoices(), 1);
+    advance(t, ctx, 2);
+    assert.equal(activeVoices(), 0);
+  });
+
+  test('a live voice that wakes just before a timer window ends still plays in full', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    installAudio({ offline: false });
+    FakeAudioContext.next = { state: 'suspended', resume: () => new Promise(() => {}) };
+    play('chime');
+    const ctx = live();
+    advance(t, ctx, 1100);
+    ctx.state = 'running';
+    advance(t, ctx, 100);
+    assert.equal(activeVoices(), 1, 'the window ended 77 ms after the resume, 1.1 s before the sound');
+    assert.equal(ctx.of('gain')[1].disconnects, 0);
+    advance(t, ctx, 1075);
+    assert.equal(activeVoices(), 1);
+    advance(t, ctx, 2);
+    assert.equal(activeVoices(), 0);
+  });
+
+  test('muting while suspended drops sounds already scheduled; muting while running lets them finish', async () => {
+    await preload(['tick']);
+    const control = pendingResume();
+    play('tick');
+    play('chime');
+    const ctx = live();
+    assert.equal(activeVoices(), 2);
+    setEnabled(false);
+    assert.equal(activeVoices(), 0);
+    const [source] = bufferSources(ctx);
+    assert.equal(source.stoppedAt, 0);
+    const [, mix, level] = ctx.of('gain');
+    assert.ok(mix.disconnects > 0 && level.disconnects > 0, 'live graph detached');
+    control.finish();
+    await tick();
+    assert.equal(activeVoices(), 0);
+    setEnabled(true);
+    play('chime', { minInterval: 0 });
+    assert.equal(activeVoices(), 1);
+    setEnabled(false);
+    assert.equal(activeVoices(), 1, 'running: sounds already playing finish');
+  });
+
+  test('invalid values are ignored; queue switches back', async () => {
+    configure({ resume: 'later' });
+    configure({ resume: true });
+    const control = pendingResume();
+    play('tick');
+    assert.equal(live().of('oscillator').length, 1, 'still eager');
+    await dispose();
+    configure({ resume: 'queue' });
+    const queued = pendingResume();
+    play('tick');
+    assert.equal(live().of('oscillator').length, 0, 'queued until resume');
+    queued.finish();
+    control.finish();
+    await tick();
+    assert.equal(live().of('oscillator').length, 1);
+  });
+});
+
+describe('renderTo()', () => {
+  beforeEach(() => reset());
+
+  test('schedules a sound onto a caller context at currentTime + delay, into its destination', () => {
+    const target = new FakeOfflineAudioContext(2, 48000, 48000);
+    target.currentTime = 1;
+    assert.equal(renderTo(target, 'tick', { delay: 0.5 }), true);
+    const [noise] = target.of('source');
+    assert.equal(noise.startedAt, 1.5);
+    assert.equal(target.of('oscillator')[0].startedAt, 1.5);
+    const [mix] = target.of('gain');
+    assert.deepEqual(mix.outputs, [target.destination]);
+  });
+
+  test('defaults to no delay and connects to a custom destination', () => {
+    const target = new FakeOfflineAudioContext(2, 48000, 48000);
+    const destination = target.createGain();
+    assert.equal(renderTo(target, 'press', { destination }), true);
+    assert.equal(target.of('source')[0].startedAt, 0);
+    const mix = target.of('gain')[1];
+    assert.deepEqual(mix.outputs, [destination]);
+    assert.equal(renderTo(target, 'press'), true);
+  });
+
+  test('volume, rate, pan and delay are applied and clamped', () => {
+    const target = new FakeOfflineAudioContext(2, 48000, 48000);
+    assert.equal(renderTo(target, 'tick', { volume: 0.5, rate: 2, pan: -3, delay: 20 }), true);
+    const [mix, level] = target.of('gain');
+    const [panner] = target.of('panner');
+    assert.deepEqual(mix.outputs, [panner]);
+    assert.equal(panner.pan.value, -1);
+    assert.deepEqual(panner.outputs, [target.destination]);
+    assert.equal(level.gain.value, 2.5 * 0.5, 'recipe level × volume');
+    assert.deepEqual(target.of('oscillator')[0].frequency.events[0], ['set', 5200, 10]);
+  });
+
+  test('bypasses muting, activation, voices and caches', () => {
+    setEnabled(false);
+    setActivation(false);
+    const target = new FakeOfflineAudioContext(2, 48000, 48000);
+    assert.equal(renderTo(target, 'chime'), true);
+    assert.equal(target.of('oscillator').length, 2);
+    assert.equal(FakeAudioContext.constructed, 0, 'no live context');
+    assert.equal(FakeOfflineAudioContext.instances.length, 1, 'no cache render');
+    assert.equal(activeVoices(), 0);
+  });
+
+  test('works on a live AudioContext without touching the engine', () => {
+    const target = new FakeAudioContext();
+    assert.equal(renderTo(target, 'tick'), true);
+    assert.equal(target.of('oscillator').length, 1);
+    assert.equal(getOutput(), null);
+  });
+
+  test('returns false for invalid names, bad contexts or graphs that throw; never throws', () => {
+    const target = new FakeOfflineAudioContext(2, 48000, 48000);
+    for (const name of ['nope', 'toString', '', null, 42]) assert.equal(renderTo(target, name), false);
+    assert.equal(target.nodes.length, 1, 'only the destination');
+    assert.equal(renderTo(null, 'tick'), false);
+    assert.equal(renderTo({}, 'tick'), false);
+    target.createOscillator = () => { throw new Error('oscillator'); };
+    assert.equal(renderTo(target, 'tick'), false);
+  });
+
+  test('renders real audio that starts at the delay (node-web-audio-api)', async () => {
+    const rate = 48000;
+    const target = new RealOfflineAudioContext(2, Math.ceil((0.3 + duration('press')) * rate), rate);
+    assert.equal(renderTo(target, 'press', { delay: 0.2 }), true);
+    const buffer = await target.startRendering();
+    const left = buffer.getChannelData(0);
+    const at = Math.round(0.2 * rate);
+    assert.ok(rms(left, 0, at - 16) < 1e-6, 'silent before the delay');
+    assert.ok(rms(left, at, at + Math.round(duration('press') * rate)) > 1e-3, 'audible after it');
+  });
+});
+
+describe('renderBuffer()', () => {
+  beforeEach(() => reset());
+
+  test('renders a fresh stereo buffer at 48 kHz before any context exists', async () => {
+    setActivation(false);
+    const buffer = await renderBuffer('chime');
+    assert.equal(buffer.numberOfChannels, 2);
+    assert.equal(buffer.sampleRate, 48000);
+    assert.equal(buffer.length, Math.ceil(1.176 * 48000));
+    assert.equal(FakeAudioContext.constructed, 0);
+  });
+
+  test("defaults to the live context's sample rate; an explicit rate wins and is clamped", async () => {
+    FakeAudioContext.next = { sampleRate: 44100 };
+    play('tick');
+    assert.equal((await renderBuffer('tick')).sampleRate, 44100);
+    assert.equal((await renderBuffer('tick', { sampleRate: 22050 })).sampleRate, 22050);
+    assert.equal((await renderBuffer('tick', { sampleRate: 1 })).sampleRate, 3000);
+    assert.equal((await renderBuffer('tick', { sampleRate: 1e9 })).sampleRate, 768000);
+    assert.equal((await renderBuffer('tick', { sampleRate: Number.NaN })).sampleRate, 44100);
+  });
+
+  test("is independent of play()'s cache", async () => {
+    await renderBuffer('tick');
+    await renderBuffer('tick');
+    assert.equal(FakeOfflineAudioContext.instances.length, 2, 'rendered every time');
+    play('tick');
+    assert.equal(live().of('oscillator').length, 1, 'play still synthesizes live on first use');
+    await tick();
+    const [a, b] = await Promise.all([renderBuffer('tick'), renderBuffer('tick')]);
+    assert.notEqual(a, b, 'fresh buffers, not the cached one');
+  });
+
+  test('resolves null for invalid names, missing or failing offline rendering', async () => {
+    assert.equal(await renderBuffer('nope'), null);
+    assert.equal(await renderBuffer('toString'), null);
+    assert.equal(FakeOfflineAudioContext.instances.length, 0);
+    FakeOfflineAudioContext.fail = true;
+    assert.equal(await renderBuffer('tick'), null);
+    await reset({ offline: false });
+    assert.equal(await renderBuffer('tick'), null);
+  });
+
+  test('renders real audio (node-web-audio-api)', async (t) => {
+    globalThis.OfflineAudioContext = RealOfflineAudioContext;
+    t.after(() => { globalThis.OfflineAudioContext = FakeOfflineAudioContext; });
+    const buffer = await renderBuffer('chime', { sampleRate: 44100 });
+    assert.equal(buffer.numberOfChannels, 2);
+    assert.equal(buffer.sampleRate, 44100);
+    assert.ok(rms(buffer.getChannelData(0), 0, buffer.length) > 1e-3);
+    assert.equal(await renderBuffer('chime', { sampleRate: 100 }).then((b) => b.sampleRate), 3000);
+  });
+});
+
+describe('render cache', () => {
+  beforeEach(() => reset());
+
+  test('an offline constructor that throws synchronously does not poison the cache', async () => {
+    const Saved = globalThis.OfflineAudioContext;
+    globalThis.OfflineAudioContext = function Broken() { throw new Error('no offline'); };
+    await preload(['tick']);
+    globalThis.OfflineAudioContext = Saved;
+    await preload(['tick']);
+    play('tick');
+    assert.deepEqual(live().nodes.map((node) => node.kind).slice(-1), ['source'], 'buffered after the retry');
+  });
+
+  test('a render still in flight at dispose() is not cached for the next context', async () => {
+    FakeAudioContext.next = { sampleRate: 44100 };
+    play('tick');
+    FakeAudioContext.next = {};
+    await dispose();
+    await tick();
+    play('tick');
+    const ctx = live();
+    assert.equal(ctx.sampleRate, 48000);
+    assert.equal(ctx.of('oscillator').length, 1, 'synthesized live, not played from the 44.1 kHz buffer');
+    await tick();
+    const before = ctx.nodes.length;
+    play('tick');
+    assert.equal(ctx.nodes.slice(before)[0].buffer.sampleRate, 48000);
+  });
+});
+
+describe('lifecycle wake-up', () => {
+  let events;
+  beforeEach(async () => {
+    await reset();
+    events = installEvents();
+  });
+  afterEach(async () => {
+    await dispose();
+    events.uninstall();
+  });
+
+  test('listens for visibilitychange, pageshow and focus once the context exists', () => {
+    assert.equal(events.win.total() + events.doc.total(), 0, 'nothing at import or before the first play');
+    play('tick');
+    play('press');
+    assert.equal(events.doc.count('visibilitychange'), 1);
+    assert.equal(events.win.count('pageshow'), 1);
+    assert.equal(events.win.count('focus'), 1);
+  });
+
+  test('resumes an interrupted or suspended context when the page comes back', async () => {
+    play('tick');
+    const ctx = live();
+    for (const fire of [() => events.win.dispatch('focus'), () => events.win.dispatch('pageshow'), () => events.doc.dispatch('visibilitychange')]) {
+      ctx.state = 'interrupted';
+      fire();
+      assert.equal(ctx.state, 'running');
+      await tick();
+    }
+    assert.equal(ctx.resumes, 3);
+    ctx.state = 'suspended';
+    events.win.dispatch('focus');
+    assert.equal(ctx.resumes, 4);
+  });
+
+  test('ignores a hidden page, a running or closed context, and pages without activation', async () => {
+    play('tick');
+    const ctx = live();
+    ctx.state = 'suspended';
+    events.doc.visibilityState = 'hidden';
+    events.doc.dispatch('visibilitychange');
+    assert.equal(ctx.resumes, 0);
+    ctx.state = 'running';
+    events.doc.visibilityState = 'visible';
+    events.doc.dispatch('visibilitychange');
+    events.win.dispatch('focus');
+    ctx.state = 'closed';
+    events.win.dispatch('pageshow');
+    assert.equal(ctx.resumes, 0);
+    ctx.state = 'interrupted';
+    setActivation(false);
+    events.win.dispatch('focus');
+    assert.equal(ctx.resumes, 0);
+    setActivation(true);
+    events.win.dispatch('focus');
+    assert.equal(ctx.resumes, 1);
+    await tick();
+  });
+
+  test('shares the coalesced resume with play() and swallows rejections', async () => {
+    const control = pendingResume();
+    play('tick');
+    const ctx = live();
+    events.win.dispatch('focus');
+    events.win.dispatch('pageshow');
+    assert.equal(ctx.resumes, 1);
+    control.finish();
+    await tick();
+    assert.equal(ctx.of('oscillator').length, 1, 'the queued play still flushes once');
+    ctx.state = 'interrupted';
+    ctx.resumeImpl = () => Promise.reject(new Error('interrupted'));
+    assert.doesNotThrow(() => events.win.dispatch('focus'));
+    await tick();
+    assert.equal(ctx.resumes, 2);
+  });
+
+  test('dispose() removes the listeners; a new context adds them again', async () => {
+    play('tick');
+    const ctx = live();
+    await dispose();
+    assert.equal(events.win.total() + events.doc.total(), 0);
+    events.win.dispatch('focus');
+    assert.equal(ctx.resumes, 0);
+    play('tick');
+    assert.equal(events.win.total() + events.doc.total(), 3);
+  });
+
+  test('works without a document, and without window.addEventListener', async () => {
+    events.uninstall();
+    events = installEvents({ document: false });
+    play('tick');
+    assert.equal(events.win.total(), 2);
+    const ctx = live();
+    ctx.state = 'interrupted';
+    events.win.dispatch('focus');
+    assert.equal(ctx.resumes, 1);
+    await dispose();
+    events.uninstall();
+    assert.doesNotThrow(() => play('tick'));
+    assert.equal(FakeAudioContext.constructed, 2);
+    await assert.doesNotReject(dispose());
+  });
+
+  test('no context (SSR or no Web Audio) means no listeners', () => {
+    delete globalThis.AudioContext;
+    play('tick');
+    assert.equal(events.win.total() + events.doc.total(), 0);
   });
 });

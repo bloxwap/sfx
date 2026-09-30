@@ -25,7 +25,10 @@
   listeners with no MutationObserver, handles keyboard press and release, skips disabled controls,
   and returns an unbind function.
 - **Safe everywhere.** Importing is SSR-safe. `play()` never throws, and it waits for the browser's
-  first user gesture before touching audio.
+  first user gesture before touching audio. Audio resumes on its own when the page comes back from the
+  background or an iOS interruption.
+- **Native and video export.** The `sfx-wav` CLI and `@bloxwap/sfx/wav` render the same sounds to WAV
+  files for native apps, and `renderTo()` bakes them into a video soundtrack.
 - **Tested.** 100% line, branch, and function coverage, including real offline renders of every sound.
 
 ## Installation
@@ -68,6 +71,10 @@ try {
 }
 
 play('tick', { volume: 0.5, rate: 1.25, pan: -0.3 });
+
+// A tap: release 90 ms after press, scheduled on the audio clock.
+play('press');
+play('release', { delay: 0.09 });
 ```
 
 ## Attributes
@@ -114,26 +121,75 @@ import {
   play, preload, bind, unlock,
   setEnabled, isEnabled, setVolume, getVolume, configure,
   stopAll, activeVoices, getOutput, dispose,
+  renderTo, renderBuffer,
   sounds, isSound, duration,
-  type SoundName, type PlayOptions, type BindOptions, type EngineOptions,
+  type SoundName, type PlayOptions, type BindOptions, type EngineOptions, type RenderOptions,
 } from '@bloxwap/sfx';
 ```
 
 | Function | Description |
 | --- | --- |
-| `play(name = 'chime', options?)` | Plays a sound now. `options`: `volume` (0–2), `rate` (0.25–4), `pan` (-1–1). Never throws. |
+| `play(name = 'chime', options?)` | Plays a sound now. `options`: `volume` (0–2), `rate` (0.25–4), `pan` (-1–1), `delay` (seconds, 0–10), `minInterval` (ms, overrides `configure()`), `force` (skip the user-gesture check). Never throws. |
 | `preload(names?)` | Renders sounds (all of them by default) to buffers. Safe to call before any user gesture. |
 | `bind(root = document, options?)` | Wires `data-sound-*` attributes under `root`. Returns `unbind()`. Options: `keyboard`, `hoverInterval`. |
 | `unlock()` | Creates and resumes audio from inside a gesture. `bind()` calls it on the first press. |
 | `setEnabled(on)` / `isEnabled()` | Global mute. Sounds already playing finish. |
 | `setVolume(0–1)` / `getVolume()` | Master volume, with a short glide to avoid clicks. |
-| `configure({ maxVoices, minInterval })` | Voice cap (default 24) and per-sound retrigger guard (default 16 ms). |
+| `configure({ maxVoices, minInterval, resume })` | Voice cap (default 24), per-sound retrigger guard (default 16 ms), and what `play()` does while audio is suspended: `'queue'` (default) or `'eager'`. |
 | `stopAll()` / `activeVoices()` | Stops every playing sound / counts them. |
 | `getOutput()` | The last node before the speakers, for an `AnalyserNode` or a recorder. |
-| `dispose()` | Closes the audio context and clears caches. |
+| `dispose()` | Closes the audio context, removes its page listeners, and clears caches. |
+| `renderTo(context, name, options?)` | Schedules a sound onto any `BaseAudioContext`, such as an `OfflineAudioContext`. `options`: `volume`, `rate`, `pan`, `delay`, `destination`. Returns `false` instead of throwing. |
+| `renderBuffer(name, { sampleRate }?)` | Renders one sound to a new stereo `AudioBuffer` (3000–768000 Hz). Resolves `null` if it can't. |
 | `sounds` / `isSound(value)` / `duration(name)` | The catalog, a type guard, and each sound's length in seconds. |
 
 The raw recipe data is available from `@bloxwap/sfx/recipes`.
+
+With the default `resume: 'queue'`, sounds requested while the audio context is suspended play once it
+resumes, and requests older than 250 ms are dropped. `'eager'` schedules them at once for the lowest
+latency, at the cost of stacking up during a long suspension. The engine also resumes the context when
+the page becomes visible, is shown, or regains focus, as long as it has had a user gesture.
+
+## WAV export and native apps
+
+Render the same sounds to WAV files for iOS, Android, or desktop apps. The CLI needs the optional peer
+dependency `node-web-audio-api`:
+
+```sh
+npm install --save-dev @bloxwap/sfx node-web-audio-api
+npx sfx-wav --out assets/sfx --sounds tick,toggle,success --combo tap=press@0,release@0.09 --trim
+```
+
+| Flag | Default | |
+| --- | --- | --- |
+| `--out <dir>` | `./sfx` | Output directory |
+| `--sounds <a,b,c>` | all | Sounds to render (`""` for only combos) |
+| `--sample-rate <hz>` | `48000` | 3000–768000 |
+| `--bit-depth <16\|24\|32>` | `16` | 16/24-bit PCM or 32-bit float |
+| `--channels <1\|2>` | `2` | Mono is an average of both channels |
+| `--trim` | off | Cut the tail below -60 dB, keeping 20 ms |
+| `--combo <name=sound@s,...>` | | Mix sounds into one file (repeatable) |
+
+It exits with 0 on success, 1 when rendering or writing fails, and 2 for bad flags.
+
+The encoder is also a separate, dependency-free entry point that works on any `AudioBuffer`:
+
+```ts
+import { renderBuffer } from '@bloxwap/sfx';
+import { encodeWav, trimSilence } from '@bloxwap/sfx/wav';
+
+// In a browser. In Node, use renderTo() with node-web-audio-api's OfflineAudioContext.
+const buffer = await renderBuffer('success', { sampleRate: 44100 });
+if (buffer) {
+  const wav = encodeWav(trimSilence(buffer), { bitDepth: 24, channels: 1 }); // an ArrayBuffer
+  const file = new Blob([wav], { type: 'audio/wav' });
+}
+```
+
+`encodeWav(buffer, { bitDepth: 16 | 24 | 32, channels: 1 | 2 })` throws a `RangeError` for an invalid
+format. `trimSilence(buffer, { thresholdDb = -60, padMs = 20 })` cuts the tail relative to the peak.
+See [Native apps and WAV export](https://bloxwap.github.io/sfx/docs/guides/native/), which also covers
+baking sounds into a video soundtrack.
 
 ## Documentation
 

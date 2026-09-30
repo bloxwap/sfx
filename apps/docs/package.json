@@ -11,7 +11,8 @@
     "postbuild": "node scripts/check-export.ts",
     "check": "next typegen && tsc --noEmit",
     "preview": "node scripts/preview.ts",
-    "postinstall": "fumadocs-mdx"
+    "postinstall": "fumadocs-mdx",
+    "smoke": "playwright test"
   },
   "dependencies": {
     "@bloxwap/sfx": "0.1.0",
@@ -24,6 +25,7 @@
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.2.0",
     "@types/mdx": "^2.0.13",
     "@types/node": "^24.13.6",

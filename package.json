@@ -20,13 +20,11 @@
     "docs:preview": "npm --workspace @bloxwap/sfx-docs run preview",
     "pack:sfx": "npm pack --workspace @bloxwap/sfx --pack-destination packages/sfx",
     "coverage:lcov": "npm --workspace @bloxwap/sfx run coverage:lcov",
-    "test:browser": "npm run build && tsc -p tsconfig.browser.json && playwright test",
-    "smoke:registry": "tsc -p tsconfig.browser.json && node scripts/registry-smoke.ts"
+    "test:browser": "npm --workspace @bloxwap/sfx run test:browser --",
+    "smoke:registry": "npm --workspace @bloxwap/sfx run smoke:registry --",
+    "docs:smoke": "npm --workspace @bloxwap/sfx-docs run smoke --"
   },
   "engines": {
     "node": ">=24"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.63.0"
   }
 }

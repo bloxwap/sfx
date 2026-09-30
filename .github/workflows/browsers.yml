@@ -33,4 +33,4 @@ jobs:
         if: failure()
         with:
           name: browser-traces
-          path: test-results/
+          path: packages/sfx/test-results/

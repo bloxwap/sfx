@@ -11,6 +11,11 @@ const KEY_TO_SOUND = new Map<string, SoundName>();
 GROUPS.flatMap((group) => group.sounds).forEach((name, index) => { if (KEYS[index]) KEY_TO_SOUND.set(KEYS[index], name); });
 const SOUND_TO_KEY = new Map([...KEY_TO_SOUND].map(([key, name]) => [name, key]));
 
+/** Point cloud: log-spaced frequency bands × frames of history, and the fixed camera angle (radians). */
+const CLOUD_COLS = 64;
+const CLOUD_ROWS = 48;
+const CLOUD_VIEW = { yaw: -0.1, pitch: 0.35 };
+
 /** Slider defaults; Reset returns every slider here. */
 const DEFAULTS = { master: 0.8, gain: 1, rate: 1, pan: 0 };
 
@@ -44,6 +49,7 @@ export function SoundBoard() {
   const [ready, setReady] = useState(false);
   const scope = useRef<HTMLCanvasElement>(null);
   const analyser = useRef<AnalyserNode | null>(null);
+  const wakeScope = useRef<(() => void) | null>(null);
   const timers = useRef<number[]>([]);
 
   useEffect(() => { setVolume(master); }, [master]);
@@ -58,11 +64,12 @@ export function SoundBoard() {
       const output = getOutput();
       if (output) {
         const node = output.context.createAnalyser();
-        node.fftSize = 1024;
+        node.fftSize = 2048;
         output.connect(node);
         analyser.current = node;
       }
     }
+    wakeScope.current?.();
   }, [gain, rate, pan]);
 
   // Render all sounds ahead of time after the first gesture, so every later play is one buffer node.
@@ -86,54 +93,107 @@ export function SoundBoard() {
     return () => window.removeEventListener('keydown', onKey);
   }, [trigger, warm]);
 
-  // Oscilloscope: draws only while sound is audible, then idles (no rAF when silent).
+  // Point cloud: a spectrum waterfall drawn in perspective. Runs only while sound is audible, then
+  // idles on a flat grid (no rAF when silent).
   useEffect(() => {
     const canvas = scope.current;
     const context = canvas?.getContext('2d');
     if (!canvas || !context) return;
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    const color = getComputedStyle(canvas).color;
+    const history = new Float32Array(CLOUD_COLS * CLOUD_ROWS);
+    let head = 0;
     let frame = 0;
     let quiet = 0;
-    let data: Uint8Array<ArrayBuffer> | null = null;
-    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    let bins: Uint8Array<ArrayBuffer> | null = null;
+    let edges: Int32Array | null = null;
+
+    // Pushes one row of log-spaced band peaks (60 Hz–16 kHz) and returns the loudest band.
+    function sample(node: AnalyserNode): number {
+      bins ??= new Uint8Array(node.frequencyBinCount);
+      if (!edges) {
+        const binHz = node.context.sampleRate / 2 / node.frequencyBinCount;
+        edges = new Int32Array(CLOUD_COLS + 1);
+        for (let c = 0; c <= CLOUD_COLS; c++) {
+          const bin = Math.floor((60 * (16000 / 60) ** (c / CLOUD_COLS)) / binHz);
+          edges[c] = Math.min(Math.max(bin, c ? edges[c - 1] + 1 : 0), node.frequencyBinCount);
+        }
+      }
+      node.getByteFrequencyData(bins);
+      head = (head + 1) % CLOUD_ROWS;
+      const row = head * CLOUD_COLS;
+      let loudest = 0;
+      for (let c = 0; c < CLOUD_COLS; c++) {
+        let peak = 0;
+        for (let b = edges[c]; b < edges[c + 1]; b++) peak = Math.max(peak, bins[b]);
+        const level = (peak / 255) ** 1.4;
+        history[row + c] = level;
+        loudest = Math.max(loudest, level);
+      }
+      return loudest;
+    }
+
+    function render() {
+      if (!canvas || !context) return;
+      const { width, height } = canvas;
+      context.clearRect(0, 0, width, height);
+      context.fillStyle = color;
+      const cosYaw = Math.cos(CLOUD_VIEW.yaw), sinYaw = Math.sin(CLOUD_VIEW.yaw);
+      const cosPitch = Math.cos(CLOUD_VIEW.pitch), sinPitch = Math.sin(CLOUD_VIEW.pitch);
+      // Fit the front row to the width, and the front peaks plus the grid's front edge to the height.
+      const focal = Math.min(width * 0.8, height * 2.4);
+      const horizon = height * 0.9 - focal * 0.112;
+      // Oldest row (back) first, so nearer points paint over farther ones.
+      for (let age = CLOUD_ROWS - 1; age >= 0; age--) {
+        const row = ((head - age + CLOUD_ROWS) % CLOUD_ROWS) * CLOUD_COLS;
+        const z = (age / (CLOUD_ROWS - 1)) * 2 - 1;
+        const fade = 1 - (age / CLOUD_ROWS) * 0.75;
+        for (let c = 0; c < CLOUD_COLS; c++) {
+          const level = history[row + c];
+          const x = ((c / (CLOUD_COLS - 1)) * 2 - 1) * 1.8;
+          const y = level * 1.3;
+          const rx = x * cosYaw + z * sinYaw;
+          const rz = z * cosYaw - x * sinYaw;
+          const ry = y * cosPitch + rz * sinPitch;
+          const depth = 4 + rz * cosPitch - y * sinPitch;
+          const scale = focal / depth;
+          const size = Math.max(ratio, scale * (0.012 + level * 0.02));
+          context.globalAlpha = Math.min(1, (0.32 + level * 0.9) * fade);
+          context.fillRect(width / 2 + rx * scale - size / 2, horizon - ry * scale - size / 2, size, size);
+        }
+      }
+      context.globalAlpha = 1;
+    }
+
+    function tick() {
+      frame = 0;
+      const node = analyser.current;
+      const loudest = node ? sample(node) : 0;
+      render();
+      quiet = loudest > 0.002 ? 0 : quiet + 1;
+      // Keep scrolling until the last audible row has left the back of the cloud.
+      if (quiet < CLOUD_ROWS) frame = requestAnimationFrame(tick);
+    }
+    function wake() {
+      quiet = 0;
+      if (!frame) frame = requestAnimationFrame(tick);
+    }
+    wakeScope.current = wake;
+
     function resize() {
       if (!canvas) return;
       canvas.width = canvas.clientWidth * ratio;
       canvas.height = canvas.clientHeight * ratio;
+      render();
     }
     resize();
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
-    const color = getComputedStyle(canvas).color;
-    function draw() {
-      frame = requestAnimationFrame(draw);
-      if (!canvas || !context) return;
-      const node = analyser.current;
-      const { width, height } = canvas;
-      context.clearRect(0, 0, width, height);
-      context.lineWidth = 2 * ratio;
-      context.strokeStyle = color;
-      context.beginPath();
-      if (!node) {
-        context.moveTo(0, height / 2);
-        context.lineTo(width, height / 2);
-        context.stroke();
-        return;
-      }
-      data ??= new Uint8Array(node.fftSize);
-      node.getByteTimeDomainData(data);
-      let peak = 0;
-      for (let i = 0; i < data.length; i++) {
-        const v = data[i];
-        const x = (i / (data.length - 1)) * width;
-        const y = (v / 255) * height;
-        if (i === 0) context.moveTo(x, y); else context.lineTo(x, y);
-        peak = Math.max(peak, Math.abs(v - 128));
-      }
-      context.stroke();
-      quiet = peak < 2 ? quiet + 1 : 0;
-    }
-    draw();
-    return () => { cancelAnimationFrame(frame); observer.disconnect(); };
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      wakeScope.current = null;
+    };
   }, []);
 
   useEffect(() => () => { timers.current.forEach(clearTimeout); }, []);
@@ -176,14 +236,15 @@ export function SoundBoard() {
         <div className="board-pads">
           {group.sounds.map((name) => <button
             type="button"
-            key={`${name}-${flash[name] ?? 0}`}
-            className={`pad${flash[name] ? ' pad--hit' : ''}${last === name ? ' pad--last' : ''}`}
+            key={name}
+            className={`pad${last === name ? ' pad--last' : ''}`}
             style={{ '--pad': group.color } as React.CSSProperties}
             onPointerDown={(event) => { if (event.button === 0) { event.preventDefault(); trigger(name); } }}
             onPointerEnter={(event) => { if (hoverPlay && event.pointerType === 'mouse' && event.buttons === 0) trigger(name); }}
             onKeyDown={(event) => { if ((event.key === 'Enter' || event.key === ' ') && !event.repeat) { event.preventDefault(); trigger(name); } }}
             aria-label={`Play ${name}: ${describe(name)}`}
           >
+            {flash[name] ? <span key={flash[name]} className="pad-flash" aria-hidden="true" /> : null}
             <span className="pad-name">{name}</span>
             <span className="pad-description">{describe(name)}</span>
             {SOUND_TO_KEY.has(name) && <kbd className="pad-key">{SOUND_TO_KEY.get(name)!.toUpperCase()}</kbd>}

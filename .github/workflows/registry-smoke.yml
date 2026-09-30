@@ -1,0 +1,32 @@
+name: Registry smoke
+on:
+  workflow_run:
+    workflows: [Publish to npm]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact npm version to verify
+        default: '0.1.0'
+        type: string
+permissions:
+  contents: read
+jobs:
+  smoke:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # Test infrastructure lives on main, including when the release predates this workflow.
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run smoke:registry -- "$SMOKE_VERSION"
+        env:
+          SMOKE_VERSION: ${{ inputs.version || '0.1.0' }}

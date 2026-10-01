@@ -98,7 +98,7 @@
     "node-web-audio-api": "^2.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "engines": {
     "node": ">=18"

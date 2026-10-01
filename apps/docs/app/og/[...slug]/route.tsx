@@ -15,11 +15,11 @@ export function generateStaticParams() {
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string[] }> }) {
   const { slug } = await params;
   const key = slug.join('/');
-  if (key === 'home.png') return renderSocialCard({ ...homeSocial, category: 'WEB AUDIO · TYPESCRIPT', home: true });
+  if (key === 'home.png') return renderSocialCard({ ...homeSocial, category: 'Docs', home: true });
 
   const page = source.getPages().find((entry) => socialImageSegments(entry.slugs).join('/') === key);
   if (!page) return new Response('Not found', { status: 404 });
-  const category = page.slugs[0] === 'api' ? 'API REFERENCE'
-    : page.slugs[0] === 'guides' ? 'GUIDES' : 'DOCUMENTATION';
+  const category = page.slugs[0] === 'api' ? 'API reference'
+    : page.slugs[0] === 'guides' ? 'Guides' : 'Docs';
   return renderSocialCard({ title: page.data.title, description: page.data.description ?? '', category });
 }

@@ -15,7 +15,7 @@
     "smoke": "playwright test"
   },
   "dependencies": {
-    "@bloxwap/font": "0.1.1",
+    "@bloxwap/font": "0.1.2",
     "@bloxwap/sfx": "0.1.0",
     "fumadocs-core": "16.15.17",
     "fumadocs-mdx": "15.4.5",

@@ -1,7 +1,7 @@
 <h1 align="center">SFX</h1>
 
 <p align="center">
-  <strong>Interface sounds for the web, synthesized with Web Audio.<br>No audio files, zero dependencies.
+  <strong>Interface sounds for the web, synthesized with Web Audio. No audio files, zero dependencies.
   <a href="https://bloxwap.github.io/sfx/">Try the sound board</a>.</strong>
 </p>
 
@@ -14,21 +14,13 @@
 
 ## Features
 
-- **19 sounds** for hovers, presses, toggles, confirmations, errors, loading, and money moments.
+- **19 sounds.** Hovers, presses, toggles, confirmations, errors, loading, and money moments.
 - **Zero files, zero dependencies.** Every sound is a small recipe of oscillators and filtered noise.
-- **One node per play.** Each sound is rendered once with an `OfflineAudioContext` and cached. After
-  that, a play is a single `AudioBufferSourceNode`, 5–75× cheaper on the main thread than building
-  the synth graph each time.
-- **A mixed output.** One master bus with volume control and a limiter, so overlapping sounds don't
-  clip. Voice stealing and retrigger guards stop sounds from piling up.
-- **Declarative binding.** Add `data-sound-*` attributes and call `bind()` once. It uses delegated
-  listeners with no MutationObserver, handles keyboard press and release, skips disabled controls,
-  and returns an unbind function.
-- **Safe everywhere.** Importing is SSR-safe. `play()` never throws, and it waits for the browser's
-  first user gesture before touching audio. Audio resumes on its own when the page comes back from the
-  background or an iOS interruption.
-- **Native and video export.** The `sfx-wav` CLI and `@bloxwap/sfx/wav` render the same sounds to WAV
-  files for native apps, and `renderTo()` bakes them into a video soundtrack.
+- **One node per play.** Each sound is rendered once with an `OfflineAudioContext` and cached. After that, a play is a single `AudioBufferSourceNode`, 5-75× cheaper on the main thread than building the synth graph each time.
+- **A mixed output.** One master bus with volume control and a limiter, so overlapping sounds don't clip. Voice stealing and retrigger guards stop sounds from piling up.
+- **Declarative binding.** Add `data-sound-*` attributes and call `bind()` once. It uses delegated listeners with no MutationObserver, handles keyboard press and release, skips disabled controls, and returns an unbind function.
+- **Safe everywhere.** Importing is SSR-safe. `play()` never throws, and it waits for the browser's first user gesture before touching audio. Audio resumes on its own when the page comes back from the background or an iOS interruption.
+- **Native and video export.** The `sfx-wav` CLI and `@bloxwap/sfx/wav` render the same sounds to WAV files for native apps, and `renderTo()` bakes them into a video soundtrack.
 - **Tested.** 100% line, branch, and function coverage, including real offline renders of every sound.
 
 ## Installation
@@ -38,6 +30,10 @@ npm install @bloxwap/sfx
 ```
 
 ESM only. Works in all modern browsers, and is a silent no-op on the server.
+
+## Release status
+
+`0.1.0` is an early developer preview; expect breaking changes before `1.0`.
 
 ## Usage
 
@@ -136,19 +132,19 @@ import {
 
 | Function | Description |
 | --- | --- |
-| `play(name = 'chime', options?)` | Plays a sound now. `options`: `volume` (0–2), `rate` (0.25–4), `pan` (-1–1), `delay` (seconds, 0–10), `minInterval` (ms, overrides `configure()`), `force` (skip the user-gesture check). Never throws. |
+| `play(name = 'chime', options?)` | Plays a sound now. `options`: `volume` (0-2), `rate` (0.25-4), `pan` (-1 to 1), `delay` (seconds, 0-10), `minInterval` (ms, overrides `configure()`), `force` (skip the user-gesture check). Never throws. |
 | `define(name, recipe)` | Registers or replaces an immutable custom recipe. Built-in names are reserved. Invalid data throws `RangeError`. |
 | `preload(names?)` | Renders sounds (all of them by default) to buffers. Safe to call before any user gesture. |
 | `bind(root = document, options?)` | Wires `data-sound-*` attributes under `root`. Returns `unbind()`. Options: `keyboard`, `hoverInterval`. |
 | `unlock()` | Creates and resumes audio from inside a gesture. `bind()` calls it on the first press. |
 | `setEnabled(on)` / `isEnabled()` | Global mute. Sounds already playing finish. |
-| `setVolume(0–1)` / `getVolume()` | Master volume, with a short glide to avoid clicks. |
+| `setVolume(0-1)` / `getVolume()` | Master volume, with a short glide to avoid clicks. |
 | `configure({ maxVoices, minInterval, resume })` | Voice cap (default 24), per-sound retrigger guard (default 16 ms), and what `play()` does while audio is suspended: `'queue'` (default) or `'eager'`. |
 | `stopAll()` / `activeVoices()` | Stops every playing sound / counts them. |
 | `getOutput()` | The last node before the speakers, for an `AnalyserNode` or a recorder. |
 | `dispose()` | Closes the audio context, removes its page listeners, and clears caches. |
 | `renderTo(context, name, options?)` | Schedules a sound onto any `BaseAudioContext`, such as an `OfflineAudioContext`. `options`: `volume`, `rate`, `pan`, `delay`, `destination`. Returns `false` instead of throwing. |
-| `renderBuffer(name, { sampleRate }?)` | Renders one sound to a new stereo `AudioBuffer` (3000–768000 Hz). Resolves `null` if it can't. |
+| `renderBuffer(name, { sampleRate }?)` | Renders one sound to a new stereo `AudioBuffer` (3000-768000 Hz). Resolves `null` if it can't. |
 | `sounds` / `isSound(value)` / `duration(name)` | The catalog, a type guard, and each sound's length in seconds. |
 
 Define custom sounds with `define('coin', { level: 0.6, layers: [{ wave: 'sine', freq: 880, at: 0, attack: 0.006, decay: 0.15, peak: 0.2 }] })`. Then `play('coin')` and `data-sound-press="coin"` use the recipe.
@@ -159,6 +155,30 @@ With the default `resume: 'queue'`, sounds requested while the audio context is 
 resumes, and requests older than 250 ms are dropped. `'eager'` schedules them at once for the lowest
 latency, at the cost of stacking up during a long suspension. The engine also resumes the context when
 the page becomes visible, is shown, or regains focus, as long as it has had a user gesture.
+
+### Category volume and reduced-motion preferences
+
+```ts
+import { configure, setVolume, getVolume, play } from '@bloxwap/sfx';
+
+configure({ respectReducedMotion: true }); // opt-in startup master volume of 0.5
+setVolume(0.8);                           // an explicit master setting takes priority
+setVolume(0.4, { category: 'hover' });
+setVolume(0.7, { category: 'money' });
+getVolume({ category: 'hover' });          // 0.4
+play('tick', { category: 'hover' });       // override its default control group
+```
+
+The defaults match the sound board: hover/ambience, controls, feedback and money. Every category
+starts at 1; category volume multiplies the per-play volume before the shared master volume.
+Category changes affect subsequent plays; sounds already playing finish at their original gain.
+Custom sounds default to feedback. `categoryOf(name)`, `categories` and `soundCategories` expose
+the group assignments. Offline exports ignore preference and category volumes.
+
+Reduced-motion handling is off by default. Call `configure({ respectReducedMotion: true })`
+before setting a master volume to start at 0.5 when `prefers-reduced-motion: reduce` matches.
+An explicitly chosen master volume is preserved. This is a startup preset; it does not track
+later media-query changes or override a user's volume choice.
 
 ## WAV export and native apps
 
@@ -174,7 +194,7 @@ npx sfx-wav --out assets/sfx --sounds tick,toggle,success --combo tap=press@0,re
 | --- | --- | --- |
 | `--out <dir>` | `./sfx` | Output directory |
 | `--sounds <a,b,c>` | all | Sounds to render (`""` for only combos) |
-| `--sample-rate <hz>` | `48000` | 3000–768000 |
+| `--sample-rate <hz>` | `48000` | 3000-768000 |
 | `--bit-depth <16\|24\|32>` | `16` | 16/24-bit PCM or 32-bit float |
 | `--channels <1\|2>` | `2` | Mono is an average of both channels |
 | `--trim` | off | Cut the tail below -60 dB, keeping 20 ms |
@@ -211,42 +231,19 @@ This repository is an npm workspace: the library lives in [`packages/sfx`](packa
 documentation site, with its live sound board, in [`apps/docs`](apps/docs).
 
 ```sh
-npm install
+npm ci
 npm test            # build and run the test suite
-npm run coverage    # tests with a 100% line/branch/function gate
+npm run coverage    # tests with 100% line, branch, and function coverage enforcement
 npm run bench       # play() cost: live synthesis vs. pre-rendered buffers
 npm run size        # gzip bundle-size budget
-npm run dev         # docs and sound board at http://localhost:3903 (or bun dev)
+npm run dev         # docs and sound board at http://localhost:3903
 ```
+
+Requires Node.js 24 or newer.
 
 Releases publish to npm from GitHub Actions with trusted publishing when a GitHub release tagged
 `v<version>` is created. See [Releasing](https://bloxwap.github.io/sfx/docs/releasing/).
 
 ## License
 
-MIT
-
-
-## Category volume and reduced-motion preferences
-
-```ts
-import { configure, setVolume, getVolume, play } from '@bloxwap/sfx';
-
-configure({ respectReducedMotion: true }); // opt-in startup master volume of 0.5
-setVolume(0.8);                           // an explicit master setting takes priority
-setVolume(0.4, { category: 'hover' });
-setVolume(0.7, { category: 'money' });
-getVolume({ category: 'hover' });          // 0.4
-play('tick', { category: 'hover' });       // override its default control group
-```
-
-The defaults match the sound board: hover/ambience, controls, feedback and money. Every category
-starts at 1; category volume multiplies the per-play volume before the shared master volume.
-Category changes affect subsequent plays; sounds already playing finish at their original gain.
-Custom sounds default to feedback. `categoryOf(name)`, `categories` and `soundCategories` expose
-the group assignments. Offline exports ignore preference and category volumes.
-
-Reduced-motion handling is off by default. Call `configure({ respectReducedMotion: true })`
-before setting a master volume to start at 0.5 when `prefers-reduced-motion: reduce` matches.
-An explicitly chosen master volume is preserved. This is a startup preset; it does not track
-later media-query changes or override a user's volume choice.
+[MIT](LICENSE)

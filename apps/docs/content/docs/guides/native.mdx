@@ -136,3 +136,24 @@ ffmpeg -i video.mp4 -i soundtrack.wav -map 0:v -map 1:a -c:v copy -c:a aac -shor
 ```
 
 `renderTo()` bypasses the engine, so the master volume and limiter don't apply. If cues overlap and clip, lower their `volume`, or pass a `destination` that runs through your own `DynamicsCompressorNode`.
+
+## Approved HIG asset subset
+
+From this repository (Node 24, pinned lockfile), run `npm ci && npm run export:hig`.
+It exports **only tick, toggle, success, error** to `packages/sfx/assets/hig`:
+48 kHz, mono, 16-bit PCM, -60 dB tail trim plus 20 ms padding. The manifest records
+package/renderer versions, exact flags, full source recipes and their hashes, artifact hashes,
+frame durations, peak and RMS levels, and the versioned semantic mapping. Noise layers use
+random samples; repeated exports can change hashes, levels and trim durations. Regeneration
+validates finite trailing envelopes, audible levels below full scale, and bounded duration;
+review the versioned artifacts rather than expecting cross-platform byte identity.
+
+The package includes this subset under `@bloxwap/sfx/assets/hig/*`. Metro/native hosts should
+require WAV assets directly and read the manifest; they must not import the SFX synthesis engine,
+CLI or optional `node-web-audio-api` renderer. Keep one asset owner and reuse the subset.
+HIG's native audio adapter owns preload/cache, rate limits, mute/volume, players and disposal,
+background/interruption/audio-session/silent-mode behavior and missing asset handling.
+
+No physical iPhone/Android playback was tested on this Linux VM. Linux WebKit and mocked native
+API tests cannot certify iOS unlock, latency, silent mode, interruptions, background transitions,
+or perceived haptic intensity. Those remain native host/device validation, not SFX export claims.

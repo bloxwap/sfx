@@ -1,0 +1,7 @@
+file         duration ms  peak dBFS
+tick.wav              84      -16.3
+toggle.wav           115      -16.6
+success.wav          567      -15.5
+error.wav            314      -15.0
+
+Wrote 4 files to /tmp/hig-par/wt-sfx/.tools/regenerated

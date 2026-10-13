@@ -29,8 +29,25 @@ jobs:
           pactl set-default-sink sfx
       # Headful Firefox under Xvfb exposes desktop fine-pointer media queries.
       - run: xvfb-run -a npm run test:browser
+      - name: Build and verify static docs and preserved demos
+        env:
+          NEXT_PUBLIC_BASE_PATH: /sfx
+          NEXT_PUBLIC_SITE_URL: https://bloxwap.github.io
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: |
+          npm run docs:build
+          npm run docs:preview > /tmp/sfx-docs-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill "$PREVIEW_PID"' EXIT
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3903/sfx/ > /dev/null; then break; fi
+            sleep 1
+          done
+          DOCS_URL=http://127.0.0.1:3903/sfx/ xvfb-run -a npm run docs:smoke
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: browser-traces
-          path: packages/sfx/test-results/
+          path: |
+            packages/sfx/test-results/
+            apps/docs/test-results/

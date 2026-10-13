@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pause, Play, RotateCcw, Volume2, VolumeX, Zap } from 'lucide-react';
-import { getOutput, play, preload, setEnabled, setVolume, sounds, type SoundName } from '@bloxwap/sfx';
+import { getOutput, play, preload, sounds, type SoundName } from '@bloxwap/sfx';
+import { useSoundPreference } from '@bloxwap/sfx/react';
 import { CopyButton } from './copy-button';
 import { GROUPS, KEYS, describe } from '@/lib/catalog';
 
@@ -31,8 +32,9 @@ function snippet(name: SoundName, volume: number, rate: number, pan: number): st
 export function SoundBoard() {
   const [last, setLast] = useState<SoundName>('chime');
   const [flash, setFlash] = useState<Record<string, number>>({});
-  const [master, setMaster] = useState(DEFAULTS.master);
-  const [muted, setMuted] = useState(false);
+  const { volume: master, enabled, setVolume: setMaster, setEnabled } = useSoundPreference();
+  const muted = !enabled;
+  const setMuted = (value: boolean) => setEnabled(!value);
   const [hoverPlay, setHoverPlay] = useState(true);
   const [rate, setRate] = useState(DEFAULTS.rate);
   const [pan, setPan] = useState(DEFAULTS.pan);
@@ -52,8 +54,6 @@ export function SoundBoard() {
   const wakeScope = useRef<(() => void) | null>(null);
   const timers = useRef<number[]>([]);
 
-  useEffect(() => { setVolume(master); }, [master]);
-  useEffect(() => { setEnabled(!muted); }, [muted]);
 
   const trigger = useCallback((name: SoundName) => {
     play(name, { volume: gain, rate, pan });
@@ -220,7 +220,7 @@ export function SoundBoard() {
         <label className="board-slider"><span>Pan</span><input type="range" min={-1} max={1} step={0.1} value={pan} onChange={(e) => setPan(Number(e.target.value))} aria-label="Stereo pan" /><output>{pan > 0 ? 'R' : pan < 0 ? 'L' : 'C'}{pan ? Math.abs(pan).toFixed(1) : ''}</output></label>
         <div className="board-buttons">
           <button type="button" className="btn btn--secondary btn--sm" onClick={playAll}>{sequence ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}{sequence ? 'Stop' : 'Play all'}</button>
-          <button type="button" className="btn btn--secondary btn--sm" aria-pressed={muted} onClick={() => setMuted((m) => !m)}>{muted ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}{muted ? 'Muted' : 'Sound on'}</button>
+          <button type="button" className="btn btn--secondary btn--sm" aria-pressed={muted} onClick={() => setMuted(!muted)}>{muted ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}{muted ? 'Muted' : 'Sound on'}</button>
           <button type="button" className="btn btn--secondary btn--sm" onClick={reset} disabled={!changed} title="Reset master, voice, rate and pan to their defaults"><RotateCcw aria-hidden="true" />Reset</button>
           <label className="board-switch">
             <button type="button" role="switch" aria-checked={hoverPlay} onClick={() => setHoverPlay((on) => !on)}><i /></button>

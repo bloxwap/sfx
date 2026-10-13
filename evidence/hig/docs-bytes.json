@@ -1,0 +1,16 @@
+{
+  "baseline": {
+    "commit": "dd15422",
+    "emittedCssBytes": 157058,
+    "emittedJsBytes": 1095009,
+    "emittedFontBytes": 13081684,
+    "fontFiles": 23
+  },
+  "after": {
+    "emittedCssBytes": 156951,
+    "emittedJsBytes": 1101563,
+    "emittedFontBytes": 12965628,
+    "fontFiles": 22
+  },
+  "note": "Uncompressed emitted static assets, summed once by file. JS includes new semantic preference demo; raw font/stylesheet changes measured separately. Not browser transfer bytes."
+}

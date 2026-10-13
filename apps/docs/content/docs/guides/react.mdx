@@ -71,3 +71,40 @@ When the provider unmounts, it restores the saved preference.
 Both entry points import safely during SSR. The React entry carries `'use client'` for Next.js.
 Server output and initial hydration use deterministic defaults; persisted preferences load after
 mount. Audio and binding run in effects or user event handlers.
+
+
+## Compose an accepted action
+
+import { SemanticPreview } from '@/components/semantic-preview';
+
+<SemanticPreview />
+
+`useSoundHandler('tick', onClick, { disabled, busy, suppressed })` calls your host handler first,
+then honors `defaultPrevented`, state suppression, and nested interactive targets. Attach it to
+`onClick` only: native button keyboard activation already generates a click. It does not
+change refs, focus, labels or action timing. Host exceptions retain normal React behavior.
+Use committed `onChange` for switches/selections/sliders, not both pointer and click handlers.
+Do not combine automatic `bind` playback and manual handlers on the same target.
+
+The provider unlocks audio on a trusted pointer/key interaction while enabled and above zero
+master volume. It never creates audio during SSR/mount. `unlockOnInteraction={false}` delegates
+unlocking to a host. It removes capture listeners on mute, unmount and prop changes. Browser
+API success is not evidence of audible output; OS policy may still suspend or suppress audio.
+
+`setCategoryVolume(category, value)` persists a 0–1 multiplier for hover, controls, feedback or
+money. Existing `{ enabled, volume }` records migrate without replacing saved choices. Bad
+category fields are ignored. Missing/corrupt/blocked storage falls back safely; tabs update live.
+
+`useSemanticSound(intent, reducedMotion)` uses the HIG 0.1.0 mapping from
+`@bloxwap/sfx/semantic`. Reduced mode halves per-play gain without changing stored volume,
+sound enablement, animation or haptic preferences. Activation/selection use tick (80 ms),
+toggle uses toggle (80 ms), success/error use their matching recipes (400 ms).
+Press/release/cancel/disclosure/warning/notification are intentionally silent. Live market
+updates remain silent. Essential information belongs in visible state/status, never only sound.
+
+For a HIG app, use `@bloxwap/hig-feedback`'s `FeedbackController` and `createWebSoundAdapter` instead
+of adding a second preference/controller store. Pass the SFX engine as the host adapter;
+HIG owns independent sound/haptic/motion settings, storage (including native storage), policy,
+source/id deduplication, per-source cooldowns, suppression and lifecycle. SFX's hook cadence
+is a per-recipe guard, not a substitute for HIG event identity or controlled-value validation.
+Use an operation id for delayed success/error; do not infer success from a click.

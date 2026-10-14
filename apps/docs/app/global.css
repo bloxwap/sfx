@@ -1,7 +1,9 @@
 @import 'tailwindcss';
 @import 'fumadocs-ui/css/neutral.css';
 @import 'fumadocs-ui/css/preset.css';
-@import '../styles/tokens.generated.css';
+@import '../styles/hig/tokens.css';
+@import '../styles/hig/controls.css';
+@import '../styles/hig-bridge.css';
 
 @theme inline {
   --font-sans: var(--font-bloxwap-sans), ui-rounded, system-ui, sans-serif;
@@ -62,7 +64,7 @@ html > body[data-scroll-locked] {
 }
 
 #nd-page h1 {
-  font-family: var(--font-docs-display), var(--font-sans);
+  font-family: var(--font-sans);
   font-size: clamp(1.875rem, 3vw, 2.5rem);
   font-weight: 700;
   letter-spacing: -0.035em;
@@ -79,7 +81,7 @@ html > body[data-scroll-locked] {
 }
 
 .prose h2 {
-  font-family: var(--font-docs-display), var(--font-sans);
+  font-family: var(--font-sans);
   font-size: 1.375rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -166,15 +168,15 @@ html > body[data-scroll-locked] {
   --text-4xl: 2.25rem;
   --text-5xl: 3rem;
   --text-6xl: 3.75rem;
-  --space-xs: 0.25rem;
-  --space-sm: 0.5rem;
-  --space-md: 0.75rem;
-  --space-lg: 1rem;
-  --space-xl: 1.25rem;
-  --space-2xl: 1.5rem;
-  --space-3xl: 2rem;
+  --space-xs: var(--hig-space-xs);
+  --space-sm: var(--hig-space-sm);
+  --space-md: var(--hig-space-md);
+  --space-lg: var(--hig-space-lg);
+  --space-xl: var(--hig-space-xl);
+  --space-2xl: var(--hig-space-xxl);
+  --space-3xl: var(--hig-space-xxxl);
   --space-4xl: 2.5rem;
-  --space-5xl: 3rem;
+  --space-5xl: var(--hig-space-section);
   --space-6xl: 4rem;
   --duration-fast: 180ms;
   --duration-base: 260ms;
@@ -196,36 +198,11 @@ html > body[data-scroll-locked] {
   }
 }
 
-/*
- * Buttons: plain-UI's .btn family (www button.tsx: pill, h-12, text-base semibold, pressed scale).
- * The primary fill is brand green with black text, as in www's .nav-cta/.submit and the app's CTAs.
- */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
-  height: var(--control-h);
-  min-width: var(--control-min-w);
-  padding: 0 var(--space-xl);
-  border: 1px solid transparent;
-  border-radius: var(--radius-full);
-  background: var(--bloxwap-green);
-  color: var(--bloxwap-black);
-  font: 600 var(--text-base) / 1 var(--font-sans);
-  white-space: nowrap;
-  cursor: pointer;
-  text-decoration: none;
-  touch-action: manipulation;
-  transition:
-    background-color var(--duration-fast) var(--ease-spring),
-    color var(--duration-fast) var(--ease-spring),
-    border-color var(--duration-fast) var(--ease-spring),
-    transform var(--duration-fast) var(--ease-spring);
-}
-.btn:hover { background: color-mix(in oklab, var(--bloxwap-green) 90%, transparent); color: var(--bloxwap-black); }
-.btn:active { transform: scale(0.98); }
-.btn:disabled, .btn[aria-disabled='true'] { opacity: 0.5; pointer-events: none; }
+/* Host class aliases use the approved HIG control geometry. */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--hig-gap); min-height: var(--hig-control); padding: 8px 20px; border: 1px solid transparent; border-radius: 9999px; font: 600 1rem/1.5 var(--font-sans); background: var(--hig-action); color: var(--hig-onAction); cursor: pointer; text-decoration: none; touch-action: manipulation; }
+.btn:hover { filter: brightness(.9); }
+.btn:active { transform: scale(.98); }
+.btn:disabled, .btn[aria-disabled='true'] { opacity: .5; pointer-events: none; }
 .btn svg { flex: none; width: var(--icon-md); height: var(--icon-md); }
 .btn--secondary { background: var(--card); color: var(--foreground); }
 .btn--secondary:hover { background: var(--muted); color: var(--foreground); }
@@ -240,7 +217,7 @@ html > body[data-scroll-locked] {
 .brand img { flex: none; width: 28px; height: 28px; }
 .brand-product { border-left: 1px solid var(--border); padding-left: var(--space-md); color: var(--muted-foreground); font-size: var(--text-sm); }
 .hero h1, .principles h2, .start-grid h2, .guide-links h3, .not-found h1 {
-  font-family: var(--font-docs-display), var(--font-sans);
+  font-family: var(--font-sans);
 }
 /* Same box as the Fumadocs header (max-w --fd-layout-width, 16px padding), so content lines up with the nav. */
 .home { width: 100%; max-width: var(--fd-layout-width, 1400px); padding: var(--space-5xl) var(--space-lg) 0; margin: 0 auto; }
@@ -507,3 +484,5 @@ button[data-search-full] kbd {
   .pad-key { display: none; }
 }
 @media (max-width: 420px) { .board-groups { grid-template-columns: minmax(0, 1fr); } }
+
+@media (prefers-reduced-motion: reduce) { .btn:active, .pad:active { transform: none; } }

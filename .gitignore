@@ -11,3 +11,6 @@ apps/docs/next-env.d.ts
 *.tgz
 test-results/
 playwright-report/
+
+.tools/
+.hig-reference/

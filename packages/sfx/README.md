@@ -233,3 +233,29 @@ Reduced-motion handling is off by default. Call `configure({ respectReducedMotio
 before setting a master volume to start at 0.5 when `prefers-reduced-motion: reduce` matches.
 An explicitly chosen master volume is preserved. This is a startup preset; it does not track
 later media-query changes or override a user's volume choice.
+
+### HIG semantic integration
+
+`@bloxwap/sfx/semantic` is a framework/browser-free, pinned HIG 0.1.0 intent table.
+Activation/selection → tick; toggle → toggle; completed success/error → matching cue.
+Other intents are silent. `useSemanticSound(intent, reducedMotion)` on the optional React
+entry offers an explicit half-gain preset; it preserves stored master/mute choices and does
+not change motion/haptics. `useSoundHandler(name, hostHandler, options)` composes accepted
+clicks after the host, honors cancellation/state suppression and avoids nested feedback.
+Attach only to `onClick` to preserve native keyboard activation without pointer duplication.
+
+`SoundProvider` unlocks on trusted pointer/key interactions (opt out with
+`unlockOnInteraction={false}`); muted/zero-volume providers attach no capture listeners.
+`useSoundPreference` persists category multipliers with `setCategoryVolume`, retaining old
+`bloxwap:sfx` records. Mount one root provider; the engine is shared, so hosts own final
+`dispose()` when the application/audio adapter is removed. A HIG host should use its existing
+`FeedbackController`/`createWebSoundAdapter` and preferences instead of mounting a second
+SFX preference owner. Sound, haptics and motion remain independently controllable.
+
+The approved native subset is available at `@bloxwap/sfx/assets/hig/*`, with a manifest.
+Regenerate from this checkout with `npm ci && npm run export:hig` (Node 24). The lockfile pins
+the optional offline renderer. Only four 48 kHz mono PCM16 WAVs ship; native hosts import
+assets, never Web Audio or the offline renderer. Recipes with noise are not byte-identical
+across regenerations; provenance, hashes, format, durations, peak/RMS and envelope bounds
+make generated changes reviewable. Physical iOS/Android latency/audio-session/haptic
+observations remain host/device work; no Linux result certifies those behaviors.

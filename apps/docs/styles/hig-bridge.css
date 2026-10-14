@@ -1,0 +1,33 @@
+/* Fumadocs and SDK demo aliases. Shared semantic values come from pinned HIG CSS. */
+:root, .dark {
+  --bloxwap-black: var(--hig-background);
+  --bloxwap-green: var(--hig-action);
+  --bloxwap-blue: var(--hig-info);
+  --bloxwap-pink: var(--hig-negative);
+  --bloxwap-gold: var(--hig-warning);
+  /* SDK sound-category visualization, outside HIG's semantic palette. */
+  --bloxwap-purple: #b300ff;
+  --bloxwap-yellow: #fffb38;
+  --background: var(--hig-background);
+  --foreground: var(--hig-text);
+  --card: var(--hig-surface);
+  --card-foreground: var(--hig-text);
+  --popover: var(--hig-surface);
+  --popover-foreground: var(--hig-text);
+  --muted: var(--hig-nested);
+  --muted-foreground: var(--hig-muted);
+  --border: var(--hig-border);
+  --ring: var(--hig-focus);
+  --radius-lg: 14px;
+  --radius-xl: 14px;
+}
+@theme inline {
+  --color-background: var(--hig-background);
+  --color-foreground: var(--hig-text);
+  --color-card: var(--hig-surface);
+  --color-muted: var(--hig-nested);
+  --color-muted-foreground: var(--hig-muted);
+  --color-border: var(--hig-border);
+  --text-2xs: 0.6875rem;
+  --text-3xs: 0.625rem;
+}

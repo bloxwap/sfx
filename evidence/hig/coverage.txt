@@ -1,0 +1,275 @@
+
+> coverage
+> npm --workspace @bloxwap/sfx run coverage
+
+
+> @bloxwap/sfx@0.1.0 coverage
+> npm run build && node --enable-source-maps --test --experimental-test-coverage --test-coverage-exclude='test/**' --test-coverage-exclude='src/cli/sfx-wav.ts' --test-coverage-exclude='**/node_modules/**' --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-branches=100 "test/**/*.test.ts"
+
+
+> @bloxwap/sfx@0.1.0 build
+> npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.cli.json
+
+
+> @bloxwap/sfx@0.1.0 clean
+> node -e "require('node:fs').rmSync('dist', { recursive: true, force: true })"
+
+✔ hover sounds play where matchMedia is unavailable (63.083075ms)
+▶ bind()
+  ✔ uses one capture listener per event type, and binding again is a no-op (21.431386ms)
+  ✔ defaults to the document and plays for elements added later (45.718883ms)
+  ✔ without a DOM it returns a no-op (8.634968ms)
+  ✔ attribute values pick the sound; empty or invalid values use the default (17.663022ms)
+  ✔ attributes are read when the event fires (18.712225ms)
+  ✔ the nearest carrier wins, and carriers outside the root are ignored (11.756136ms)
+  ✔ events whose target is not an element are ignored (0.674178ms)
+✔ bind() (135.846631ms)
+▶ hover
+  ✔ mouse on a fine pointer only (16.066221ms)
+  ✔ one hover sound per 150 ms across the page; throttled events do not extend the window (18.543825ms)
+  ✔ hoverInterval is configurable (2.084433ms)
+  ✔ moving between an element’s own children does not replay it (14.629776ms)
+✔ hover (51.634512ms)
+▶ press and release
+  ✔ pointer down and up play press and release, for touch too (2.764446ms)
+  ✔ secondary buttons are ignored (0.718212ms)
+  ✔ disabled, aria-disabled and inert controls are silent (8.16618ms)
+  ✔ Enter and Space press and release, without key repeat, paired per element (20.587416ms)
+  ✔ keyboard: false leaves keys silent (0.560851ms)
+✔ press and release (41.176836ms)
+▶ multiple roots
+  ✔ an event plays once even when several bound roots see it (9.324279ms)
+  ✔ a stale unbind does not remove a newer binding (1.475051ms)
+✔ multiple roots (10.924346ms)
+▶ unlock on first gesture
+  ✔ the first pointer or key press resumes a suspended context, then the listener detaches (31.569841ms)
+  ✔ gestures keep trying while audio cannot start (1.69681ms)
+✔ unlock on first gesture (33.451664ms)
+✔ attributes resolve user-defined sound names (0.971433ms)
+✔ defined recipes render, preload and play without changing built-ins or caller data (39.574343ms)
+✔ custom noise, glide, pan and echo preserve independent immutable data (0.398947ms)
+✔ invalid names and recipes cannot poison the renderer or overwrite a built-in (3.004354ms)
+✔ redefining a custom sound invalidates the old playback buffer (0.595295ms)
+▶ play() gating
+  ✔ unknown, inherited and non-string names are silent and create no context (8.201536ms)
+  ✔ defaults to chime (13.107299ms)
+  ✔ a page without a user gesture yet creates no context; the first play after one does (0.510394ms)
+  ✔ setEnabled(false) mutes; non-booleans are ignored (0.206769ms)
+  ✔ a constructor that throws is swallowed and retried on the next play (0.208299ms)
+  ✔ a context whose nodes throw never breaks the caller (15.272493ms)
+  ✔ a queued sound whose graph throws is skipped after resume (13.35676ms)
+  ✔ no navigator global means no activation gate (5.671959ms)
+  ✔ no window (SSR) is a silent no-op (0.443783ms)
+  ✔ the prefixed webkitAudioContext is used when AudioContext is missing (10.909431ms)
+  ✔ repeats of one sound inside minInterval are dropped, other sounds are not (40.80897ms)
+  ✔ works with no performance global (1.987305ms)
+✔ play() gating (123.883704ms)
+▶ master bus
+  ✔ volume → limiter → destination, created once with the interactive latency hint (23.611875ms)
+  ✔ without a compressor the bus connects straight to the speakers (5.264266ms)
+  ✔ setVolume clamps to 0–1 and glides the live bus (10.847565ms)
+  ✔ setVolume falls back to .value where setTargetAtTime is missing (10.159355ms)
+✔ master bus (50.124622ms)
+▶ rendering
+  ✔ the first play synthesizes live and renders a stereo buffer; later plays use one buffer node (28.392859ms)
+  ✔ a render in flight is shared, not repeated (1.224729ms)
+  ✔ preload renders every sound before any gesture, without an AudioContext (62.607179ms)
+  ✔ without OfflineAudioContext every play synthesizes live (20.533045ms)
+  ✔ a failed render falls back to live synthesis and can be retried (31.452976ms)
+  ✔ the noise buffer is allocated once per context and read from random offsets (1.318982ms)
+✔ rendering (145.928261ms)
+▶ live synthesis graph
+  ✔ envelopes rise and fall exponentially from 0.0001 (32.776793ms)
+  ✔ glides, detune, filters and Q follow the recipe (1.147657ms)
+  ✔ a glide without its own time lasts the whole envelope (0.530502ms)
+  ✔ the echo taps the level node: delay → lowpass → feedback loop and wet send (6.9284ms)
+  ✔ stereo layers get a panner set at their start time; payout pans both ways (4.576954ms)
+  ✔ layers connect directly where stereo panners are unsupported (1.194189ms)
+  ✔ rate scales pitch and time; frequencies stay below Nyquist (13.275974ms)
+  ✔ the live voice is torn down after its tail (7.552974ms)
+  ✔ a live voice paused by a suspension mid-sound waits for the rest of it (1.716003ms)
+  ✔ a live voice on a context that closed is torn down when its timer fires (0.761771ms)
+✔ live synthesis graph (71.195067ms)
+▶ play options
+  ✔ volume, rate and pan add a gain and a panner only when they change something (1.139572ms)
+  ✔ out-of-range options are clamped; volume 0 plays nothing (1.116773ms)
+✔ play options (2.355704ms)
+▶ voices
+  ✔ ended buffer voices disconnect themselves (4.118977ms)
+  ✔ the oldest voice is cut when maxVoices is reached (17.668764ms)
+  ✔ stopAll stops buffered and live voices (5.227307ms)
+  ✔ stopping a voice twice is harmless (1.812417ms)
+  ✔ configure ignores invalid values (4.112385ms)
+✔ voices (34.116013ms)
+▶ suspended contexts
+  ✔ plays while suspended share one resume and play once each after it (5.954307ms)
+  ✔ requests older than 250 ms are dropped instead of playing late (4.920743ms)
+  ✔ a rejected or throwing resume is swallowed (6.573182ms)
+  ✔ muting while a resume is pending drops the queued sounds (1.631193ms)
+  ✔ a context that resumes but is not running plays nothing (1.53706ms)
+✔ suspended contexts (20.953917ms)
+▶ unlock()
+  ✔ creates and resumes the context inside a gesture (0.226988ms)
+  ✔ reports false before a gesture, without Web Audio, or when resume fails (0.203427ms)
+✔ unlock() (0.511227ms)
+▶ dispose()
+  ✔ closes the context and forgets buffers (2.554787ms)
+  ✔ tolerates contexts without close() or whose close() rejects (11.414009ms)
+✔ dispose() (14.076109ms)
+▶ delay option
+  ✔ a buffered play starts on the audio clock, delay seconds after currentTime (1.211709ms)
+  ✔ delay is clamped to 0–10 and non-finite values mean no delay (1.187073ms)
+  ✔ a live play schedules every layer and envelope at currentTime + delay (18.032627ms)
+  ✔ the live voice cleanup timer is extended by the delay (0.703985ms)
+  ✔ press now, release 90 ms later on the audio clock (3.190418ms)
+  ✔ a request queued while suspended is delayed from the moment it plays after resume (26.902481ms)
+✔ delay option (51.606204ms)
+▶ minInterval option
+  ✔ a per-call minInterval overrides the global guard in both directions (1.564411ms)
+  ✔ invalid or negative values fall back to the global value (1.2724ms)
+  ✔ the override is per sound, like the global guard (29.582449ms)
+✔ minInterval option (32.592476ms)
+▶ force option
+  ✔ skips the user-activation gate (1.921191ms)
+  ✔ still respects setEnabled(false), invalid names and the retrigger guard (1.702627ms)
+  ✔ force: false keeps the gate (0.16548ms)
+  ✔ a forced play on a suspended context queues and resumes (29.630211ms)
+✔ force option (34.454828ms)
+▶ eager resume
+  ✔ schedules immediately and resumes concurrently with one shared promise (21.206885ms)
+  ✔ buffered plays are scheduled while suspended too, and honor delay (1.30565ms)
+  ✔ voices are still capped (19.673673ms)
+  ✔ rejected or throwing resumes are swallowed (40.059742ms)
+  ✔ WebKit's interrupted state is resumed eagerly too (6.378807ms)
+  ✔ a closed context is not scheduled onto (13.684311ms)
+  ✔ a live voice is not torn down while its context is still asleep (5.191177ms)
+  ✔ a live voice that wakes just before a timer window ends still plays in full (0.532108ms)
+  ✔ muting while suspended drops sounds already scheduled; muting while running lets them finish (18.865744ms)
+  ✔ invalid values are ignored; queue switches back (17.501952ms)
+✔ eager resume (145.006881ms)
+▶ renderTo()
+  ✔ schedules a sound onto a caller context at currentTime + delay, into its destination (8.843123ms)
+  ✔ defaults to no delay and connects to a custom destination (9.535617ms)
+  ✔ volume, rate, pan and delay are applied and clamped (1.234619ms)
+  ✔ bypasses muting, activation, voices and caches (0.178885ms)
+  ✔ works on a live AudioContext without touching the engine (9.522015ms)
+  ✔ returns false for invalid names, bad contexts or graphs that throw; never throws (10.014724ms)
+  ✔ renders real audio that starts at the delay (node-web-audio-api) (26.680406ms)
+✔ renderTo() (66.38269ms)
+▶ renderBuffer()
+  ✔ renders a fresh stereo buffer at 48 kHz before any context exists (1.397487ms)
+  ✔ defaults to the live context's sample rate; an explicit rate wins and is clamped (74.249084ms)
+  ✔ is independent of play()'s cache (14.057785ms)
+  ✔ resolves null for invalid names, missing or failing offline rendering (11.345306ms)
+  ✔ renders real audio (node-web-audio-api) (18.208081ms)
+✔ renderBuffer() (119.681615ms)
+▶ render cache
+  ✔ an offline constructor that throws synchronously does not poison the cache (1.534793ms)
+  ✔ a render still in flight at dispose() is not cached for the next context (25.602694ms)
+✔ render cache (27.351616ms)
+▶ lifecycle wake-up
+  ✔ listens for visibilitychange, pageshow and focus once the context exists (3.08487ms)
+  ✔ resumes an interrupted or suspended context when the page comes back (31.026308ms)
+  ✔ ignores a hidden page, a running or closed context, and pages without activation (10.139917ms)
+  ✔ shares the coalesced resume with play() and swallows rejections (4.906495ms)
+  ✔ dispose() removes the listeners; a new context adds them again (12.751518ms)
+  ✔ works without a document, and without window.addEventListener (16.195042ms)
+  ✔ no context (SSR or no Web Audio) means no listeners (0.221813ms)
+✔ lifecycle wake-up (78.68514ms)
+✔ approved artifacts match recipes, semantic intent, format, hashes and envelope/level metadata (82.67743ms)
+✔ reduced-motion preset is opt-in and preserves an explicitly chosen master volume (1.109496ms)
+✔ categories match the sound board and reject arbitrary property names (0.93159ms)
+✔ category mixing scales live and cached sounds independently without affecting offline export (22.778246ms)
+✔ the React subpath renders on the server without creating audio (49.173342ms)
+✔ preferences hydrate after mount, synchronize consumers and tabs, clamp and persist (97.432846ms)
+✔ provider overrides persisted settings and restores them on unmount (10.27596ms)
+✔ unavailable storage does not break effects or preference changes (5.596372ms)
+✔ binding cleans up on options changes and unmount, and useSound plays (45.199386ms)
+✔ category preferences migrate, persist, synchronize and restore policy overrides (8.490677ms)
+✔ provider unlock only accepts trusted interactions and removes capture listeners (7.043447ms)
+✔ composed handler preserves actions, cancellation and nested controls; semantic outcomes are quiet (26.56046ms)
+✔ nineteen sounds in catalog order, frozen (9.954196ms)
+✔ isSound accepts own names only (0.204731ms)
+✔ recipe levels (0.199375ms)
+✔ ring-out times match the reference (source end + echo tail + two 50 ms pads) (2.767093ms)
+✔ echo tail edge cases (7.536145ms)
+✔ every layer is well formed (0.324939ms)
+✔ reference-matched recipes keep their signature details (0.427246ms)
+✔ chime renders clean, audible audio that decays (126.054957ms)
+✔ sparkle renders clean, audible audio that decays (85.58931ms)
+✔ droplet renders clean, audible audio that decays (14.342646ms)
+✔ bloom renders clean, audible audio that decays (44.944553ms)
+✔ whisper renders clean, audible audio that decays (21.911623ms)
+✔ tick renders clean, audible audio that decays (14.606091ms)
+✔ press renders clean, audible audio that decays (16.256587ms)
+✔ release renders clean, audible audio that decays (16.773904ms)
+✔ toggle renders clean, audible audio that decays (14.652604ms)
+✔ success renders clean, audible audio that decays (11.36946ms)
+✔ error renders clean, audible audio that decays (15.0497ms)
+✔ page renders clean, audible audio that decays (10.759579ms)
+✔ loading renders clean, audible audio that decays (14.859643ms)
+✔ ready renders clean, audible audio that decays (19.189433ms)
+✔ payout renders clean, audible audio that decays (23.790475ms)
+✔ deposit renders clean, audible audio that decays (38.905159ms)
+✔ pluck renders clean, audible audio that decays (17.777928ms)
+✔ notification renders clean, audible audio that decays (38.30178ms)
+✔ loss renders clean, audible audio that decays (31.626063ms)
+✔ centered sounds are mono; panned recipes are stereo (93.559162ms)
+✔ tonal sounds carry their fundamental (7.097948ms)
+✔ glides land on their target pitch (4.424219ms)
+✔ two-stage sounds strike again at 125 ms (0.246157ms)
+✔ rate stretches time and pitch together (7.570712ms)
+▶ encodeWav
+  ✔ 16-bit PCM header, field by field (1.74078ms)
+  ✔ 16-bit samples are scaled, rounded, clamped and interleaved (1.80839ms)
+  ✔ 24-bit samples are three little-endian bytes, and an odd data chunk gets a pad byte (2.280176ms)
+  ✔ 32-bit is IEEE float with an extended fmt chunk and a fact chunk (0.587323ms)
+  ✔ channels: 1 averages every channel; 2 duplicates mono or keeps the first two (2.13738ms)
+  ✔ empty buffers, short channel data and fractional sample rates (0.29649ms)
+  ✔ rejects formats it cannot write (1.620372ms)
+  ✔ an independent decoder reads every bit depth back (45.644917ms)
+✔ encodeWav (66.954803ms)
+▶ trimSilence
+  ✔ cuts the tail below -60 dB relative to the peak and keeps 20 ms (1.072019ms)
+  ✔ thresholdDb and padMs (1.279481ms)
+  ✔ uses the latest audible sample across channels and copies the samples (0.168172ms)
+  ✔ silence keeps only the pad (0.200894ms)
+✔ trimSilence (2.883902ms)
+▶ sfx-wav CLI
+  ✔ --help prints usage and needs no audio module (10.176855ms)
+  ✔ renders sounds with the chosen format and prints a table (111.50094ms)
+  ✔ --combo mixes sounds at their offsets into one file; --trim shortens it (211.635396ms)
+  ✔ defaults: every sound, stereo 16-bit 48 kHz, into ./sfx under the working directory (830.073388ms)
+  ✔ runs with its real defaults (module loader, file system, console) (21.502299ms)
+  ✔ bad input exits 2 with a message, before loading audio (6.054889ms)
+  ✔ a missing node-web-audio-api exits 1 with an install hint (0.681812ms)
+  ✔ render and write failures exit 1 (18.730721ms)
+  ✔ silence reports -inf dBFS (8.238788ms)
+  ✔ the bin runs the CLI and sets the exit code (402.676501ms)
+✔ sfx-wav CLI (1622.268714ms)
+ℹ tests 183
+ℹ suites 25
+ℹ pass 183
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3750.425043
+ℹ start of coverage report
+ℹ --------------------------------------------------------------
+ℹ file          | line % | branch % | funcs % | uncovered lines
+ℹ --------------------------------------------------------------
+ℹ src           |        |          |         | 
+ℹ  bind.ts      | 100.00 |   100.00 |  100.00 | 
+ℹ  cli          |        |          |         | 
+ℹ   index.ts    | 100.00 |   100.00 |  100.00 | 
+ℹ  engine.ts    | 100.00 |   100.00 |  100.00 | 
+ℹ  index.ts     | 100.00 |   100.00 |  100.00 | 
+ℹ  react.ts     | 100.00 |   100.00 |  100.00 | 
+ℹ  recipes.ts   | 100.00 |   100.00 |  100.00 | 
+ℹ  semantic.ts  | 100.00 |   100.00 |  100.00 | 
+ℹ  wav.ts       | 100.00 |   100.00 |  100.00 | 
+ℹ --------------------------------------------------------------
+ℹ all files     | 100.00 |   100.00 |  100.00 | 
+ℹ --------------------------------------------------------------
+ℹ end of coverage report

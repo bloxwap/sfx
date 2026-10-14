@@ -1,0 +1,232 @@
+{
+  "schemaVersion": 1,
+  "package": "@bloxwap/sfx@0.1.0",
+  "renderer": "node-web-audio-api@2.2.0",
+  "command": "npm ci && npm run export:hig",
+  "flags": [
+    "--out",
+    "packages/sfx/assets/hig",
+    "--sounds",
+    "tick,toggle,success,error",
+    "--sample-rate",
+    "48000",
+    "--bit-depth",
+    "16",
+    "--channels",
+    "1",
+    "--trim"
+  ],
+  "format": {
+    "sampleRate": 48000,
+    "channels": 1,
+    "bitDepth": 16,
+    "encoding": "PCM",
+    "trimThresholdDb": -60,
+    "trimPadMs": 20
+  },
+  "variance": "Noise uses Math.random; regenerations may differ in samples, hashes, trim duration and levels. Review versioned artifacts and bounded envelope/level checks; byte identity is not guaranteed across renderers or platforms.",
+  "semanticPresets": {
+    "press": {
+      "sound": null,
+      "cooldown": 0
+    },
+    "activate": {
+      "sound": "tick",
+      "cooldown": 80
+    },
+    "release": {
+      "sound": null,
+      "cooldown": 0
+    },
+    "cancel": {
+      "sound": null,
+      "cooldown": 0
+    },
+    "selection": {
+      "sound": "tick",
+      "cooldown": 80
+    },
+    "toggle": {
+      "sound": "toggle",
+      "cooldown": 80
+    },
+    "disclosure": {
+      "sound": null,
+      "cooldown": 120
+    },
+    "success": {
+      "sound": "success",
+      "cooldown": 400
+    },
+    "warning": {
+      "sound": null,
+      "cooldown": 400
+    },
+    "error": {
+      "sound": "error",
+      "cooldown": 400
+    },
+    "notification": {
+      "sound": null,
+      "cooldown": 800
+    }
+  },
+  "cues": [
+    {
+      "name": "tick",
+      "file": "tick.wav",
+      "recipe": {
+        "level": 2.5,
+        "layers": [
+          {
+            "noise": "bandpass",
+            "freq": 5400,
+            "at": 0,
+            "attack": 0.001,
+            "decay": 0.018,
+            "peak": 0.14,
+            "q": 1.8
+          },
+          {
+            "wave": "sine",
+            "freq": 2600,
+            "at": 0,
+            "attack": 0.001,
+            "decay": 0.012,
+            "peak": 0.018
+          }
+        ]
+      },
+      "recipeSha256": "c7cf1c8b622b6fa3b81bc0098af3edc0df168a2a985a9c5fdb8ee48ab1f81eda",
+      "sha256": "5fabc4a353b387c61962d8e0ed43bbd27901bfe7114fb79c2e926a7cad8ccb81",
+      "frames": 4254,
+      "durationMs": 88.625,
+      "peak": 0.11083984375,
+      "rms": 0.00817237055318835
+    },
+    {
+      "name": "toggle",
+      "file": "toggle.wav",
+      "recipe": {
+        "level": 3.3,
+        "layers": [
+          {
+            "noise": "bandpass",
+            "freq": 2200,
+            "at": 0,
+            "attack": 0.001,
+            "decay": 0.016,
+            "peak": 0.12,
+            "q": 1.6
+          },
+          {
+            "noise": "bandpass",
+            "freq": 3800,
+            "at": 0.024,
+            "attack": 0.001,
+            "decay": 0.02,
+            "peak": 0.1,
+            "q": 1.6
+          }
+        ]
+      },
+      "recipeSha256": "248794bd0795cad967145ba1781e76e7a4ff4f97293f49b1712c93ff8b9d4da8",
+      "sha256": "5b9925b2804383f17f5c55d9805cf2df92a2d800cae739c5123c13d710915f13",
+      "frames": 5491,
+      "durationMs": 114.39583333333333,
+      "peak": 0.13897705078125,
+      "rms": 0.0092159424194113
+    },
+    {
+      "name": "success",
+      "file": "success.wav",
+      "recipe": {
+        "level": 2.4,
+        "echo": {
+          "delay": 0.1,
+          "feedback": 0.22,
+          "wet": 0.16,
+          "lowpass": 4500
+        },
+        "layers": [
+          {
+            "wave": "sine",
+            "freq": 880,
+            "at": 0,
+            "attack": 0.004,
+            "decay": 0.09,
+            "peak": 0.06
+          },
+          {
+            "wave": "sine",
+            "freq": 1108.73,
+            "at": 0.06,
+            "attack": 0.004,
+            "decay": 0.1,
+            "peak": 0.06
+          },
+          {
+            "wave": "sine",
+            "freq": 1318.51,
+            "at": 0.12,
+            "attack": 0.004,
+            "decay": 0.18,
+            "peak": 0.07
+          }
+        ]
+      },
+      "recipeSha256": "d04eaad73e6393af2b4b661753282f5c9226ee1e939f8fd8d40b0e21b0d3fc04",
+      "sha256": "297662685cf37860711fbb54f670e424974905a3c35eb2440d932a1a332b1c1e",
+      "frames": 27212,
+      "durationMs": 566.9166666666666,
+      "peak": 0.1685791015625,
+      "rms": 0.025549750962013406
+    },
+    {
+      "name": "error",
+      "file": "error.wav",
+      "recipe": {
+        "level": 4.1,
+        "layers": [
+          {
+            "noise": "bandpass",
+            "freq": 850,
+            "at": 0,
+            "attack": 0.001,
+            "decay": 0.035,
+            "peak": 0.13,
+            "q": 1.1
+          },
+          {
+            "wave": "triangle",
+            "freq": 440,
+            "at": 0.025,
+            "attack": 0.004,
+            "decay": 0.09,
+            "peak": 0.045
+          },
+          {
+            "wave": "triangle",
+            "freq": 349.23,
+            "at": 0.1,
+            "attack": 0.004,
+            "decay": 0.14,
+            "peak": 0.04
+          }
+        ]
+      },
+      "recipeSha256": "9fdb0d7120f9f322dd179798924ffeee091b7829a83eed1882b0a31759e038f0",
+      "sha256": "cdd535b8e8506495ca7812e3c9c3dd7f4a7e2d729d2c490fd65a6bd7429f2e5f",
+      "frames": 15072,
+      "durationMs": 314,
+      "peak": 0.177703857421875,
+      "rms": 0.025415846945591323
+    }
+  ],
+  "semanticSource": {
+    "version": "hig-0.1.0",
+    "repository": "https://github.com/bloxwap/hig",
+    "commit": "1a776b9326c6ba03702894943b3edbfd178c4b40"
+  },
+  "sourceRepository": "https://github.com/bloxwap/sfx"
+}

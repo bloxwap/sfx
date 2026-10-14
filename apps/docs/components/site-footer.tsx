@@ -14,9 +14,7 @@ export function SiteFooter() {
       <div className="footer-brand">
         <a className="footer-lockup" href="https://bloxwap.com" aria-label="Bloxwap">
           {/* Supplied Bloxwap artwork (brand/marks); the marks are never redrawn. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={assetUrl('/logos/bloxwap-icon-green.svg')} alt="" width={36} height={36} className="footer-icon" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={assetUrl('/logos/bloxwap-wordmark-white-greenx.svg')} alt="" width={117} height={32} className="footer-wordmark" />
         </a>
         <p>The easiest way to trade.</p>

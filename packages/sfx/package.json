@@ -38,7 +38,12 @@
     "./react": {
       "types": "./dist/react.d.ts",
       "import": "./dist/react.js"
-    }
+    },
+    "./semantic": {
+      "types": "./dist/semantic.d.ts",
+      "import": "./dist/semantic.js"
+    },
+    "./assets/hig/*": "./assets/hig/*"
   },
   "bin": {
     "sfx-wav": "./dist/cli/sfx-wav.js"
@@ -48,7 +53,8 @@
     "!dist/**/*.map",
     "CHANGELOG.md",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "assets/hig"
   ],
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",

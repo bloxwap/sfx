@@ -4,8 +4,8 @@ import { Window } from 'happy-dom';
 import { createElement, useRef, act, StrictMode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { createRoot, type Root } from 'react-dom/client';
-import { useBindSounds, useSound, useSoundPreference, SoundProvider, type SoundPreference } from '../dist/react.js';
-import { dispose, getVolume, isEnabled, preload, setEnabled, setVolume } from '../dist/index.js';
+import { useBindSounds, useSound, useSoundPreference, SoundProvider, useSoundHandler, useSemanticSound, type SoundPreference } from '../dist/react.js';
+import { dispose, getVolume, getOutput, unlock, isEnabled, preload, setEnabled, setVolume } from '../dist/index.js';
 import { FakeAudioContext, asReal, globals, installAudio, setActivation } from './fake-audio.ts';
 const dom = new Window({ url: 'https://example.test' });
 let root: Root | undefined;
@@ -99,4 +99,77 @@ test('binding cleans up on options changes and unmount, and useSound plays', asy
   assert.equal(context.of('source').length, before);
   function NoElement() { const ref = useRef<HTMLElement | null>(null); useBindSounds(ref); return null; }
   await act(async () => root!.render(createElement(NoElement)));
+});
+
+
+test('category preferences migrate, persist, synchronize and restore policy overrides', async () => {
+  setup();
+  dom.localStorage.setItem('bloxwap:sfx', JSON.stringify({ enabled: true, volume: 0.6, categoryVolumes: { controls: 0.2, money: -1, hover: 4, feedback: 'bad', alien: 1 } }));
+  let seen!: SoundPreference;
+  function Preference() { seen = useSoundPreference(); return null; }
+  await act(async () => root!.render(createElement(SoundProvider, { unlockOnInteraction: false }, createElement(Preference))));
+  assert.equal(getVolume({ category: 'controls' }), 0.2);
+  assert.equal(getVolume({ category: 'money' }), 0);
+  assert.equal(getVolume({ category: 'hover' }), 1);
+  assert.equal(getVolume({ category: 'feedback' }), 1);
+  await act(async () => { seen.setCategoryVolume('feedback', 0.4); seen.setCategoryVolume('controls', NaN); seen.setCategoryVolume('alien' as 'hover', 0.2); });
+  assert.equal(getVolume({ category: 'feedback' }), 0.4);
+  assert.equal(JSON.parse(dom.localStorage.getItem('bloxwap:sfx')!).categoryVolumes.feedback, 0.4);
+  assert.equal(getOutput(), null);
+});
+
+test('provider unlock only accepts trusted interactions and removes capture listeners', async (t) => {
+  setup();
+  const added = t.mock.method(dom.document, 'addEventListener');
+  const removed = t.mock.method(dom.document, 'removeEventListener');
+  await act(async () => root!.render(createElement(SoundProvider)));
+  const calls = added.mock.calls.filter(call => ['pointerdown', 'keydown'].includes(String(call.arguments[0])));
+  assert.ok(calls.length >= 2);
+  const listener = calls.at(-1)!.arguments[1] as unknown as (event: { isTrusted: boolean }) => void;
+  listener({ isTrusted: false }); assert.equal(getOutput(), null);
+  await act(async () => listener({ isTrusted: true })); assert.ok(getOutput());
+  await act(async () => root!.render(createElement(SoundProvider, { volume: 0 })));
+  assert.equal(removed.mock.calls.filter(call => ['pointerdown', 'keydown'].includes(String(call.arguments[0]))).length, calls.length);
+  await act(async () => root!.render(createElement(SoundProvider, { enabled: false })));
+  assert.equal(added.mock.calls.filter(call => ['pointerdown', 'keydown'].includes(String(call.arguments[0]))).length, calls.length);
+});
+
+test('composed handler preserves actions, cancellation and nested controls; semantic outcomes are quiet', async () => {
+  setup();
+  await unlock(); await preload(['tick', 'toggle', 'success', 'error']);
+  let trigger!: (event: any) => void;
+  let semantic!: () => void;
+  let actions = 0;
+  const button = dom.document.createElement('button');
+  const span = dom.document.createElement('span'); button.append(span);
+  const nested = dom.document.createElement('button'); button.append(nested);
+  function Control({ handler, options, intent = 'activate', reduced = false }: any) {
+    trigger = useSoundHandler('tick', handler, options);
+    semantic = useSemanticSound(intent, reduced);
+    return null;
+  }
+  const host = () => { actions++; };
+  const event = (target: typeof button | typeof span = button, prevented = false) => ({ target, currentTarget: button, defaultPrevented: prevented });
+  const count = () => FakeAudioContext.instances.at(-1)!.of('source').length;
+  await act(async () => root!.render(createElement(Control)));
+  let before = count(); trigger(event()); assert.equal(count(), before + 1);
+  await act(async () => root!.render(createElement(Control, { handler: host, options: { minInterval: 0 } })));
+  before = count(); trigger(event(span)); assert.equal(count(), before + 1); assert.equal(actions, 1);
+  before = count(); trigger(event(nested)); trigger(event(button, true)); assert.equal(count(), before); assert.equal(actions, 3);
+  for (const flag of ['disabled', 'busy', 'suppressed']) {
+    await act(async () => root!.render(createElement(Control, { handler: host, options: { [flag]: true } })));
+    before = count(); trigger(event()); assert.equal(count(), before);
+  }
+  await act(async () => root!.render(createElement(Control, { handler: (e: any) => { e.defaultPrevented = true; } })));
+  before = count(); trigger(event()); assert.equal(count(), before);
+  await act(async () => root!.render(createElement(SoundProvider, { enabled: false }, createElement(Control))));
+  before = count(); trigger(event()); semantic(); assert.equal(count(), before);
+  await act(async () => root!.render(createElement(SoundProvider, { volume: 0 }, createElement(Control))));
+  before = count(); trigger(event()); semantic(); assert.equal(count(), before);
+  for (const intent of ['press', 'activate', 'release', 'cancel', 'selection', 'toggle', 'disclosure', 'success', 'warning', 'error', 'notification']) {
+    await act(async () => root!.render(createElement(SoundProvider, { volume: 1, enabled: true }, createElement(Control, { intent, reduced: true }))));
+    semantic();
+  }
+  await act(async () => root!.render(createElement(SoundProvider, { volume: 1, enabled: true }, createElement(Control, { intent: 'error' })))); semantic();
+  assert.ok(FakeAudioContext.instances.at(-1)!.of('gain').some(node => node.gain.value === 0.5));
 });

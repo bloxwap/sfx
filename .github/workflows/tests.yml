@@ -30,6 +30,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
       - name: Type check
         run: npm run typecheck
 
@@ -51,7 +54,7 @@ jobs:
             import { readFileSync } from 'node:fs';
             const { name, exports } = JSON.parse(readFileSync('packages/sfx/package.json', 'utf8'));
             for (const key of Object.keys(exports)) {
-              if (key.endsWith('.json')) continue;
+              if (key.endsWith('.json') || key.includes('*')) continue;
               await import(key === '.' ? name : name + key.slice(1));
             }
             console.log('imported', Object.keys(exports).length, 'entry points');

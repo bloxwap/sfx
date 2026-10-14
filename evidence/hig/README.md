@@ -12,7 +12,7 @@ HIG 0.1.0 plain CSS and semantic mapping are pinned to the source commit in `app
 - `npm run bench` passed. VM scheduling measurements are not device latency evidence.
 - Approved WAV regeneration executed into a separate directory. All four cues passed envelope/tail/level/duration checks; committed manifest/artifact hashes, source recipes and PCM format are tested. Regeneration changes noise samples and can change trim durations/levels; no byte identity claim.
 - Chromium static smoke passed board, keyboard shortcuts, sliders, binding demo, disabled control, search/resources, recipe editing/preview/copy, semantic click/Space request count, preference reload and muted no-initialization. PR CI additionally runs Chromium, Firefox and Linux WebKit with a PulseAudio null sink and Xvfb. See the PR checks for final browser results.
-- Local Firefox board smoke passed; its audio-running assertion failed without a native audio backend on this VM. This is retained as a local limitation rather than weakening the assertion. CI supplies the documented null sink. Linux WebKit is not physical Safari/iOS.
+- Local Linux WebKit static smoke passed both the board and recipe/preference tests after the hydration-ready wait. Local Firefox board smoke passed; its audio-running assertion failed without a native audio backend on this VM. This is retained as a local limitation rather than weakening the assertion. CI supplies the documented null sink. Linux WebKit is not physical Safari/iOS.
 
 ## Before/after measurements
 

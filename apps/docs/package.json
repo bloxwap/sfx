@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@bloxwap/hig-native-fonts": "file:../../vendor/bloxwap-hig/bloxwap-hig-native-fonts-0.1.0-candidate.sha872906a9.tgz",
-    "@playwright/test": "^1.63.0",
+    "@playwright/test": "^1.64.0",
     "@tailwindcss/postcss": "^4.2.0",
     "@types/mdx": "^2.0.13",
     "@types/node": "^26.6.4",

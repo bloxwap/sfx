@@ -13,11 +13,13 @@ const ink = tokens.colors.text.srgb;
 const muted = tokens.colors.muted.srgb;
 const canvas = tokens.colors.background.srgb;
 const bar: [color: string, share: number][] = [[tokens.colors.action.srgb, 62], [tokens.colors.info.srgb, 14], ['#b300ff', 10], ['#ff479c', 8], ['#fffb38', 6]];
-// Approved static Bloxwap Sans instances (derived from @bloxwap/font 0.1.2) shipped by the HIG tokens package.
+// Approved static Bloxwap Sans instances (derived from @bloxwap/font 0.1.2). Satori reads TTF, not the variable WOFF2
+// in @bloxwap/font, and @bloxwap/hig-tokens no longer ships them (hig#64), so they come from the build-time-only
+// @bloxwap/hig-native-fonts devDependency. Nothing from it is served by the static export.
 const hig = createRequire(join(process.cwd(), 'package.json'));
 const fonts = Promise.all([
-  readFile(hig.resolve('@bloxwap/hig-tokens/fonts/BloxwapSans-Bold.ttf')),
-  readFile(hig.resolve('@bloxwap/hig-tokens/fonts/BloxwapSans-Black.ttf')),
+  readFile(hig.resolve('@bloxwap/hig-native-fonts/fonts/BloxwapSans-Bold.ttf')),
+  readFile(hig.resolve('@bloxwap/hig-native-fonts/fonts/BloxwapSans-Black.ttf')),
 ]);
 
 /** Lucide-style 24px stroke icons, inlined so the renderer needs no icon font or component. */

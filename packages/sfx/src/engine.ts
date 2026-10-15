@@ -22,6 +22,12 @@ export interface PlayOptions {
    * never get one. Muting, invalid names and the retrigger guard still apply.
    */
   force?: boolean;
+  /**
+   * Stops this play, and only this play, when the signal aborts: a request waiting for a suspended context
+   * is dropped and a sounding voice stops at once. Other voices keep playing. An already aborted signal makes
+   * play() a no-op. Share one signal across plays to cancel everything one caller (a view, a widget) started.
+   */
+  signal?: AbortSignal;
 }
 
 /** Options for renderTo(): the per-play adjustments plus where to connect the sound. */
@@ -305,6 +311,14 @@ function route(ctx: Ctx, source: AudioNode, options: PlayOptions | undefined, de
   return extra;
 }
 
+/** Stops `voice` when `signal` aborts. Returns the remover, called once the voice is gone. */
+function watch(voice: Voice, signal: AbortSignal | undefined): () => void {
+  if (!signal) return () => {};
+  const abort = (): void => voice.stop();
+  signal.addEventListener('abort', abort, { once: true });
+  return () => signal.removeEventListener('abort', abort);
+}
+
 function register(voice: Voice): void {
   if (voices.size >= maxVoices) {
     const oldest = voices.values().next().value;
@@ -358,7 +372,9 @@ function start(ctx: AudioContext, name: SoundName, options: PlayOptions | undefi
         try { source.stop(); } catch { /* already stopped */ }
       },
     };
+    const release = watch(voice, options?.signal);
     source.onended = () => {
+      release();
       voices.delete(voice);
       source.disconnect();
       for (const node of nodes) node.disconnect();
@@ -377,8 +393,10 @@ function start(ctx: AudioContext, name: SoundName, options: PlayOptions | undefi
       clearTimeout(timer);
       voices.delete(voice);
       for (const node of nodes) node.disconnect();
+      release();
     },
   };
+  const release = watch(voice, options?.signal);
   // Tear down by the audio clock, which stands still while the context is suspended, so a sound
   // scheduled before (or paused by) a suspension is not cut off when it finally plays.
   const done = (): void => {
@@ -400,7 +418,7 @@ function flush(): void {
   const seen = new Set<SoundName>();
   for (const request of pending) {
     // Play each sound at most once per resume, and only if the user is still waiting for it.
-    if (request.at < cutoff || seen.has(request.name)) continue;
+    if (request.at < cutoff || request.options?.signal?.aborted || seen.has(request.name)) continue;
     seen.add(request.name);
     try { start(ctx, request.name, request.options); } catch { /* see play() */ }
   }
@@ -420,12 +438,12 @@ function resume(ctx: AudioContext): Promise<void> {
 }
 
 /**
- * Plays a sound now (or after `options.delay`). Never throws: unknown names, a muted engine, a page
- * without a user gesture yet (unless `options.force`), or a browser without Web Audio all make it a
- * silent no-op.
+ * Plays a sound now (or after `options.delay`). Never throws: unknown names, a muted engine, an aborted
+ * `options.signal`, a page without a user gesture yet (unless `options.force`), or a browser without Web
+ * Audio all make it a silent no-op.
  */
 export function play(name: SoundName = 'chime', options?: PlayOptions): void {
-  if (!enabled || !isSound(name) || !(options?.force || activated())) return;
+  if (!enabled || !isSound(name) || options?.signal?.aborted || !(options?.force || activated())) return;
   const t = now();
   const last = lastPlayed.get(name);
   const gap = options?.minInterval;

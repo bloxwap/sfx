@@ -28,6 +28,7 @@ interface PlayOptions {
   delay?: number;       // seconds, 0–10, default 0
   minInterval?: number; // ms, default: configure({ minInterval })
   force?: boolean;      // play before the first user gesture, default false
+  signal?: AbortSignal; // stops this play (and only this play) when aborted
 }
 ```
 
@@ -36,11 +37,13 @@ Plays a sound now, or `delay` seconds from now. `name` defaults to `'chime'`. Ou
 - `delay` is scheduled on the audio clock, so a busy main thread can't shift it. The sound counts as a voice from the moment you call `play()`, so `stopAll()` cancels it and voice stealing can cut it before it starts. A request that waits for a suspended context takes its delay from when the context resumes.
 - `minInterval` replaces the [`configure()`](#configure) value for this call only. A negative or non-numeric value uses the configured one. The time of each accepted call is recorded when you call `play()`, not when a delayed sound starts.
 - `force` skips the user-gesture check, for capture and kiosk browsers such as OBS or CEF that never see a gesture. Muting, unknown names, and the retrigger guard still apply. In a normal browser the audio context stays suspended until a gesture, so `force` doesn't help there.
+- `signal` stops this play when it aborts: a request waiting for a suspended context is dropped, and a sounding or delayed voice stops at once. Voices started without that signal keep playing, so one view, widget or app root can cancel its own sounds without `stopAll()`. Share one `AbortController` across the plays you want to cancel together. The listener is removed when the voice ends.
 
 `play()` never throws. It does nothing when:
 
 - `name` is not a sound (including inherited keys like `"toString"`);
 - sound is disabled with `setEnabled(false)`;
+- `signal` has already aborted;
 - the page hasn't had a user gesture yet (where `navigator.userActivation` is available), unless `force` is set;
 - the same sound played less than `minInterval` ms ago (default 16);
 - there is no Web Audio (on the server, or in old browsers).

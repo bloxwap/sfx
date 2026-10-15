@@ -218,10 +218,10 @@ export function SoundBoard() {
         <label className="board-slider"><span>Voice</span><input type="range" min={0} max={1.5} step={0.05} value={gain} onChange={(e) => setGain(Number(e.target.value))} aria-label="Per-sound volume" /><output>{gain.toFixed(2)}</output></label>
         <label className="board-slider"><span>Rate</span><input type="range" min={0.5} max={2} step={0.05} value={rate} onChange={(e) => setRate(Number(e.target.value))} aria-label="Playback rate" /><output>{rate.toFixed(2)}×</output></label>
         <label className="board-slider"><span>Pan</span><input type="range" min={-1} max={1} step={0.1} value={pan} onChange={(e) => setPan(Number(e.target.value))} aria-label="Stereo pan" /><output>{pan > 0 ? 'R' : pan < 0 ? 'L' : 'C'}{pan ? Math.abs(pan).toFixed(1) : ''}</output></label>
-        <div className="board-buttons">
-          <button type="button" className="btn btn--secondary btn--sm" onClick={playAll}>{sequence ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}{sequence ? 'Stop' : 'Play all'}</button>
-          <button type="button" className="btn btn--secondary btn--sm" aria-pressed={muted} onClick={() => setMuted(!muted)}>{muted ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}{muted ? 'Muted' : 'Sound on'}</button>
-          <button type="button" className="btn btn--secondary btn--sm" onClick={reset} disabled={!changed} title="Reset master, voice, rate and pan to their defaults"><RotateCcw aria-hidden="true" />Reset</button>
+        <div className="board-buttons" data-hig-density="compact">
+          <button type="button" className="hig-button" data-intent="secondary" onClick={playAll}>{sequence ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}{sequence ? 'Stop' : 'Play all'}</button>
+          <button type="button" className="hig-button" data-intent="secondary" aria-pressed={muted} onClick={() => setMuted(!muted)}>{muted ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}{muted ? 'Muted' : 'Sound on'}</button>
+          <button type="button" className="hig-button" data-intent="secondary" onClick={reset} disabled={!changed} title="Reset master, voice, rate and pan to their defaults"><RotateCcw aria-hidden="true" />Reset</button>
           <label className="board-switch">
             <button type="button" role="switch" aria-checked={hoverPlay} onClick={() => setHoverPlay((on) => !on)}><i /></button>
             Play on hover

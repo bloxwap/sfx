@@ -1,0 +1,136 @@
+{
+ "method": "Sums of emitted files in apps/docs/out after `NEXT_PUBLIC_BASE_PATH=/sfx NEXT_PUBLIC_SITE_URL=https://bloxwap.github.io npm run docs:build` (Node 24.6.0, macOS arm64, Next 16.4.0 Turbopack). gzip = per-file zlib default level. Source = apps/docs CSS/font files. lockfilePackages = package-lock.json entries under node_modules. Emitted file sizes, not browser transfer.",
+ "hig": {
+  "sourceCommit": "7c67a07ce20c02264b0fdc57e5f27d020cfd6fdc",
+  "artifactVersion": "0.1.0-candidate.sha7c67a07c",
+  "command": "npm ci && npm run build && npm run generate:fonts && npm run release:dry-run -- --channel candidate"
+ },
+ "before": {
+  "label": "before",
+  "commit": "f68d375",
+  "build": {
+   "totalFiles": 159,
+   "totalBytes": 18927778,
+   "htmlFiles": 18,
+   "cssFiles": 2,
+   "cssBytes": 156951,
+   "cssGzip": 24876,
+   "jsBytes": 1101714,
+   "jsGzip": 359845,
+   "fontFiles": 22,
+   "fontBytes": 12965628
+  },
+  "source": {
+   "cssFiles": [
+    "app/global.css",
+    "styles/hig/controls.css",
+    "styles/hig/tokens.css",
+    "styles/hig-bridge.css"
+   ],
+   "cssLines": 605,
+   "cssBytes": 35675,
+   "fontFiles": [
+    "fonts/BloxwapSans-Black.ttf",
+    "fonts/BloxwapSans-Bold.ttf"
+   ]
+  },
+  "dependencies": {
+   "docsDirect": 9,
+   "docsDev": 8,
+   "lockfilePackages": 503
+  }
+ },
+ "after": {
+  "label": "after",
+  "commit": "this branch (working tree at measurement)",
+  "build": {
+   "totalFiles": 159,
+   "totalBytes": 18947908,
+   "htmlFiles": 18,
+   "cssFiles": 2,
+   "cssBytes": 158666,
+   "cssGzip": 25215,
+   "jsBytes": 1122957,
+   "jsGzip": 366687,
+   "fontFiles": 22,
+   "fontBytes": 12965628
+  },
+  "source": {
+   "cssFiles": [
+    "app/global.css",
+    "styles/hig-bridge.css"
+   ],
+   "cssLines": 501,
+   "cssBytes": 31110,
+   "fontFiles": []
+  },
+  "dependencies": {
+   "docsDirect": 12,
+   "docsDev": 8,
+   "lockfilePackages": 520
+  }
+ },
+ "delta": {
+  "build": {
+   "totalFiles": 0,
+   "totalBytes": 20130,
+   "htmlFiles": 0,
+   "cssFiles": 0,
+   "cssBytes": 1715,
+   "cssGzip": 339,
+   "jsBytes": 21243,
+   "jsGzip": 6842,
+   "fontFiles": 0,
+   "fontBytes": 0
+  },
+  "source": {
+   "cssLines": -104,
+   "cssBytes": -4565
+  },
+  "dependencies": {
+   "docsDirect": 3,
+   "docsDev": 0,
+   "lockfilePackages": 17
+  }
+ },
+ "jsDecomposition": {
+  "note": "Build with only the dependency/lockfile change (no source change) to separate npm re-resolution from HIG code.",
+  "lockfileOnlyJsBytes": 1119894,
+  "lockfileOnlyJsGzip": 365781,
+  "radixReResolution": {
+   "jsBytes": 18180,
+   "jsGzip": 5936
+  },
+  "higReactAndComponentChanges": {
+   "jsBytes": 3063,
+   "jsGzip": 906
+  },
+  "cause": "@bloxwap/hig-react 0.1.0 declares exact optional peers @radix-ui/react-dialog/react-popover 1.1.15. They conflict with the hoisted Fumadocs copies (^1.1.23, locked 1.1.23), so npm nests Fumadocs-owned Radix and re-resolves it within its declared ranges (dialog/popover 1.3.1). npm overrides did not change this placement. The docs import no HIG overlay/Radix entry."
+ },
+ "removedFiles": [
+  "apps/docs/styles/hig/tokens.css (hand-vendored copy; now @bloxwap/hig-tokens/css)",
+  "apps/docs/styles/hig/controls.css (hand-vendored copy; now @bloxwap/hig-react/css)",
+  "apps/docs/styles/hig/README.md",
+  "apps/docs/styles/hig/LICENSE (package carries LICENSE)",
+  "apps/docs/fonts/BloxwapSans-Bold.ttf (now @bloxwap/hig-tokens/fonts/BloxwapSans-Bold.ttf)",
+  "apps/docs/fonts/BloxwapSans-Black.ttf (now @bloxwap/hig-tokens/fonts/BloxwapSans-Black.ttf)",
+  "apps/docs/fonts/Bloxwap-OFL.txt (package carries assets/fonts/OFL.txt)",
+  "apps/docs/fonts/README.md"
+ ],
+ "removedSourceBytes": {
+  "styles/hig/* (4 files)": 6325,
+  "fonts/* (4 files)": 898132,
+  "total": 904457
+ },
+ "removedCssRules": [
+  ".btn/.btn--secondary/.btn--ghost/.btn--sm/.btn--icon alias layer (replaced by HIG .hig-button intents/density)",
+  "scale-layer aliases --space-*/--text-* (replaced by --hig-space-* and Tailwind theme values)",
+  "duplicate :focus-visible ring (HIG controls CSS supplies it)",
+  "bespoke .install-tabs pill tabs (replaced by HIG Tabs)"
+ ],
+ "vendoredTarballBytes": {
+  "bloxwap-hig-tokens": 4428734,
+  "bloxwap-hig-react": 15182,
+  "bloxwap-hig-contracts": 2550
+ }
+}

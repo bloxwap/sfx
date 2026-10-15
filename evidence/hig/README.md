@@ -2,7 +2,7 @@
 
 Scope: bloxwap/hig #21–#25 and #34 **SFX-owned prerequisites**. HIG retains the feedback contract, channel policy, haptic adapters and native playback controller. No HIG issue is closed by this change. No open SFX PR existed when work started.
 
-HIG 0.1.0 plain CSS and semantic mapping are pinned to the source commit in `apps/docs/styles/hig/README.md` and `semanticSource`. Routing/search remains Fumadocs, as permitted by the migration kit. The `/sfx` static base path, metadata/social cards, deep links, install/copy controls and SDK demos remain on the existing host shell. MIT CSS distribution is included byte-for-byte; host aliases and SDK visualization color exceptions are documented separately.
+HIG 0.1.0 plain CSS and semantic mapping are pinned to the source commit in `vendor/bloxwap-hig/README.md` (packaged candidate tarballs since the docs package migration; see `docs-package-migration/`) and `semanticSource`. Routing/search remains Fumadocs, as permitted by the migration kit. The `/sfx` static base path, metadata/social cards, deep links, install/copy controls and SDK demos remain on the existing host shell. MIT CSS distribution is included byte-for-byte; host aliases and SDK visualization color exceptions are documented separately.
 
 ## Validation
 

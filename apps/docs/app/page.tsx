@@ -16,7 +16,7 @@ export default function Home() {
           <p className="eyebrow"><span className="status-dot" /> DEVELOPER PREVIEW · v0.1.0</p>
           <h1>Interface sounds.<br /><span>Zero files.</span></h1>
           <p className="hero-description">Nineteen sounds for hovers, presses, toggles, confirmations, and money moments, synthesized with Web Audio. Each one renders once, then every play is a single audio node.</p>
-          <div className="hero-actions"><a href="#board" className="btn">Play the sound board <ArrowDown aria-hidden="true" /></a><Link href="/docs/getting-started" className="btn btn--secondary">Start building <ArrowRight aria-hidden="true" /></Link></div>
+          <div className="hero-actions"><a href="#board" className="hig-button">Play the sound board <ArrowDown aria-hidden="true" /></a><Link href="/docs/getting-started" className="hig-button" data-intent="secondary">Start building <ArrowRight aria-hidden="true" /></Link></div>
           <InstallCommand />
         </div>
         <HeroCode />

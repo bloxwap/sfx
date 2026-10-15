@@ -1,0 +1,124 @@
+{
+ "method": "Sums of emitted files in apps/docs/out after NEXT_PUBLIC_BASE_PATH=/sfx NEXT_PUBLIC_SITE_URL=https://bloxwap.github.io npm run docs:build (Node 24.10.0, npm 11.6.1, macOS arm64, Next 16.4.0). gzip = per-file zlib default level. Lockfile counts are package-lock.json package entries. Emitted file sizes, not browser transfer.",
+ "hig": {
+  "before": {
+   "sourceCommit": "7c67a07ce20c02264b0fdc57e5f27d020cfd6fdc",
+   "artifactVersion": "0.1.0-candidate.sha7c67a07c"
+  },
+  "after": {
+   "sourceCommit": "872906a9071469af8714b3b6fb5cc7bd64d2d6f3",
+   "artifactVersion": "0.1.0-candidate.sha872906a9",
+   "command": "npm ci && npm run build && npm run generate:fonts && npm run release:dry-run -- --channel candidate"
+  }
+ },
+ "before": {
+  "commit": "7d0b3c8",
+  "export": {
+   "css": 158666,
+   "cssGzip": 25235,
+   "javascript": 1122957,
+   "javascriptGzip": 367566,
+   "fonts": 12965628,
+   "total": 18947908,
+   "files": 159
+  },
+  "lockfile": {
+   "entries": 522,
+   "radix": 48,
+   "nestedRadix": 22
+  },
+  "vendorTarballs": {
+   "bytes": 4446466,
+   "files": {
+    "bloxwap-hig-tokens-0.1.0-candidate.sha7c67a07c.tgz": 4428734,
+    "bloxwap-hig-react-0.1.0-candidate.sha7c67a07c.tgz": 15182,
+    "bloxwap-hig-contracts-0.1.0-candidate.sha7c67a07c.tgz": 2550
+   }
+  }
+ },
+ "after": {
+  "commit": "this branch",
+  "export": {
+   "css": 167295,
+   "cssGzip": 26769,
+   "javascript": 1112363,
+   "javascriptGzip": 364524,
+   "fonts": 12965628,
+   "total": 18945943,
+   "files": 159
+  },
+  "lockfile": {
+   "entries": 509,
+   "radix": 34,
+   "nestedRadix": 0
+  },
+  "vendorTarballs": {
+   "bytes": 4454889,
+   "files": {
+    "bloxwap-hig-contracts-0.1.0-candidate.sha872906a9.tgz": 6119,
+    "bloxwap-hig-native-fonts-0.1.0-candidate.sha872906a9.tgz": 4420375,
+    "bloxwap-hig-react-0.1.0-candidate.sha872906a9.tgz": 20287,
+    "bloxwap-hig-tokens-0.1.0-candidate.sha872906a9.tgz": 8108
+   }
+  }
+ },
+ "lockfileDiff": {
+  "added": [
+   "node_modules/@bloxwap/hig-native-fonts",
+   "node_modules/@bloxwap/hig-react",
+   "node_modules/@fumadocs/tailwind",
+   "node_modules/@radix-ui/react-arrow",
+   "node_modules/@radix-ui/react-dialog",
+   "node_modules/@radix-ui/react-focus-guards",
+   "node_modules/@radix-ui/react-focus-scope",
+   "node_modules/@radix-ui/react-popover",
+   "node_modules/@radix-ui/react-popper",
+   "node_modules/@radix-ui/react-portal",
+   "node_modules/@radix-ui/react-use-rect",
+   "node_modules/@radix-ui/react-use-size",
+   "node_modules/@radix-ui/rect",
+   "node_modules/cn",
+   "node_modules/framer-motion",
+   "node_modules/fumadocs-core",
+   "node_modules/fumadocs-ui",
+   "node_modules/motion",
+   "node_modules/motion-dom",
+   "node_modules/motion-utils"
+  ],
+  "removed": [
+   "apps/docs/node_modules/@bloxwap/hig-react",
+   "apps/docs/node_modules/@fumadocs/tailwind",
+   "apps/docs/node_modules/@radix-ui/react-presence",
+   "apps/docs/node_modules/@radix-ui/react-presence/node_modules/@radix-ui/react-use-layout-effect",
+   "apps/docs/node_modules/@radix-ui/react-slot",
+   "apps/docs/node_modules/@radix-ui/react-slot/node_modules/@radix-ui/react-compose-refs",
+   "apps/docs/node_modules/cn",
+   "apps/docs/node_modules/framer-motion",
+   "apps/docs/node_modules/fumadocs-core",
+   "apps/docs/node_modules/fumadocs-ui",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/primitive",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/react-arrow",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/react-compose-refs",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/react-context",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/react-dialog",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/react-dismissable-layer",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/react-focus-guards",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/react-focus-scope",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/react-id",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/react-popover",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/react-popper",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/react-portal",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/react-primitive",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/react-use-callback-ref",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/react-use-controllable-state",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/react-use-effect-event",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/react-use-layout-effect",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/react-use-rect",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/react-use-size",
+   "apps/docs/node_modules/fumadocs-ui/node_modules/@radix-ui/rect",
+   "apps/docs/node_modules/motion",
+   "apps/docs/node_modules/motion-dom",
+   "apps/docs/node_modules/motion-utils"
+  ]
+ }
+}

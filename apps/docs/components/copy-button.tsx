@@ -23,10 +23,10 @@ export function CopyButton({ text, label }: { text: string; label: string }) {
   }
 
   return <>
-    <button type="button" className="btn btn--ghost btn--icon" aria-label={label} title={result === 'copied' ? 'Copied!' : label} onClick={copy}>
+    <button type="button" className="hig-button" data-intent="ghost" data-shape="icon" data-hig-density="compact" aria-label={label} title={result === 'copied' ? 'Copied!' : label} onClick={copy}>
       {result === 'copied' ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
     </button>
-    <span role="status" className="sr-only">
+    <span role="status" className="hig-sr-only">
       {result === 'copied' ? 'Code copied to clipboard.' : result === 'failed' ? 'Could not copy. Select the code to copy it manually.' : ''}
     </span>
   </>;

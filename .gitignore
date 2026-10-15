@@ -14,3 +14,6 @@ playwright-report/
 
 .tools/
 .hig-reference/
+
+# Vendored HIG candidate tarballs (see vendor/bloxwap-hig/README.md).
+!vendor/bloxwap-hig/*.tgz

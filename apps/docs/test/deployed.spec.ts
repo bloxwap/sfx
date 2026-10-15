@@ -96,6 +96,77 @@ test('recipe editor edits, previews and copies; semantic preferences survive nav
   await expect(preview.getByRole('status')).toHaveText('Operation completed');
   expect(await page.evaluate(() => (window as any).audioProof.contexts)).toBe(0);
   await page.setViewportSize({ width: 390, height: 844 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  // Poll: Fumadocs' responsive header settles a frame after the viewport changes.
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await context.clearCookies();
+});
+
+test('HIG shell: install tabs and copy, search states, callout, 404, keyboard and mobile navigation', async ({ page, browserName }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto(live!);
+  await page.locator('html[data-docs-hydrated=true]').waitFor();
+
+  // Keyboard: the header, hero actions and install tabs are reachable in order with a visible HIG focus ring.
+  const reached: string[] = [];
+  for (let step = 0; step < 8; step++) {
+    await page.keyboard.press('Tab');
+    reached.push(await page.evaluate(() => {
+      const active = document.activeElement as HTMLElement;
+      if (getComputedStyle(active).outlineStyle === 'none') return 'no-focus-ring';
+      return (active.getAttribute('aria-label') ?? active.textContent ?? '').trim();
+    }));
+  }
+  expect(reached).not.toContain('no-focus-ring');
+  // WebKit leaves links out of the Tab sequence unless the OS full-keyboard-access setting is on.
+  if (browserName !== 'webkit') expect(reached.some(label => label.startsWith('Play the sound board'))).toBe(true);
+  expect(reached).toContain('bun');
+
+  // HIG Tabs: roving focus with arrow/End keys; every panel copies its own command with a visible or announced result.
+  const tabs = page.getByRole('tablist', { name: 'Package manager' });
+  await expect(tabs.getByRole('tab', { name: 'bun', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await tabs.getByRole('tab', { name: 'bun', exact: true }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(tabs.getByRole('tab', { name: 'npm', exact: true })).toBeFocused();
+  await expect(tabs.getByRole('tab', { name: 'npm', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('End');
+  await expect(tabs.getByRole('tab', { name: 'yarn', exact: true })).toHaveAttribute('aria-selected', 'true');
+  const panel = page.getByRole('tabpanel', { name: 'yarn', exact: true });
+  await expect(panel).toContainText('yarn add @bloxwap/sfx');
+  await panel.getByRole('button', { name: 'Copy install command' }).click();
+  await expect(panel.getByRole('status')).toContainText(/copied|Could not copy/);
+
+  // Search: keyboard shortcut, HIG no-results state, Escape closes.
+  await page.keyboard.press('ControlOrMeta+k');
+  await page.getByRole('combobox').fill('zzqxv');
+  await expect(page.getByRole('dialog')).toContainText('No matching pages');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toBeHidden();
+
+  // MDX callouts render through the HIG callout without becoming live regions.
+  await page.goto(new URL('docs/guides/native/', live!).href);
+  const callout = page.locator('.docs-callout [data-severity="warning"]');
+  await expect(callout).toContainText('Platform verification');
+  await expect(callout).toContainText('No physical iPhone/Android playback');
+  await expect(callout).not.toHaveAttribute('role', /.+/);
+
+  // 404 keeps the base path on its recovery link.
+  await page.goto(new URL('missing-page/', live!).href);
+  await expect(page.getByRole('heading', { name: 'That page is missing.' })).toBeVisible();
+  expect(await page.getByRole('link', { name: 'Open documentation' }).getAttribute('href')).toBe(new URL('docs/', live!).pathname);
+
+  // Mobile navigation at 390 px: no horizontal scroll, sidebar opens and navigates to a deep link.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(new URL('docs/getting-started/', live!).href);
+  await page.locator('html[data-docs-hydrated=true]').waitFor();
+  // Poll: Fumadocs' responsive header settles a frame after the viewport changes.
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole('button', { name: 'Open Sidebar' }).first().click();
+  await page.getByRole('link', { name: 'Recipes', exact: true }).click();
+  await expect(page).toHaveURL(new URL('docs/api/recipes/', live!).href);
+  await expect(page.getByRole('region', { name: 'Recipe editor' })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  // WebKit reports Next's RSC prefetches that a navigation cancels as "access control checks" page errors;
+  // those payloads serve 200 from the static export, so only other errors fail the run.
+  expect(errors.filter(message => !message.includes('due to access control checks'))).toEqual([]);
 });

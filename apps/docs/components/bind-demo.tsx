@@ -46,9 +46,9 @@ export function BindDemo() {
       <div className="demo-card">
         <h3>Deposit</h3>
         <p>Amounts from 1 to 10,000 succeed. Try 0 or 20000 to hear the error.</p>
-        <div className="demo-row">
-          <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} aria-label="Deposit amount" data-sound-press="tick" />
-          <button type="button" className="btn btn--sm" data-sound-press data-sound-release onClick={deposit} disabled={status === 'pending'}>
+        <div className="demo-row" data-hig-density="compact">
+          <input className="hig-input" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} aria-label="Deposit amount" data-sound-press="tick" />
+          <button type="button" className="hig-button" data-sound-press data-sound-release onClick={deposit} disabled={status === 'pending'}>
             {status === 'pending' ? 'Depositing…' : 'Deposit'}
           </button>
         </div>
@@ -64,9 +64,9 @@ export function BindDemo() {
         <label className="demo-switch"><span>Price alerts</span>
           <button type="button" role="switch" aria-checked={alerts} data-sound-toggle onClick={() => { setAlerts((a) => !a); if (!alerts) play('notification'); }}><i /></button>
         </label>
-        <div className="demo-row">
-          <button type="button" className="btn btn--secondary btn--sm" data-sound-hover="whisper" data-sound-press="press" data-sound-release="release">Hover me</button>
-          <button type="button" className="btn btn--secondary btn--sm" data-sound-press disabled>Disabled</button>
+        <div className="demo-row" data-hig-density="compact">
+          <button type="button" className="hig-button" data-intent="secondary" data-sound-hover="whisper" data-sound-press="press" data-sound-release="release">Hover me</button>
+          <button type="button" className="hig-button" data-intent="secondary" data-sound-press disabled>Disabled</button>
         </div>
       </div>
     </div>

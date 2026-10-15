@@ -154,6 +154,10 @@ CLI or optional `node-web-audio-api` renderer. Keep one asset owner and reuse th
 HIG's native audio adapter owns preload/cache, rate limits, mute/volume, players and disposal,
 background/interruption/audio-session/silent-mode behavior and missing asset handling.
 
+<Callout type="warn" title="Platform verification">
+
 No physical iPhone/Android playback was tested on this Linux VM. Linux WebKit and mocked native
 API tests cannot certify iOS unlock, latency, silent mode, interruptions, background transitions,
 or perceived haptic intensity. Those remain native host/device validation, not SFX export claims.
+
+</Callout>

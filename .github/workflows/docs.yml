@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 20
     env:
       NEXT_PUBLIC_BASE_PATH: /sfx
@@ -28,11 +28,26 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-          cache: npm
-          cache-dependency-path: package-lock.json
+          package-manager-cache: false
       - run: npm ci
       - run: npm run docs:build
       - run: npm run docs:check
+      # upload-pages-artifact invokes gtar on macOS (BSD tar has no --hard-dereference).
+      - name: Expose Homebrew GNU tar
+        run: |
+          if command -v gtar >/dev/null 2>&1; then
+            exit 0
+          fi
+          if command -v brew >/dev/null 2>&1; then
+            prefix=$(brew --prefix gnu-tar 2>/dev/null || true)
+            if [ -n "$prefix" ] && [ -x "$prefix/bin/gtar" ]; then
+              echo "$prefix/libexec/gnubin" >> "$GITHUB_PATH"
+              echo "$prefix/bin" >> "$GITHUB_PATH"
+              exit 0
+            fi
+          fi
+          echo "::error::gtar is required to upload the GitHub Pages artifact on macOS. Install Homebrew gnu-tar (see docs/ci-runners.md)."
+          exit 1
       - uses: actions/upload-pages-artifact@v5
         with:
           path: apps/docs/out
@@ -40,7 +55,7 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     permissions:
       pages: write
       id-token: write

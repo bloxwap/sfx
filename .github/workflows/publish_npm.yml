@@ -17,7 +17,8 @@ concurrency:
 
 jobs:
   publish:
-    runs-on: [self-hosted, macOS, ARM64]
+    # npm trusted publishing requires a GitHub-hosted runner.
+    runs-on: macos-latest
     timeout-minutes: 20
     permissions:
       contents: read

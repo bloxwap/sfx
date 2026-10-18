@@ -239,7 +239,8 @@ npm run size        # gzip bundle-size budget
 npm run dev         # docs and sound board at http://localhost:3903
 ```
 
-Requires Node.js 24 or newer. CI runs on self-hosted Apple Silicon Mac minis; see
+Requires Node.js 24 or newer. CI runs on self-hosted Apple Silicon Mac minis;
+npm releases use GitHub-hosted macOS for provenance and trusted publishing. See
 [docs/ci-runners.md](docs/ci-runners.md) for the runner labels and tools.
 
 Releases publish to npm from GitHub Actions with trusted publishing when a GitHub release tagged

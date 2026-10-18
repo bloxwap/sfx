@@ -1,8 +1,11 @@
 # Self-hosted CI runners
 
-Every GitHub Actions job in this repository runs on Apple Silicon Mac minis
-labeled `[self-hosted, macOS, ARM64]`. The whole suite moved off `ubuntu-latest`,
-including docs deploy, coverage upload, npm publish, and the registry smoke.
+CI checks, docs deploy, coverage upload, and the registry smoke run on Apple
+Silicon Mac minis labeled `[self-hosted, macOS, ARM64]`. npm release preparation
+and publishing run on GitHub-hosted `macos-latest` because [npm provenance
+requires a hosted build runner](https://docs.npmjs.com/generating-provenance-statements/)
+and [trusted publishing does not support self-hosted
+runners](https://docs.npmjs.com/trusted-publishers/). No jobs use `ubuntu-latest`.
 
 Workflows must not call `apt`, `sudo`, `xvfb-run`, or `playwright install --with-deps`.
 Inline scripts are POSIX / BSD-portable and write scratch files under `$RUNNER_TEMP`.
@@ -61,10 +64,13 @@ CoreAudio on these machines.
 
 - Allow self-hosted runners for this repository (and the `github-pages`
   environment, if environment-level runner groups are restricted).
-- OIDC stays in use: Codecov (`coverage`), npm trusted publishing (`publish`),
-  and GitHub Pages (`deploy`). The runner must be allowed to request ID tokens.
-- Public-repo fork PRs do not reach self-hosted runners until someone with
-  write access approves the run.
+- OIDC stays in use for Codecov (`coverage`) and GitHub Pages (`deploy`). The
+  self-hosted runner must be allowed to request ID tokens. npm trusted
+  publishing (`publish`) requests its ID token on a GitHub-hosted runner.
+- Review the repository's fork workflow approval setting before accepting
+  untrusted contributions on persistent runners. The current
+  `first_time_contributors` policy requires approval for first-time contributors;
+  it does not require approval for every fork PR.
 
 ## Local rehearsal
 

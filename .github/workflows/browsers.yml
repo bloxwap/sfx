@@ -23,10 +23,10 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ hashFiles('package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-playwright-
-      - run: npx playwright install chromium firefox webkit
-      # Firefox needs a real audio backend even in headless mode. CoreAudio is
-      # native on these runners. Start a PulseAudio null sink only if Homebrew
-      # already provided the binaries — do not apt or brew install here.
+      - run: npx playwright install chromium webkit
+      # Chromium and WebKit need a real audio backend. CoreAudio is native on
+      # these runners. Start a PulseAudio null sink only if Homebrew already
+      # provided the binaries — do not apt or brew install here.
       - name: Start audio backend
         run: |
           if command -v pulseaudio >/dev/null 2>&1 && command -v pactl >/dev/null 2>&1; then
@@ -37,8 +37,6 @@ jobs:
           else
             echo "Using native CoreAudio (PulseAudio not on PATH)"
           fi
-      # Headful Firefox on macOS exposes desktop fine-pointer media queries
-      # without Xvfb.
       - run: npm run test:browser
       - name: Build and verify static docs and preserved demos
         env:

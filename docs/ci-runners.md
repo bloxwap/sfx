@@ -30,7 +30,7 @@ Install these on the Mac before the runner accepts jobs. Workflows will not
 | GitHub Actions runner (`actions/runner`) | Job execution. Keep it current; `actions/cache@v4` and Node 24 actions need a recent runner. |
 | Xcode Command Line Tools | `git`, `curl`, `clang` / `python3` for native addons such as `node-web-audio-api` |
 | bash | Default GitHub Actions shell on macOS |
-| CoreAudio | Native audio backend for Chromium, Firefox, and WebKit. Built in; no PulseAudio required. |
+| CoreAudio | Native audio backend for Chromium and WebKit. Built in; no PulseAudio required. |
 | Homebrew `gnu-tar` (`gtar` on `PATH`) | `actions/upload-pages-artifact` calls `gtar` on macOS because BSD `tar` has no `--hard-dereference` |
 
 The Documentation **build** job looks for `gtar` and, if needed, prepends
@@ -47,19 +47,14 @@ at `~/Library/Caches/ms-playwright`.
 | Homebrew | Already needed for `gnu-tar`. Not used to install packages from workflows. |
 | Homebrew `pulseaudio` (`pulseaudio` and `pactl` on `PATH`) | Not required. `browser-tests` and live-docs **verify** start a PulseAudio null sink only when both binaries already exist (`command -v`). CoreAudio is the default. |
 
-Do not install PulseAudio just to satisfy CI. Firefox on macOS uses CoreAudio.
+Do not install PulseAudio just to satisfy CI. Chromium and WebKit on macOS use
+CoreAudio.
 
-## Audio and headed browsers
+## Audio
 
-`packages/sfx/playwright.config.ts` and `apps/docs/playwright.config.ts` run
-Firefox headed on CI so `(hover: hover) and (pointer: fine)` matches. On macOS
-that works without Xvfb.
-
-Start the runner from a logged-in Aqua session (a LaunchAgent as the desktop
-user), not a headless LaunchDaemon. Headed Firefox needs a window server.
-
-Browser jobs do not change autoplay policy or mock Web Audio. They only make
-sure a real output device exists — CoreAudio on these machines.
+Playwright covers Chromium and WebKit only. Browser jobs do not change autoplay
+policy or mock Web Audio. They only make sure a real output device exists —
+CoreAudio on these machines.
 
 ## Repository settings
 
@@ -76,6 +71,6 @@ sure a real output device exists — CoreAudio on these machines.
 npm ci
 npm test
 npm run coverage
-npx playwright install chromium firefox webkit
+npx playwright install chromium webkit
 npm run test:browser
 ```

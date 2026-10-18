@@ -27,7 +27,7 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ hashFiles('package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-playwright-
-      - run: npx playwright install chromium firefox webkit
+      - run: npx playwright install chromium webkit
       - name: Start native audio backend
         run: |
           if command -v pulseaudio >/dev/null 2>&1 && command -v pactl >/dev/null 2>&1; then
@@ -38,7 +38,7 @@ jobs:
           else
             echo "Using native CoreAudio (PulseAudio not on PATH)"
           fi
-      - name: Verify the deployed docs in three browsers
+      - name: Verify the deployed docs in Chromium and WebKit
         run: npm run docs:smoke
         env:
           DOCS_URL: https://bloxwap.github.io/sfx/

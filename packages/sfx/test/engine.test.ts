@@ -1197,3 +1197,92 @@ describe('lifecycle wake-up', () => {
     assert.equal(events.win.total() + events.doc!.total(), 0);
   });
 });
+
+describe('signal option', () => {
+  beforeEach(async () => {
+    await reset();
+    await preload(['tick', 'press']);
+  });
+
+  test('an already aborted signal is a silent no-op', () => {
+    const controller = new AbortController();
+    controller.abort();
+    play('tick', { signal: controller.signal });
+    assert.equal(FakeAudioContext.constructed, 0);
+    assert.equal(activeVoices(), 0);
+  });
+
+  test('aborting stops only the voices that share the signal', async () => {
+    const mine = new AbortController();
+    play('tick', { signal: mine.signal });
+    play('press', { signal: mine.signal });
+    play('tick', { volume: 0.5 });
+    const [first, second, other] = bufferSources(live());
+    assert.equal(activeVoices(), 3);
+    mine.abort();
+    assert.equal(first.stoppedAt, 0);
+    assert.equal(second.stoppedAt, 0);
+    assert.equal(other.stoppedAt, undefined);
+    await tick();
+    assert.equal(activeVoices(), 1);
+  });
+
+  test('an ended buffer voice stops listening, so a later abort is harmless', (t) => {
+    const controller = new AbortController();
+    const remove = t.mock.method(controller.signal, 'removeEventListener');
+    play('tick', { signal: controller.signal });
+    const [source] = bufferSources(live());
+    source.end();
+    assert.equal(remove.mock.callCount(), 1);
+    assert.equal(remove.mock.calls[0].arguments[0], 'abort');
+    assert.doesNotThrow(() => controller.abort());
+    assert.equal(source.stoppedAt, undefined);
+  });
+
+  test('aborting stops a live (not yet rendered) voice and tears it down once', () => {
+    const controller = new AbortController();
+    play('chime', { signal: controller.signal });
+    play('sparkle');
+    const ctx = live();
+    assert.equal(activeVoices(), 2);
+    controller.abort();
+    assert.equal(activeVoices(), 1);
+    assert.ok(ctx.of('gain')[1].disconnects > 0);
+  });
+
+  test('a live voice that rings out removes its listener', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const controller = new AbortController();
+    play('chime', { signal: controller.signal });
+    const ctx = live();
+    advance(t, ctx, 1177);
+    assert.equal(activeVoices(), 0);
+    play('sparkle');
+    controller.abort();
+    assert.equal(activeVoices(), 1);
+  });
+
+  test('a request queued on a suspended context is dropped when its signal aborts', async () => {
+    const control = pendingResume();
+    const controller = new AbortController();
+    play('tick', { signal: controller.signal });
+    play('press');
+    controller.abort();
+    control.finish();
+    await tick();
+    const ctx = live();
+    assert.equal(bufferSources(ctx).length, 1);
+    assert.equal(activeVoices(), 1);
+  });
+
+  test('an aborted queued request does not hide a later request for the same sound', async () => {
+    const control = pendingResume();
+    const controller = new AbortController();
+    play('tick', { signal: controller.signal });
+    play('tick');
+    controller.abort();
+    control.finish();
+    await tick();
+    assert.equal(bufferSources(live()).length, 1);
+  });
+});

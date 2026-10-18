@@ -1,0 +1,88 @@
+{
+  "source": "4f9fccefed7eb71a43a39eb88c9937310f7461a6",
+  "higVersion": "0.1.0-candidate.sha872906a9",
+  "node": "v24.6.0",
+  "next": "16.4.1",
+  "basePath": "/sfx",
+  "fonts": [
+    {
+      "asset": "BloxwapSans-Bold.ttf",
+      "name": "Bloxwap Sans",
+      "weight": 700,
+      "style": "normal",
+      "bytes": 447388,
+      "sha256": "13e10451ecec4e33733b196454f1232a16d34d5014dce66daaee4d0c58600e1b"
+    },
+    {
+      "asset": "BloxwapSans-Black.ttf",
+      "name": "Bloxwap Sans",
+      "weight": 900,
+      "style": "normal",
+      "bytes": 445912,
+      "sha256": "a99894c158cff3cff828b7d17ec12f075352848843944a730caa9d64c0362ea2"
+    }
+  ],
+  "cards": {
+    "docs/api/recipes.png": {
+      "bytes": 50186,
+      "sha256": "448d4f815449bcb6677325073f6d582d365045e4db6467248e53f9a41ef721af"
+    },
+    "docs/api.png": {
+      "bytes": 43857,
+      "sha256": "440be38e8f32f516f490e85f5ee65f647af8dc0ec95163bfbc6682e56fe94736"
+    },
+    "docs/development.png": {
+      "bytes": 45214,
+      "sha256": "6b860ceee480aa8b802d8e01c0cdeb24f96d3e7e74c218bfa18f33bb40e938fa"
+    },
+    "docs/getting-started.png": {
+      "bytes": 48607,
+      "sha256": "81b074551cfe45adee681e73ce6e4133b521c66f3fb7409ca8d416ca9f5bde6b"
+    },
+    "docs/guides/accessibility.png": {
+      "bytes": 64399,
+      "sha256": "b2145be3fbe51ec236124bf2acc576caf40511c8188349c98beae1bb3fb1c21d"
+    },
+    "docs/guides/binding.png": {
+      "bytes": 51080,
+      "sha256": "58cd45efcd09958df47fbf2c3d584daec0e80454c49314694080dcdc3efd3eb2"
+    },
+    "docs/guides/frameworks.png": {
+      "bytes": 44864,
+      "sha256": "363d39851846a1d78c47ae22a06b6c5d6e2c9cadd9a12323f0721eed0fcbb5e7"
+    },
+    "docs/guides/native.png": {
+      "bytes": 61885,
+      "sha256": "fe5e5b69576efa8612af7762521a634d33da63d4760dcecea8a54f82f425b2c5"
+    },
+    "docs/guides/react.png": {
+      "bytes": 47939,
+      "sha256": "bcfc9526db0115b9dcf307643c970cb49d2bbf799b5be911ad6186b8c25537b2"
+    },
+    "docs/guides/sound-design.png": {
+      "bytes": 48278,
+      "sha256": "ebf049a826e2517a364048cbc6c08fbdb59dc991accc51f62e288bb5341141ba"
+    },
+    "docs/index.png": {
+      "bytes": 52314,
+      "sha256": "95825227434088c452ac527234259435ceefef2c87dd50a43dddd06ba25118ad"
+    },
+    "docs/performance.png": {
+      "bytes": 50197,
+      "sha256": "ee62f12e3ac2d45fcddc8867bbd4d118975b316e6229c2102e06824c4db126be"
+    },
+    "docs/releasing.png": {
+      "bytes": 43788,
+      "sha256": "d5436d927bcbc63d61599e9ef4c27565353e3e019b31b74dabf72c58e8f9fb65"
+    },
+    "docs/sounds.png": {
+      "bytes": 47637,
+      "sha256": "47bd5e9027ef3db7592f8d5cceb99a949488c73dbdd3490e5d65e80190c4c7de"
+    },
+    "home.png": {
+      "bytes": 63891,
+      "sha256": "f604a56b34a41850dbb306142523cf8757c8bf75d041ca281e540ca2726bb66e"
+    }
+  },
+  "vendorBytes": 4454889
+}

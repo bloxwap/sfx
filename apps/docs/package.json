@@ -9,16 +9,16 @@
     "prebuild": "npm --workspace @bloxwap/sfx run build",
     "build": "next build",
     "postbuild": "node scripts/check-export.ts",
-    "check": "next typegen && tsc --noEmit",
+    "check": "node scripts/hig-packages.mjs && next typegen && tsc --noEmit",
     "preview": "node scripts/preview.ts",
     "postinstall": "fumadocs-mdx",
     "smoke": "playwright test"
   },
   "dependencies": {
     "@bloxwap/font": "0.1.2",
-    "@bloxwap/hig-contracts": "file:../../vendor/bloxwap-hig/bloxwap-hig-contracts-0.1.0-candidate.sha872906a9.tgz",
-    "@bloxwap/hig-react": "file:../../vendor/bloxwap-hig/bloxwap-hig-react-0.1.0-candidate.sha872906a9.tgz",
-    "@bloxwap/hig-tokens": "file:../../vendor/bloxwap-hig/bloxwap-hig-tokens-0.1.0-candidate.sha872906a9.tgz",
+    "@bloxwap/hig-contracts": "file:../../vendor/bloxwap-hig/bloxwap-hig-contracts-0.1.0-candidate.shae3390bbd.tgz",
+    "@bloxwap/hig-react": "file:../../vendor/bloxwap-hig/bloxwap-hig-react-0.1.0-candidate.shae3390bbd.tgz",
+    "@bloxwap/hig-tokens": "file:../../vendor/bloxwap-hig/bloxwap-hig-tokens-0.1.0-candidate.shae3390bbd.tgz",
     "@bloxwap/sfx": "0.1.0",
     "fumadocs-core": "16.17.3",
     "fumadocs-mdx": "15.4.7",
@@ -29,7 +29,6 @@
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "@bloxwap/hig-native-fonts": "file:../../vendor/bloxwap-hig/bloxwap-hig-native-fonts-0.1.0-candidate.sha872906a9.tgz",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4.2.0",
     "@types/mdx": "^2.0.13",
@@ -37,7 +36,8 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "tailwindcss": "^4.2.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "@bloxwap/hig-og-fonts": "file:../../vendor/bloxwap-hig/bloxwap-hig-og-fonts-0.1.0-candidate.shae3390bbd.tgz"
   },
   "engines": {
     "node": ">=24"

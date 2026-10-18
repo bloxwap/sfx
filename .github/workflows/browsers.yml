@@ -8,7 +8,7 @@ permissions:
   contents: read
 jobs:
   browser-tests:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -17,18 +17,29 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium firefox webkit
-      # Firefox needs a real audio backend even in headless mode. A PulseAudio null sink
-      # supplies it without changing autoplay policy or mocking Web Audio.
+      - uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/ms-playwright
+          key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-playwright-
+      - run: npx playwright install chromium firefox webkit
+      # Firefox needs a real audio backend even in headless mode. CoreAudio is
+      # native on these runners. Start a PulseAudio null sink only if Homebrew
+      # already provided the binaries — do not apt or brew install here.
       - name: Start audio backend
         run: |
-          sudo apt-get update
-          sudo apt-get install -y pulseaudio
-          pulseaudio --start --exit-idle-time=-1
-          pactl load-module module-null-sink sink_name=sfx
-          pactl set-default-sink sfx
-      # Headful Firefox under Xvfb exposes desktop fine-pointer media queries.
-      - run: xvfb-run -a npm run test:browser
+          if command -v pulseaudio >/dev/null 2>&1 && command -v pactl >/dev/null 2>&1; then
+            echo "Using Homebrew PulseAudio null sink"
+            pulseaudio --check || pulseaudio --start --exit-idle-time=-1
+            pactl load-module module-null-sink sink_name=sfx 2>/dev/null || true
+            pactl set-default-sink sfx
+          else
+            echo "Using native CoreAudio (PulseAudio not on PATH)"
+          fi
+      # Headful Firefox on macOS exposes desktop fine-pointer media queries
+      # without Xvfb.
+      - run: npm run test:browser
       - name: Build and verify static docs and preserved demos
         env:
           NEXT_PUBLIC_BASE_PATH: /sfx
@@ -36,14 +47,25 @@ jobs:
           NEXT_TELEMETRY_DISABLED: '1'
         run: |
           npm run docs:build
-          npm run docs:preview > /tmp/sfx-docs-preview.log 2>&1 &
+          npm run docs:preview > "$RUNNER_TEMP/sfx-docs-preview.log" 2>&1 &
           PREVIEW_PID=$!
-          trap 'kill "$PREVIEW_PID"' EXIT
-          for attempt in $(seq 1 60); do
-            if curl -fsS http://127.0.0.1:3903/sfx/ > /dev/null; then break; fi
+          trap 'kill "$PREVIEW_PID" 2>/dev/null || true' EXIT
+          ready=0
+          i=0
+          while [ "$i" -lt 60 ]; do
+            if curl -fsS http://127.0.0.1:3903/sfx/ >/dev/null; then
+              ready=1
+              break
+            fi
+            i=$((i + 1))
             sleep 1
           done
-          DOCS_URL=http://127.0.0.1:3903/sfx/ xvfb-run -a npm run docs:smoke
+          if [ "$ready" -ne 1 ]; then
+            echo "::error::Docs preview did not become ready"
+            cat "$RUNNER_TEMP/sfx-docs-preview.log" 2>/dev/null || true
+            exit 1
+          fi
+          DOCS_URL=http://127.0.0.1:3903/sfx/ npm run docs:smoke
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

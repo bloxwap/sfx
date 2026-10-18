@@ -19,3 +19,4 @@ Pre-release versions (`0.2.0-beta.1`) publish under the matching dist-tag (`beta
 - On npmjs.com, add a trusted publisher to `@bloxwap/sfx`: GitHub Actions, repository `bloxwap/sfx`, workflow `publish_npm.yml`.
 - In the repository settings, set GitHub Pages to deploy from **GitHub Actions**.
 - Protect `main`, and require the **Tests** check.
+- Keep at least one self-hosted Apple Silicon runner online with the labels and tools in [`docs/ci-runners.md`](https://github.com/bloxwap/sfx/blob/main/docs/ci-runners.md). Publish, Pages deploy, and coverage upload all run there.

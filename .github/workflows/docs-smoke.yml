@@ -10,7 +10,7 @@ permissions:
 jobs:
   verify:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -21,16 +21,25 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium firefox webkit
+      - uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/ms-playwright
+          key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-playwright-
+      - run: npx playwright install chromium firefox webkit
       - name: Start native audio backend
         run: |
-          sudo apt-get update
-          sudo apt-get install -y pulseaudio
-          pulseaudio --start --exit-idle-time=-1
-          pactl load-module module-null-sink sink_name=sfx
-          pactl set-default-sink sfx
+          if command -v pulseaudio >/dev/null 2>&1 && command -v pactl >/dev/null 2>&1; then
+            echo "Using Homebrew PulseAudio null sink"
+            pulseaudio --check || pulseaudio --start --exit-idle-time=-1
+            pactl load-module module-null-sink sink_name=sfx 2>/dev/null || true
+            pactl set-default-sink sfx
+          else
+            echo "Using native CoreAudio (PulseAudio not on PATH)"
+          fi
       - name: Verify the deployed docs in three browsers
-        run: xvfb-run -a npm run docs:smoke
+        run: npm run docs:smoke
         env:
           DOCS_URL: https://bloxwap.github.io/sfx/
       - uses: actions/upload-artifact@v7

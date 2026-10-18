@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 20
     permissions:
       contents: read
@@ -40,15 +40,22 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           # The private workspace root has no release version; the sfx package owns it.
-          VERSION=$(jq -r .version packages/sfx/package.json)
+          VERSION=$(node -p "require('./packages/sfx/package.json').version")
           # A release must be tagged for the version it publishes, or npm and GitHub disagree.
-          if [[ -n "$RELEASE_TAG" && "$RELEASE_TAG" != "v$VERSION" ]]; then
+          if [ -n "$RELEASE_TAG" ] && [ "$RELEASE_TAG" != "v$VERSION" ]; then
             echo "::error::Release tag $RELEASE_TAG does not match packages/sfx/package.json version v$VERSION"
             exit 1
           fi
-          TAG=$(echo "$VERSION" | sed -n 's/.*-\(alpha\|beta\|rc\).*/\1/p')
-          if [[ -z "$TAG" && "$VERSION" == *-* ]]; then
-            TAG="prerelease"
+          TAG=
+          case "$VERSION" in
+            *-alpha*) TAG=alpha ;;
+            *-beta*) TAG=beta ;;
+            *-rc*) TAG=rc ;;
+          esac
+          if [ -z "$TAG" ]; then
+            case "$VERSION" in
+              *-*) TAG=prerelease ;;
+            esac
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "value=${TAG:-latest}" >> "$GITHUB_OUTPUT"

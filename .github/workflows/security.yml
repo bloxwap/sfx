@@ -13,7 +13,7 @@ permissions:
 jobs:
   audit:
     name: npm audit (runtime + tooling)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7

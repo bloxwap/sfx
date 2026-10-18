@@ -11,7 +11,7 @@ permissions:
   contents: read
 jobs:
   prepare:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 15
     permissions:
       contents: read
@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-          cache: npm
+          package-manager-cache: false
       # Match the CLI used for the one-time local publish with --provenance-file.
       - run: npm install -g npm@11.15.0
       - run: npm ci
@@ -36,7 +36,8 @@ jobs:
         run: |
           mkdir -p "$SFX_RELEASE_DIRECTORY"
           npm pack --workspace @bloxwap/sfx --pack-destination "$SFX_RELEASE_DIRECTORY"
-          export SFX_NPM_MODULES="$(npm root -g)"
+          SFX_NPM_MODULES="$(npm root -g)"
+          export SFX_NPM_MODULES
           node "$RUNNER_TEMP/sfx-prepare-release.ts"
         env:
           SFX_RELEASE_DIRECTORY: ${{ runner.temp }}/sfx-npm-release

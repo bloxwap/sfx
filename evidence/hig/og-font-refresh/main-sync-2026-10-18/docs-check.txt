@@ -1,0 +1,12 @@
+
+> docs:check
+> npm --workspace @bloxwap/sfx-docs run check
+
+
+> @bloxwap/sfx-docs@0.1.0 check
+> node scripts/hig-packages.mjs && next typegen && tsc --noEmit
+
+HIG 0.1.0-candidate.shae3390bbd: 4 reviewed tarballs and exact Bold/Black OG faces verified.
+[MDX] generated files in 4.359082999999998ms
+Generating route types...
+✓ Types generated successfully

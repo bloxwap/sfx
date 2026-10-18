@@ -33,3 +33,7 @@ install/lock aside and resolving the coherent file dependencies from scratch avo
 
 Package publication and deployment are outside this refresh. Remote CI and the central HIG
 adoption linkage are tracked through the draft refresh PR.
+
+A later [normal main integration](main-sync-2026-10-18/README.md) preserves the original candidate
+and all 15 OG cards, rehearses the updated owning gates and records why strict branch protection
+required updating the feature branch. The original baseline evidence above remains historical.

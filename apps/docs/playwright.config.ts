@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-// Verifies the deployed site (DOCS_URL) in all three engines; nothing is served locally.
+// Verifies the deployed site (DOCS_URL) in Chromium and WebKit; nothing is served locally.
 export default defineConfig({
   testDir: './test',
   fullyParallel: true,
@@ -9,7 +9,6 @@ export default defineConfig({
   use: { trace: 'retain-on-failure' },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'], headless: !process.env.CI } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ],
 });

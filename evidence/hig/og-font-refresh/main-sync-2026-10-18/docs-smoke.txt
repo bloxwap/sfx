@@ -1,0 +1,31 @@
+
+> docs:smoke
+> npm --workspace @bloxwap/sfx-docs run smoke --
+
+
+> @bloxwap/sfx-docs@0.1.0 smoke
+> playwright test
+
+
+Running 6 tests using 6 workers
+
+(node:67203) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:67206) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:67201) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:67204) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:67202) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:67205) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  5 [chromium] › test/deployed.spec.ts:46:1 › recipe editor edits, previews and copies; semantic preferences survive navigation (1.6s)
+  ✓  1 [webkit] › test/deployed.spec.ts:46:1 › recipe editor edits, previews and copies; semantic preferences survive navigation (1.9s)
+  ✓  6 [chromium] › test/deployed.spec.ts:5:1 › deployed board, controls, demo, search and public resources (3.3s)
+  ✓  2 [chromium] › test/deployed.spec.ts:104:1 › HIG shell: install tabs and copy, search states, callout, 404, keyboard and mobile navigation (3.4s)
+  ✓  3 [webkit] › test/deployed.spec.ts:5:1 › deployed board, controls, demo, search and public resources (3.8s)
+  ✓  4 [webkit] › test/deployed.spec.ts:104:1 › HIG shell: install tabs and copy, search states, callout, 404, keyboard and mobile navigation (4.1s)
+
+  6 passed (4.9s)

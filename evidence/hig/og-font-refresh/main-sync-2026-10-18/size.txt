@@ -1,0 +1,19 @@
+
+> size
+> npm --workspace @bloxwap/sfx run size
+
+
+> @bloxwap/sfx@0.1.0 size
+> npm run build && node scripts/size.ts
+
+
+> @bloxwap/sfx@0.1.0 build
+> npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.cli.json
+
+
+> @bloxwap/sfx@0.1.0 clean
+> node -e "require('node:fs').rmSync('dist', { recursive: true, force: true })"
+
+full bundle   16774 B min   6391 B gzip   5725 B brotli
+play() only   11565 B min   4503 B gzip   3992 B brotli
+bind() only   13764 B min   5315 B gzip   4731 B brotli

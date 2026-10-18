@@ -73,10 +73,8 @@ CoreAudio on these machines.
 - OIDC stays in use for Codecov (`coverage`) and GitHub Pages (`deploy`). The
   self-hosted runner must be allowed to request ID tokens. npm trusted
   publishing (`publish`) requests its ID token on a GitHub-hosted runner.
-- Review the repository's fork workflow approval setting before accepting
-  untrusted contributions on persistent runners. The current
-  `first_time_contributors` policy requires approval for first-time contributors;
-  it does not require approval for every fork PR.
+- First-time contributors to this repository need approval to run workflows
+  from fork pull requests (`first_time_contributors`).
 
 ## Local rehearsal
 

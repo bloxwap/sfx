@@ -122,6 +122,15 @@ test('HIG shell: install tabs and copy, search states, callout, 404, keyboard an
   if (browserName !== 'webkit') expect(reached.some(label => label.startsWith('Play the sound board'))).toBe(true);
   expect(reached).toContain('bun');
 
+  // HIG control CSS reads --hig-font-sans (hig#65): with no host bridge, buttons still render in a loaded Bloxwap face.
+  const buttonFace = await page.locator('.package-install .hig-button').first().evaluate(async (button) => {
+    await document.fonts.ready;
+    const family = getComputedStyle(button).fontFamily.split(',')[0].trim().replace(/["']/g, '');
+    return { family, loaded: [...document.fonts].some(face => face.family.replace(/["']/g, '') === family && face.status === 'loaded') };
+  });
+  expect(buttonFace.family).toMatch(/bloxwap/i);
+  expect(buttonFace.loaded).toBe(true);
+
   // HIG Tabs: roving focus with arrow/End keys; every panel copies its own command with a visible or announced result.
   const tabs = page.getByRole('tablist', { name: 'Package manager' });
   await expect(tabs.getByRole('tab', { name: 'bun', exact: true })).toHaveAttribute('aria-selected', 'true');

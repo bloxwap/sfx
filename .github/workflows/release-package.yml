@@ -36,7 +36,8 @@ jobs:
         run: |
           mkdir -p "$SFX_RELEASE_DIRECTORY"
           npm pack --workspace @bloxwap/sfx --pack-destination "$SFX_RELEASE_DIRECTORY"
-          export SFX_NPM_MODULES="$(npm root -g)"
+          SFX_NPM_MODULES="$(npm root -g)"
+          export SFX_NPM_MODULES
           node "$RUNNER_TEMP/sfx-prepare-release.ts"
         env:
           SFX_RELEASE_DIRECTORY: ${{ runner.temp }}/sfx-npm-release

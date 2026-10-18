@@ -3,6 +3,13 @@
 All notable changes to `@bloxwap/sfx` are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+- `play()` option `signal`: an `AbortSignal` that stops that play, and only that play. A queued request is
+  dropped and a sounding voice stops at once; other voices keep playing. An already aborted signal makes
+  `play()` a no-op. This gives each caller (for example one HIG feedback root) per-voice cancellation without
+  `stopAll()`.
+
 ## 0.1.0 — 2026-09-29
 
 First release.

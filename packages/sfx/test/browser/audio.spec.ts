@@ -51,6 +51,26 @@ test('play before a gesture stays silent; a real click unlocks cached playback',
   expect(warnings.filter(message => /autoplay|not allowed|user gesture/i.test(message))).toEqual([]);
 });
 
+test('aborting delayed buffered and live voices preserves unrelated playback', async ({ page }) => {
+  await page.locator('#unlock').click();
+  await expect.poll(() => page.evaluate(() => (window as any).context.state)).toBe('running');
+  const before = await page.evaluate(async () => {
+    const { sfx } = window as any;
+    await sfx.preload(['tick', 'press']);
+    const controller = new AbortController();
+    sfx.play('tick', { delay: 10, signal: controller.signal });
+    sfx.play('chime', { delay: 10, signal: controller.signal });
+    sfx.play('press', { delay: 10 });
+    const voices = sfx.activeVoices();
+    controller.abort();
+    return voices;
+  });
+  expect(before).toBe(3);
+  // Native buffer sources must report onended even when stopped before their scheduled start.
+  await expect.poll(() => page.evaluate(() => (window as any).sfx.activeVoices())).toBe(1);
+  await page.evaluate(() => (window as any).sfx.stopAll());
+});
+
 test('bind handles native hover, pointer, keyboard, toggle, disabled and teardown', async ({ page }) => {
   await page.locator('#unlock').click();
   await expect.poll(() => page.evaluate(() => (window as any).context.state)).toBe('running');

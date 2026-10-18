@@ -69,8 +69,8 @@ CoreAudio on these machines.
   environment, if environment-level runner groups are restricted).
 - OIDC stays in use: Codecov (`coverage`), npm trusted publishing (`publish`),
   and GitHub Pages (`deploy`). The runner must be allowed to request ID tokens.
-- Public-repo fork PRs do not reach self-hosted runners until someone with
-  write access approves the run.
+- First-time contributors to this repository need approval to run workflows
+  from fork pull requests (`first_time_contributors`).
 
 ## Local rehearsal
 

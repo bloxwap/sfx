@@ -1,11 +1,21 @@
 # Self-hosted CI runners
 
 Every GitHub Actions job in this repository runs on Apple Silicon Mac minis
-labeled `[self-hosted, macOS, ARM64]`. The whole suite moved off `ubuntu-latest`,
-including docs deploy, coverage upload, npm publish, and the registry smoke.
+labeled `[self-hosted, macOS, ARM64]` in runner group JWS. The whole suite moved
+off `ubuntu-latest`, including docs deploy, coverage upload, npm publish, and
+the registry smoke.
 
 Workflows must not call `apt`, `sudo`, `xvfb-run`, or `playwright install --with-deps`.
 Inline scripts are POSIX / BSD-portable and write scratch files under `$RUNNER_TEMP`.
+`actions/setup-python` cannot install on these minis (`/Users/runner` is not
+writable); this repository does not need Python.
+
+## Trusted publishing is unavailable
+
+[npm trusted publishing does not support self-hosted runners](https://docs.npmjs.com/trusted-publishers/).
+The publish job therefore authenticates with the org-level `NPM_TOKEN` secret
+(granular token, publish rights for `@bloxwap` packages). That **drops OIDC
+trusted publishing and automatic provenance**.
 
 ## Labels
 
@@ -32,6 +42,8 @@ Install these on the Mac before the runner accepts jobs. Workflows will not
 | bash | Default GitHub Actions shell on macOS |
 | CoreAudio | Native audio backend for Chromium and WebKit. Built in; no PulseAudio required. |
 | Homebrew `gnu-tar` (`gtar` on `PATH`) | `actions/upload-pages-artifact` calls `gtar` on macOS because BSD `tar` has no `--hard-dereference` |
+| `gh` | GitHub CLI, preinstalled on the minis |
+| `gpg` (Homebrew `gnupg`) | Preinstalled on the minis |
 
 The Documentation **build** job looks for `gtar` and, if needed, prepends
 `$(brew --prefix gnu-tar)/bin` to `PATH`. It does not install the formula.
@@ -66,9 +78,12 @@ CoreAudio on these machines.
 ## Repository settings
 
 - Allow self-hosted runners for this repository (and the `github-pages`
-  environment, if environment-level runner groups are restricted).
-- OIDC stays in use: Codecov (`coverage`), npm trusted publishing (`publish`),
-  and GitHub Pages (`deploy`). The runner must be allowed to request ID tokens.
+  environment, if environment-level runner groups are restricted). Machines are
+  in runner group JWS, running as macOS user `admin`.
+- OIDC stays in use for Codecov (`coverage`) and GitHub Pages (`deploy`). The
+  runner must be allowed to request ID tokens for those jobs.
+- npm publish (`Publish to npm`) uses the org-level `NPM_TOKEN` secret via
+  `NODE_AUTH_TOKEN`. It does not use OIDC and does not attach provenance.
 - First-time contributors to this repository need approval to run workflows
   from fork pull requests (`first_time_contributors`).
 

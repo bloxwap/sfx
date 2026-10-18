@@ -26,12 +26,8 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - uses: actions/cache@v4
-        with:
-          path: ~/Library/Caches/ms-playwright
-          key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-playwright-
+      # Self-hosted minis already persist ~/Library/Caches/ms-playwright.
+      # Do not upload that tree with actions/cache — it exceeded the job timeout.
       - run: npx playwright install chromium
       - name: Verify the published version
         run: |

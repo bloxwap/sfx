@@ -37,8 +37,9 @@ The Documentation **build** job looks for `gtar` and, if needed, prepends
 `$(brew --prefix gnu-tar)/bin` to `PATH`. It does not install the formula.
 
 Node.js 24 and npm are installed per job by `actions/setup-node`. Playwright
-browsers are installed by `npx playwright install` (no `--with-deps`) and cached
-at `~/Library/Caches/ms-playwright`.
+browsers are installed by `npx playwright install` (no `--with-deps`) and stay
+on each machine at `~/Library/Caches/ms-playwright`. Workflows do not upload
+that directory with `actions/cache`.
 
 ## Optional tools
 

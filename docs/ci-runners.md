@@ -41,6 +41,12 @@ browsers are installed by `npx playwright install` (no `--with-deps`) and stay
 on each machine at `~/Library/Caches/ms-playwright`. Workflows do not upload
 that directory with `actions/cache`.
 
+npm reuses its configured cache directory (typically `~/.npm`). Node setup disables Actions package
+manager caching with `package-manager-cache: false`, so each job avoids
+archiving and transferring the persistent runner's full npm cache after its
+checks finish. Do not add `cache: npm` or an `actions/cache` upload for this
+directory on the Mac minis.
+
 ## Optional tools
 
 | Tool | When |

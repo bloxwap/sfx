@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { chromium } from '@playwright/test';
 
-const argument = process.argv[2] ?? '0.1.0';
+const argument = process.argv[2] ?? '0.2.0';
 const archive = argument.endsWith('.tgz');
 if (!archive && !/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(argument)) throw new Error('Pass an exact published version or a local .tgz for rehearsal');
 const spec = archive ? resolve(argument) : `@bloxwap/sfx@${argument}`;

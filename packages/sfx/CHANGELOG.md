@@ -5,10 +5,19 @@ All notable changes to `@bloxwap/sfx` are documented here. This project follows
 
 ## Unreleased
 
+## 0.2.0 — 2026-10-19
+
 - `play()` option `signal`: an `AbortSignal` that stops that play, and only that play. A queued request is
   dropped and a sounding voice stops at once; other voices keep playing. An already aborted signal makes
   `play()` a no-op. This gives each caller (for example one HIG feedback root) per-voice cancellation without
   `stopAll()`.
+- `define(name, recipe)` registers or replaces an immutable custom recipe. Built-in names stay reserved.
+- Optional React 18/19 bindings at `@bloxwap/sfx/react`: `useBindSounds`, `useSound`, `useSoundPreference`,
+  and `<SoundProvider>`. Mute and volume persist in localStorage.
+- Category volumes (`hover`, `controls`, `feedback`, `money`) and an opt-in reduced-motion startup preset
+  (`configure({ respectReducedMotion: true })`).
+- `@bloxwap/sfx/semantic` maps HIG 0.1.0 feedback intents to sounds. Approved native WAV assets ship at
+  `@bloxwap/sfx/assets/hig/*`.
 
 ## 0.1.0 — 2026-09-29
 

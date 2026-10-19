@@ -1,6 +1,6 @@
 {
   "name": "@bloxwap/sfx",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Interface sound effects for the web, synthesized live with Web Audio. No audio files, zero runtime dependencies.",
   "type": "module",
   "sideEffects": false,

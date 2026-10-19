@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "package": "@bloxwap/sfx@0.1.0",
+  "package": "@bloxwap/sfx@0.2.0",
   "renderer": "node-web-audio-api@2.2.0",
   "command": "npm ci && npm run export:hig",
   "flags": [

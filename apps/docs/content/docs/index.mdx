@@ -28,7 +28,7 @@ The first time a sound is needed, the engine renders its recipe once with an `Of
 
 ## What is included
 
-- `play(name, options)` with per-play volume, playback rate, and stereo pan.
+- `play(name, options)` with per-play volume, playback rate, stereo pan, and an `AbortSignal` that stops that play only.
 - `bind()`: delegated handling for `data-sound-hover`, `-press`, `-release`, and `-toggle` attributes, including keyboard support.
 - `preload()`, which renders sounds before they are needed, even before the first user gesture.
 - Master volume, a global mute, voice limits, `stopAll()`, and an output tap for visualizers.

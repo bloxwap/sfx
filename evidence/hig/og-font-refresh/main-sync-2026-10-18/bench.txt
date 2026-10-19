@@ -1,0 +1,40 @@
+
+> bench
+> npm --workspace @bloxwap/sfx run bench
+
+
+> @bloxwap/sfx@0.1.0 bench
+> npm run build && node bench/schedule.bench.ts
+
+
+> @bloxwap/sfx@0.1.0 build
+> npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.cli.json
+
+
+> @bloxwap/sfx@0.1.0 clean
+> node -e "require('node:fs').rmSync('dist', { recursive: true, force: true })"
+
+play() main-thread cost, µs per call (300 iterations, real Web Audio nodes)
+
+sound         nodes      live  buffered  speedup
+chime             9      84.5       7.7    10.9×
+sparkle          13     115.8       9.5    12.1×
+droplet           7      54.1      12.9     4.2×
+bloom             9      80.6       8.8     9.2×
+whisper           4      48.9       9.3     5.2×
+tick              6      61.0       7.8     7.9×
+press             4      48.1       9.2     5.2×
+release           6      64.8       8.0     8.1×
+toggle            7      73.5       7.0    10.5×
+success          11      92.3       8.0    11.6×
+error             8      76.0       7.2    10.6×
+page              9      85.9       9.9     8.7×
+loading          10     106.4       8.1    13.1×
+ready            12     118.7       7.9    15.0×
+payout           51     487.9       8.9    54.5×
+deposit          53     542.6       6.6    82.1×
+pluck            30     284.4       8.1    35.1×
+notification     43     372.4       8.5    43.9×
+loss             33     316.4       8.6    36.9×
+
+mean           17.1     163.9       8.5    19.2×

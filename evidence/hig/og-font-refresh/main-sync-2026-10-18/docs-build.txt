@@ -1,0 +1,81 @@
+
+> docs:build
+> npm --workspace @bloxwap/sfx-docs run build
+
+
+> @bloxwap/sfx-docs@0.1.0 prebuild
+> npm --workspace @bloxwap/sfx run build
+
+
+> @bloxwap/sfx@0.1.0 build
+> npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.cli.json
+
+
+> @bloxwap/sfx@0.1.0 clean
+> node -e "require('node:fs').rmSync('dist', { recursive: true, force: true })"
+
+
+> @bloxwap/sfx-docs@0.1.0 build
+> next build
+
+▲ Next.js 16.4.1 (Turbopack)
+[MDX] generated files in 4.304666999999881ms
+✓ Running next.config.ts took 857ms
+
+  Creating an optimized production build ...
+Found 2 warnings while optimizing generated CSS:
+
+Issue #1:
+[2m│     }[22m
+[2m│   }[22m
+[2m│[22m   .\[\&_\:\:highlight\(fd-search\)\]\:text-fd-primary ::highlight(fd-search) {
+[2m┆[22m                                                                   [33m[2m^--[22m 'highlight' is not recognized as a valid pseudo-element. Did you mean ':highlight' (pseudo-class) or is this a typo?[39m
+[2m┆[22m
+[2m│     color: var(--color-fd-primary);[22m
+[2m│   }[22m
+
+Issue #2:
+[2m│     color: var(--color-fd-primary);[22m
+[2m│   }[22m
+[2m│[22m   .\[\&_\:\:highlight\(fd-search\)\]\:underline ::highlight(fd-search) {
+[2m┆[22m                                                             [33m[2m^--[22m 'highlight' is not recognized as a valid pseudo-element. Did you mean ':highlight' (pseudo-class) or is this a typo?[39m
+[2m┆[22m
+[2m│     text-decoration-line: underline;[22m
+[2m│   }[22m
+
+✓ Compiled successfully in 887ms
+  Running TypeScript ...
+  Finished TypeScript in 213ms ...
+  Collecting page data using 8 workers ...
+  Generating static pages using 8 workers (0/34) ...
+  Generating static pages using 8 workers (8/34)
+  Generating static pages using 8 workers (16/34)
+  Generating static pages using 8 workers (25/34)
+✓ Generating static pages using 8 workers (34/34) in 646ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├   /docs/[[...slug]]
+│ ├ ● /docs/api
+│ ├ ● /docs/api/recipes
+│ ├ ● /docs/development
+│ └ ● [+11 more paths]
+├   /og/[...slug]
+│ ├ ● /og/home.png
+│ ├ ● /og/docs/api.png
+│ ├ ● /og/docs/api/recipes.png
+│ └ ● [+12 more paths]
+├ ○ /search.json
+└ ○ /sitemap.xml
+
+
+○  (Static)  prerendered as static content
+●  (SSG)     prerendered as static HTML (uses generateStaticParams)
+
+
+> @bloxwap/sfx-docs@0.1.0 postbuild
+> node scripts/check-export.ts
+
+Static export OK: 18 HTML files, 15 social cards, base path /sfx.

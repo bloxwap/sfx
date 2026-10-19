@@ -1,0 +1,22 @@
+
+> docs:smoke
+> npm --workspace @bloxwap/sfx-docs run smoke -- --project=chromium
+
+
+> @bloxwap/sfx-docs@0.1.0 smoke
+> playwright test --project=chromium
+
+
+Running 3 tests using 3 workers
+
+(node:60792) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:60791) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:60790) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  2 [chromium] › test/deployed.spec.ts:46:1 › recipe editor edits, previews and copies; semantic preferences survive navigation (862ms)
+  ✓  3 [chromium] › test/deployed.spec.ts:5:1 › deployed board, controls, demo, search and public resources (2.6s)
+  ✓  1 [chromium] › test/deployed.spec.ts:104:1 › HIG shell: install tabs and copy, search states, callout, 404, keyboard and mobile navigation (3.0s)
+
+  3 passed (3.5s)

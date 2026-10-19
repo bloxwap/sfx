@@ -1,0 +1,6 @@
+Fresh detached baseline: 4f9fccefed7eb71a43a39eb88c9937310f7461a6
+Node v24.6.0 / npm 11.5.1 / Next 16.4.1
+npm ci: exit 0
+NEXT_PUBLIC_BASE_PATH=/sfx NEXT_PUBLIC_SITE_URL=https://bloxwap.github.io NEXT_TELEMETRY_DISABLED=1 npm run docs:build: exit 0
+Production Turbopack export: 15 OG cards; static HTML and browser captures verified.
+Build output was observed live; this file records the commands and outcomes.

@@ -1,0 +1,325 @@
+{
+  "issue": "https://github.com/bloxwap/hig/issues/115",
+  "pullRequest": "https://github.com/bloxwap/sfx/pull/55",
+  "checkedAt": "2026-10-18T20:35:27.588339+00:00",
+  "featureHeadBeforeMerge": "694d13eaaa73ac41ae20aa42562afc35865bb09e",
+  "mergedMain": "1be6630fe0bdea2cf08f5ffb1948beb51ec49caf",
+  "operation": "normal merge into feature branch",
+  "reason": {
+    "priorMergeStateStatus": "BEHIND",
+    "effectiveRulesEndpoint": "https://api.github.com/repos/bloxwap/sfx/rules/branches/main",
+    "rules": [
+      {
+        "type": "deletion",
+        "ruleset_source_type": "Repository",
+        "ruleset_source": "bloxwap/sfx",
+        "ruleset_id": 24222799
+      },
+      {
+        "type": "non_fast_forward",
+        "ruleset_source_type": "Repository",
+        "ruleset_source": "bloxwap/sfx",
+        "ruleset_id": 24222799
+      },
+      {
+        "type": "pull_request",
+        "parameters": {
+          "required_approving_review_count": 0,
+          "dismiss_stale_reviews_on_push": true,
+          "required_reviewers": [],
+          "require_code_owner_review": false,
+          "dismissal_restriction": {
+            "enabled": false,
+            "allowed_actors": []
+          },
+          "require_last_push_approval": false,
+          "required_review_thread_resolution": true,
+          "require_extra_approval_for_unattributed_changes": true,
+          "allowed_merge_methods": [
+            "merge",
+            "squash",
+            "rebase"
+          ]
+        },
+        "ruleset_source_type": "Repository",
+        "ruleset_source": "bloxwap/sfx",
+        "ruleset_id": 24222799
+      },
+      {
+        "type": "required_status_checks",
+        "parameters": {
+          "strict_required_status_checks_policy": true,
+          "do_not_enforce_on_create": false,
+          "required_status_checks": [
+            {
+              "context": "test",
+              "integration_id": 15368
+            },
+            {
+              "context": "npm audit (runtime + tooling)",
+              "integration_id": 15368
+            }
+          ]
+        },
+        "ruleset_source_type": "Repository",
+        "ruleset_source": "bloxwap/sfx",
+        "ruleset_id": 24222799
+      }
+    ],
+    "classicProtection": "not configured; effective repository ruleset requires up-to-date status checks"
+  },
+  "environment": {
+    "node": "v24.6.0",
+    "npm": "11.5.1",
+    "platform": "macOS ARM64"
+  },
+  "upstreamChangedFilesPreserved": [
+    ".github/workflows/browsers.yml",
+    ".github/workflows/coverage.yml",
+    ".github/workflows/docs-smoke.yml",
+    ".github/workflows/docs.yml",
+    ".github/workflows/publish_npm.yml",
+    ".github/workflows/registry-smoke.yml",
+    ".github/workflows/release-package.yml",
+    ".github/workflows/security.yml",
+    ".github/workflows/tests.yml",
+    "README.md",
+    "apps/docs/content/docs/development.mdx",
+    "apps/docs/content/docs/releasing.mdx",
+    "apps/docs/playwright.config.ts",
+    "docs/ci-runners.md",
+    "packages/sfx/package.json",
+    "packages/sfx/playwright.config.ts",
+    "packages/sfx/scripts/check-publish-auth.ts",
+    "packages/sfx/scripts/prepare-release.ts",
+    "packages/sfx/test/check-publish-auth.test.ts"
+  ],
+  "higSourceCommit": "e3390bbd0ac12b9d4b371175bd250d01ea866abe",
+  "higArtifactVersion": "0.1.0-candidate.shae3390bbd",
+  "identity": {
+    "allVendorFilesByteIdentical": true,
+    "all15OgCardsByteIdentical": true,
+    "lockByteIdentical": true,
+    "rendererAndDocsManifestUnchanged": true,
+    "ogCards": {
+      "docs/api/recipes.png": {
+        "bytes": 50186,
+        "sha256": "448d4f815449bcb6677325073f6d582d365045e4db6467248e53f9a41ef721af"
+      },
+      "docs/api.png": {
+        "bytes": 43857,
+        "sha256": "440be38e8f32f516f490e85f5ee65f647af8dc0ec95163bfbc6682e56fe94736"
+      },
+      "docs/development.png": {
+        "bytes": 45214,
+        "sha256": "6b860ceee480aa8b802d8e01c0cdeb24f96d3e7e74c218bfa18f33bb40e938fa"
+      },
+      "docs/getting-started.png": {
+        "bytes": 48607,
+        "sha256": "81b074551cfe45adee681e73ce6e4133b521c66f3fb7409ca8d416ca9f5bde6b"
+      },
+      "docs/guides/accessibility.png": {
+        "bytes": 64399,
+        "sha256": "b2145be3fbe51ec236124bf2acc576caf40511c8188349c98beae1bb3fb1c21d"
+      },
+      "docs/guides/binding.png": {
+        "bytes": 51080,
+        "sha256": "58cd45efcd09958df47fbf2c3d584daec0e80454c49314694080dcdc3efd3eb2"
+      },
+      "docs/guides/frameworks.png": {
+        "bytes": 44864,
+        "sha256": "363d39851846a1d78c47ae22a06b6c5d6e2c9cadd9a12323f0721eed0fcbb5e7"
+      },
+      "docs/guides/native.png": {
+        "bytes": 61885,
+        "sha256": "fe5e5b69576efa8612af7762521a634d33da63d4760dcecea8a54f82f425b2c5"
+      },
+      "docs/guides/react.png": {
+        "bytes": 47939,
+        "sha256": "bcfc9526db0115b9dcf307643c970cb49d2bbf799b5be911ad6186b8c25537b2"
+      },
+      "docs/guides/sound-design.png": {
+        "bytes": 48278,
+        "sha256": "ebf049a826e2517a364048cbc6c08fbdb59dc991accc51f62e288bb5341141ba"
+      },
+      "docs/index.png": {
+        "bytes": 52314,
+        "sha256": "95825227434088c452ac527234259435ceefef2c87dd50a43dddd06ba25118ad"
+      },
+      "docs/performance.png": {
+        "bytes": 50197,
+        "sha256": "ee62f12e3ac2d45fcddc8867bbd4d118975b316e6229c2102e06824c4db126be"
+      },
+      "docs/releasing.png": {
+        "bytes": 43788,
+        "sha256": "d5436d927bcbc63d61599e9ef4c27565353e3e019b31b74dabf72c58e8f9fb65"
+      },
+      "docs/sounds.png": {
+        "bytes": 47637,
+        "sha256": "47bd5e9027ef3db7592f8d5cceb99a949488c73dbdd3490e5d65e80190c4c7de"
+      },
+      "home.png": {
+        "bytes": 63891,
+        "sha256": "f604a56b34a41850dbb306142523cf8757c8bf75d041ca281e540ca2726bb66e"
+      }
+    },
+    "vendor": [
+      {
+        "path": "vendor/bloxwap-hig/README.md",
+        "bytes": 3319,
+        "sha256": "c41bef58c842ab26d8494512f53292adc6635bb979084be9f6c7ecfdfab12725"
+      },
+      {
+        "path": "vendor/bloxwap-hig/bloxwap-hig-contracts-0.1.0-candidate.shae3390bbd.tgz",
+        "bytes": 7205,
+        "sha256": "801fea3c0f3d8bcaad20fcee7ffca91b30da59616b5477a288a3a8c2c27536b9"
+      },
+      {
+        "path": "vendor/bloxwap-hig/bloxwap-hig-og-fonts-0.1.0-candidate.shae3390bbd.tgz",
+        "bytes": 844028,
+        "sha256": "5d322cd414ac8c6ace05d103f59ac1065ef609ec7cb176e1e91044e0beb9a89e"
+      },
+      {
+        "path": "vendor/bloxwap-hig/bloxwap-hig-react-0.1.0-candidate.shae3390bbd.tgz",
+        "bytes": 21918,
+        "sha256": "f18f76f4847f4f1c75dcec128709454b3b649fd49d98c80bf22c44b3b97cac56"
+      },
+      {
+        "path": "vendor/bloxwap-hig/bloxwap-hig-tokens-0.1.0-candidate.shae3390bbd.tgz",
+        "bytes": 8227,
+        "sha256": "a650c37a3bb34943bbe6b8476906029eb7be014580cbd66b4e91030eace83791"
+      },
+      {
+        "path": "vendor/bloxwap-hig/provenance.json",
+        "bytes": 1746,
+        "sha256": "d60649d65caf7c498b73a5b481c7769355983ab6da31ebba85183038941e497e"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "command": "npm ci",
+      "result": "passed",
+      "log": "install.txt",
+      "logSha256": "c9628c06f50f9031ed37411415d6e49559b7e9fc323018a9c74fae678e1de795",
+      "originalLogSha256": "c9628c06f50f9031ed37411415d6e49559b7e9fc323018a9c74fae678e1de795"
+    },
+    {
+      "command": "npm run lint",
+      "result": "passed",
+      "log": "lint.txt",
+      "logSha256": "5b8f9ee80a09020d007a34cbceb06d2c62f950c662af039c1feab7f446717ecb",
+      "originalLogSha256": "666a917c8b993b07f856b59b925e3573ec95a36f9d18b76cc94b494c9176c489"
+    },
+    {
+      "command": "npm run typecheck",
+      "result": "passed",
+      "log": "typecheck.txt",
+      "logSha256": "5ddae25d2a6675d70f386d28a8bf64ade55ba4a2c54b039e45c12af2358aebf3",
+      "originalLogSha256": "45355f965ef4d8efbc807f615fa8e3b4225d36b835c2d964a2e672fd1469e236"
+    },
+    {
+      "command": "npm run coverage",
+      "result": "passed",
+      "log": "coverage.txt",
+      "logSha256": "9b4cc6dd4dc856f81b518fd1d0ed172dacae2955901fd56c85ac3cac265a541a",
+      "originalLogSha256": "0759ecac52626b78ae6a684838367355a14c9a546320390de7646b8b2dd8f774"
+    },
+    {
+      "command": "npm run size",
+      "result": "passed",
+      "log": "size.txt",
+      "logSha256": "d665c6ada9a579524542b39a9c9b0b26711401354c852d2d763f44e9ad1b6f16",
+      "originalLogSha256": "d665c6ada9a579524542b39a9c9b0b26711401354c852d2d763f44e9ad1b6f16"
+    },
+    {
+      "command": "npm run bench",
+      "result": "passed",
+      "log": "bench.txt",
+      "logSha256": "5eecd1442a042b1948cfdbec31606074ccb2346a041a0f01a818a2ea14aab297",
+      "originalLogSha256": "5eecd1442a042b1948cfdbec31606074ccb2346a041a0f01a818a2ea14aab297"
+    },
+    {
+      "command": "npm audit --audit-level=high",
+      "result": "passed",
+      "log": "audit.txt",
+      "logSha256": "6d8c5c8f3d7684adb070417bd608d01ae90aa3dc26a65af03ffda4955f38d9a3",
+      "originalLogSha256": "6d8c5c8f3d7684adb070417bd608d01ae90aa3dc26a65af03ffda4955f38d9a3"
+    },
+    {
+      "command": "assert 0 published runtime dependencies",
+      "result": "passed",
+      "log": "runtime-deps.txt",
+      "logSha256": "62d051e28a9b3a2fbc5875185ad83a1339fb31603d94e63854c2797d0ab47321",
+      "originalLogSha256": "62d051e28a9b3a2fbc5875185ad83a1339fb31603d94e63854c2797d0ab47321"
+    },
+    {
+      "command": "import each explicit JavaScript package export in Node",
+      "result": "passed",
+      "log": "entry-points.txt",
+      "logSha256": "65f3bc20081910a5190952edfa628992495c8a026a2819b66c90e426297678f2",
+      "originalLogSha256": "65f3bc20081910a5190952edfa628992495c8a026a2819b66c90e426297678f2"
+    },
+    {
+      "command": "npm pack --dry-run; assert required files and no source/test/bench",
+      "result": "passed",
+      "log": "pack-check.txt",
+      "logSha256": "3b4a3fabb222438a31f6dbcd4b87d8614c6af7e80c305f0181f25ef043db3f31",
+      "originalLogSha256": "3b4a3fabb222438a31f6dbcd4b87d8614c6af7e80c305f0181f25ef043db3f31"
+    },
+    {
+      "command": "NEXT_PUBLIC_BASE_PATH=/sfx NEXT_PUBLIC_SITE_URL=https://bloxwap.github.io NEXT_TELEMETRY_DISABLED=1 npm run docs:build",
+      "result": "passed",
+      "log": "docs-build.txt",
+      "logSha256": "6becaba711127603f58d6f498f9e9e50894856ddbc4a68bf772b5cdfa3a1f843",
+      "originalLogSha256": "f89add9bc6456c482ea463ad540dc128fb5e3155e1f9316c134113f09a175fce"
+    },
+    {
+      "command": "NEXT_PUBLIC_BASE_PATH=/sfx NEXT_PUBLIC_SITE_URL=https://bloxwap.github.io NEXT_TELEMETRY_DISABLED=1 npm run docs:check",
+      "result": "passed",
+      "log": "docs-check.txt",
+      "logSha256": "6a1b6c586da3c192e4de946eb2f0c47e8627a04c84ad2610dccd4350605d6976",
+      "originalLogSha256": "6a1b6c586da3c192e4de946eb2f0c47e8627a04c84ad2610dccd4350605d6976"
+    },
+    {
+      "command": "npm run test:browser",
+      "result": "passed",
+      "log": "browser.txt",
+      "logSha256": "60ae50829e1e05f93f9e173b1f10c4b719c8c288183d58e5ebeef0cddb80498a",
+      "originalLogSha256": "60ae50829e1e05f93f9e173b1f10c4b719c8c288183d58e5ebeef0cddb80498a"
+    },
+    {
+      "command": "DOCS_URL=http://127.0.0.1:43965/sfx/ npm run docs:smoke",
+      "result": "passed",
+      "log": "docs-smoke.txt",
+      "logSha256": "43f4f01eb9b812a31b7202cf296eea652ef969eb9523406992ffa6422b766653",
+      "originalLogSha256": "43f4f01eb9b812a31b7202cf296eea652ef969eb9523406992ffa6422b766653"
+    }
+  ],
+  "results": {
+    "unitTests": 191,
+    "lineCoverage": 100,
+    "functionCoverage": 100,
+    "branchCoverage": 100,
+    "vulnerabilities": 0,
+    "explicitJavaScriptExportsImported": 5,
+    "packedFiles": 27,
+    "htmlFiles": 18,
+    "ogCards": 15,
+    "browserPassed": 9,
+    "browserSkipped": 1,
+    "browserSkipReason": "Chromium skips WebKit-specific interrupted AudioContext recovery",
+    "productionDocsSmokePassed": 6,
+    "engines": [
+      "Chromium",
+      "WebKit"
+    ]
+  },
+  "remoteCi": "pending after normal push; final remote status reported to HIG owner separately",
+  "limits": [
+    "Existing 15-card and font byte identity evidence remains authoritative; upstream CI runner/authentication changes are preserved.",
+    "Local static preview was stopped after the smoke suite.",
+    "No manual deployment, publication, main merge, hook bypass or forced update."
+  ],
+  "logNormalization": "Only carriage returns, trailing horizontal whitespace and final blank lines normalized; original SHA-256 retained."
+}

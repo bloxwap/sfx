@@ -1,0 +1,126 @@
+{
+  "issue": "https://github.com/bloxwap/hig/issues/115",
+  "repository": "bloxwap/sfx",
+  "consumerBaselineCommit": "4f9fccefed7eb71a43a39eb88c9937310f7461a6",
+  "higSourceCommit": "e3390bbd0ac12b9d4b371175bd250d01ea866abe",
+  "higArtifactVersion": "0.1.0-candidate.shae3390bbd",
+  "higSourceTreeDirty": false,
+  "environment": {
+    "node": "v24.6.0",
+    "npm": "11.5.1",
+    "next": "16.4.1",
+    "basePath": "/sfx"
+  },
+  "fonts": [
+    {
+      "asset": "BloxwapSans-Bold.ttf",
+      "name": "Bloxwap Sans",
+      "weight": 700,
+      "style": "normal",
+      "bytes": 447388,
+      "sha256": "13e10451ecec4e33733b196454f1232a16d34d5014dce66daaee4d0c58600e1b"
+    },
+    {
+      "asset": "BloxwapSans-Black.ttf",
+      "name": "Bloxwap Sans",
+      "weight": 900,
+      "style": "normal",
+      "bytes": 445912,
+      "sha256": "a99894c158cff3cff828b7d17ec12f075352848843944a730caa9d64c0362ea2"
+    }
+  ],
+  "allFontDescriptorsAndBytesPreserved": true,
+  "cards": {
+    "count": 15,
+    "allByteIdentical": true,
+    "mismatches": [],
+    "beforeManifest": "before.json",
+    "afterManifest": "after.json"
+  },
+  "browser": {
+    "captures": [
+      {
+        "capture": "home-desktop",
+        "beforeSha256": "37d9d1bd73b28d7ef3b1497ceb340b96fc0025ecd56daae970280150e408b484",
+        "afterSha256": "37d9d1bd73b28d7ef3b1497ceb340b96fc0025ecd56daae970280150e408b484",
+        "byteIdentical": true
+      },
+      {
+        "capture": "docs-desktop",
+        "beforeSha256": "2b910acd373860660bc681a4031fc4410112138c482c51d39e554a84c0189d35",
+        "afterSha256": "2b910acd373860660bc681a4031fc4410112138c482c51d39e554a84c0189d35",
+        "byteIdentical": true
+      },
+      {
+        "capture": "home-mobile",
+        "beforeSha256": "ffae84eae0a609901916d87e296fa509b2d08ca9aa18291e170703a98b2f0343",
+        "afterSha256": "ffae84eae0a609901916d87e296fa509b2d08ca9aa18291e170703a98b2f0343",
+        "byteIdentical": true
+      },
+      {
+        "capture": "og-home",
+        "beforeSha256": "f604a56b34a41850dbb306142523cf8757c8bf75d041ca281e540ca2726bb66e",
+        "afterSha256": "f604a56b34a41850dbb306142523cf8757c8bf75d041ca281e540ca2726bb66e",
+        "byteIdentical": true
+      }
+    ],
+    "computedStyleChanges": [],
+    "consoleErrors": [],
+    "mobileNoOverflow": true,
+    "details": "browser-comparison.json"
+  },
+  "vendor": {
+    "beforeBytes": 4454889,
+    "afterBytes": 881378,
+    "deltaBytes": -3573511,
+    "nativeFontTarballs": 0,
+    "nativeFontLockEntries": [],
+    "exportedTtfFiles": []
+  },
+  "checks": [
+    {
+      "command": "npm install --package-lock-only --ignore-scripts && npm ci",
+      "result": "passed from an empty dependency tree and lock; no legacy-peer-deps or force"
+    },
+    {
+      "command": "npm run build && npm run lint && npm run typecheck && npm test",
+      "result": "passed",
+      "tests": 190,
+      "log": "root-gates.log"
+    },
+    {
+      "command": "NEXT_PUBLIC_BASE_PATH=/sfx NEXT_PUBLIC_SITE_URL=https://bloxwap.github.io npm run docs:build",
+      "result": "passed; production Turbopack static export",
+      "log": "after-build.log"
+    },
+    {
+      "command": "NEXT_PUBLIC_BASE_PATH=/sfx npm run docs:check",
+      "result": "passed; archive/version/font guards, Next typegen and TypeScript",
+      "guardTests": 0,
+      "log": "docs-check.log"
+    },
+    {
+      "command": "npm run docs:smoke -- --project=chromium",
+      "result": "passed against the local production export",
+      "browserChecks": 3,
+      "log": "docs-smoke.log"
+    },
+    {
+      "command": "node evidence/hig/og-font-refresh/capture.mjs before|after",
+      "result": "passed; home/docs desktop,390px home,OG request bytes",
+      "log": "browser-comparison.json"
+    }
+  ],
+  "reviewNotes": [
+    "Exact original Bold/Black descriptors and every generated card are preserved.",
+    "Explicit whole-page base CSS import preserves existing docs appearance after the HIG CSS split.",
+    "The old lock update attempted an unpublished transitive registry fetch; clean lock resolution succeeded.",
+    "Rebased onto current main4f9fcce and repeated baseline/after builds and captures with Next16.4.1 and Playwright1.64.1 before delivery."
+  ],
+  "pendingAcceptance": [
+    "Remote CI remains pending at the time of this local validation report.",
+    "The HIG owner tracks the refresh PR and remote CI in the central adoption row."
+  ],
+  "published": false,
+  "deployed": false
+}

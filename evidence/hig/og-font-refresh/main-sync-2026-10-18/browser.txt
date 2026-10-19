@@ -1,0 +1,54 @@
+
+> test:browser
+> npm --workspace @bloxwap/sfx run test:browser --
+
+
+> @bloxwap/sfx@0.1.0 test:browser
+> npm run build && playwright test
+
+
+> @bloxwap/sfx@0.1.0 build
+> npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.cli.json
+
+
+> @bloxwap/sfx@0.1.0 clean
+> node -e "require('node:fs').rmSync('dist', { recursive: true, force: true })"
+
+[WebServer] (node:66476) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 10 tests using 8 workers
+
+(node:66484) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:66479) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:66483) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:66478) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:66477) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:66482) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:66480) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:66481) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  -   5 [chromium] › test/browser/audio.spec.ts:100:1 › WebKit recovers the interrupted state through its native context
+  ✓   3 [chromium] › test/browser/audio.spec.ts:8:1 › preload and every offline render are audible, finite, stereo and decay (285ms)
+(node:66533) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   6 [chromium] › test/browser/audio.spec.ts:40:1 › play before a gesture stays silent; a real click unlocks cached playback (695ms)
+  ✓   8 [chromium] › test/browser/audio.spec.ts:54:1 › aborting delayed buffered and live voices preserves unrelated playback (729ms)
+  ✓   1 [chromium] › test/browser/audio.spec.ts:74:1 › bind handles native hover, pointer, keyboard, toggle, disabled and teardown (790ms)
+(node:66535) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   4 [webkit] › test/browser/audio.spec.ts:8:1 › preload and every offline render are audible, finite, stereo and decay (717ms)
+  ✓   7 [webkit] › test/browser/audio.spec.ts:54:1 › aborting delayed buffered and live voices preserves unrelated playback (930ms)
+  ✓   2 [webkit] › test/browser/audio.spec.ts:40:1 › play before a gesture stays silent; a real click unlocks cached playback (967ms)
+  ✓  10 [webkit] › test/browser/audio.spec.ts:100:1 › WebKit recovers the interrupted state through its native context (604ms)
+  ✓   9 [webkit] › test/browser/audio.spec.ts:74:1 › bind handles native hover, pointer, keyboard, toggle, disabled and teardown (760ms)
+
+  1 skipped
+  9 passed (2.7s)

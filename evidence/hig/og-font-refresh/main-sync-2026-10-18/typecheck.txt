@@ -1,0 +1,15 @@
+
+> typecheck
+> npm --workspace @bloxwap/sfx run typecheck
+
+
+> @bloxwap/sfx@0.1.0 typecheck
+> npm run build && tsc -p tsconfig.dev.json
+
+
+> @bloxwap/sfx@0.1.0 build
+> npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.cli.json
+
+
+> @bloxwap/sfx@0.1.0 clean
+> node -e "require('node:fs').rmSync('dist', { recursive: true, force: true })"

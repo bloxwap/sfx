@@ -7,7 +7,7 @@ on:
     inputs:
       version:
         description: Exact npm version to verify
-        default: '0.1.0'
+        default: '0.2.0'
         type: string
 permissions:
   contents: read

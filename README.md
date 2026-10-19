@@ -33,7 +33,7 @@ ESM only. Works in all modern browsers, and is a silent no-op on the server.
 
 ## Release status
 
-`0.1.0` is an early developer preview; expect breaking changes before `1.0`.
+`0.2.0` is an early developer preview; expect breaking changes before `1.0`.
 
 ## Usage
 
@@ -67,6 +67,10 @@ try {
 }
 
 play('tick', { volume: 0.5, rate: 1.25, pan: -0.3 });
+
+const loading = new AbortController();
+play('loading', { signal: loading.signal });
+loading.abort(); // stops this play only; other voices keep going
 
 // A tap: release 90 ms after press, scheduled on the audio clock.
 play('press');
@@ -132,7 +136,7 @@ import {
 
 | Function | Description |
 | --- | --- |
-| `play(name = 'chime', options?)` | Plays a sound now. `options`: `volume` (0-2), `rate` (0.25-4), `pan` (-1 to 1), `delay` (seconds, 0-10), `minInterval` (ms, overrides `configure()`), `force` (skip the user-gesture check). Never throws. |
+| `play(name = 'chime', options?)` | Plays a sound now. `options`: `volume` (0-2), `rate` (0.25-4), `pan` (-1 to 1), `delay` (seconds, 0-10), `minInterval` (ms, overrides `configure()`), `force` (skip the user-gesture check), `signal` (AbortSignal that stops this play only). Never throws. |
 | `define(name, recipe)` | Registers or replaces an immutable custom recipe. Built-in names are reserved. Invalid data throws `RangeError`. |
 | `preload(names?)` | Renders sounds (all of them by default) to buffers. Safe to call before any user gesture. |
 | `bind(root = document, options?)` | Wires `data-sound-*` attributes under `root`. Returns `unbind()`. Options: `keyboard`, `hoverInterval`. |

@@ -53,7 +53,15 @@ async function deposit(amount: number) {
 }
 ```
 
-`play()` never throws. If the name is unknown, sound is muted, the page hasn't had a user gesture yet, or the browser has no Web Audio, it does nothing.
+`play()` never throws. If the name is unknown, sound is muted, the `signal` has already aborted, the page hasn't had a user gesture yet, or the browser has no Web Audio, it does nothing.
+
+Pass `signal` to stop one play without `stopAll()`. Share one `AbortController` across the plays a view or widget started:
+
+```ts
+const root = new AbortController();
+play('loading', { signal: root.signal });
+root.abort(); // this play stops; sounds started without this signal keep going
+```
 
 ## Warm up (optional)
 

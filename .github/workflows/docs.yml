@@ -34,8 +34,11 @@ jobs:
       - run: npm ci
       - run: npm run docs:build
       - run: npm run docs:check
+      # Deploy only runs on main. Skip the Pages artifact on PRs (p50 ~45s) after
+      # the build and docs:check have already validated the site.
       # upload-pages-artifact invokes gtar on macOS (BSD tar has no --hard-dereference).
       - name: Expose Homebrew GNU tar
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: |
           if command -v gtar >/dev/null 2>&1; then
             exit 0
@@ -51,6 +54,7 @@ jobs:
           echo "::error::gtar is required to upload the GitHub Pages artifact on macOS. Install Homebrew gnu-tar (see docs/ci-runners.md)."
           exit 1
       - uses: actions/upload-pages-artifact@v5
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         with:
           path: apps/docs/out
 

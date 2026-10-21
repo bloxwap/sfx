@@ -58,8 +58,8 @@
   ],
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
-    "build": "npm run clean && tsrs -p tsconfig.json && tsrs -p tsconfig.cli.json",
-    "typecheck": "npm run build && tsrs -p tsconfig.dev.json",
+    "build": "npm run clean && node scripts/tsc-or-tsrs.mjs -p tsconfig.json && node scripts/tsc-or-tsrs.mjs -p tsconfig.cli.json",
+    "typecheck": "npm run build && node scripts/tsc-or-tsrs.mjs -p tsconfig.dev.json",
     "build:tsc": "npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.cli.json",
     "typecheck:tsc": "npm run build:tsc && tsc -p tsconfig.dev.json",
     "test": "npm run build && node --test \"test/**/*.test.ts\"",

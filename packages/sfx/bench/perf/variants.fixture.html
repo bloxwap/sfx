@@ -1,0 +1,14 @@
+<!doctype html><meta charset="utf-8"><title>SFX variant benchmark</title><button id="unlock">Unlock</button>
+<script type="module">
+// Loads ?dist=<dir> (default /dist) so independent builds can be compared on identical workloads.
+const dist = new URLSearchParams(location.search).get('dist') ?? '/dist';
+const sfx = await import(`${dist}/index.js`);
+window.sfx = sfx;
+document.querySelector('#unlock').onclick = async () => { window.running = await sfx.unlock(); };
+window.batch = (n = 10000, opts) => {
+  const t = performance.now();
+  for (let i = 0; i < n; i++) sfx.play(sfx.sounds[i % sfx.sounds.length], opts);
+  return ((performance.now() - t) * 1000) / n;
+};
+window.ready = true;
+</script>

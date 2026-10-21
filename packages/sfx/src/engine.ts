@@ -84,6 +84,7 @@ const voices = new Set<Voice>();
 const lastPlayed = new Map<SoundName, number>();
 const rendered = new Map<SoundName, AudioBuffer>();
 const rendering = new Map<SoundName, Promise<AudioBuffer | null>>();
+const deferred = new Map<SoundName, () => void>();
 const noiseBuffers = new WeakMap<Ctx, AudioBuffer>();
 
 /** Milliseconds from a monotonic clock where available. */
@@ -296,6 +297,21 @@ function render(name: SoundName): Promise<AudioBuffer | null> {
   return pending;
 }
 
+/** Keep offline graph construction off the input handler's stack. */
+function deferRender(name: SoundName): void {
+  if (deferred.has(name)) return;
+  const run = (): void => {
+    // A dispose or recipe replacement invalidates callbacks the browser still holds.
+    if (deferred.get(name) !== run) return;
+    deferred.delete(name);
+    void render(name);
+  };
+  deferred.set(name, run);
+  const idle = (globalThis as { requestIdleCallback?: (callback: () => void, options: { timeout: number }) => void }).requestIdleCallback;
+  if (typeof idle === 'function') idle.call(globalThis, run, { timeout: 100 });
+  else setTimeout(run, 0);
+}
+
 /** Adds the per-play panner only when it changes something. */
 function route(ctx: Ctx, source: AudioNode, options: PlayOptions | undefined, destination: AudioNode): AudioNode[] {
   const extra: AudioNode[] = [];
@@ -406,7 +422,7 @@ function start(ctx: AudioContext, name: SoundName, options: PlayOptions | undefi
   };
   timer = setTimeout(done, seconds * 1000);
   register(voice);
-  void render(name);
+  deferRender(name);
 }
 
 function flush(): void {
@@ -591,6 +607,7 @@ export async function dispose(): Promise<void> {
   resuming = null;
   rendered.clear();
   rendering.clear();
+  deferred.clear();
   lastPlayed.clear();
   if (ctx && typeof ctx.close === 'function') {
     try { await ctx.close(); } catch { /* already closed */ }
@@ -603,6 +620,7 @@ export function define<Name extends string>(name: Name, recipe: Recipe): Name {
   const result = registerRecipe(name, recipe);
   rendered.delete(name);
   rendering.delete(name);
+  deferred.delete(name);
   lastPlayed.delete(name);
   return result;
 }

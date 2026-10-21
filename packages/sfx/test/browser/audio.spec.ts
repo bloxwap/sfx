@@ -113,3 +113,39 @@ test('WebKit recovers the interrupted state through its native context', async (
   await expect.poll(() => page.evaluate(() => (window as any).context.state)).toBe('running');
   expect(await page.evaluate(() => (window as any).stats.resumes)).toBeGreaterThan(0);
 });
+
+test('cold playback defers offline construction and fills the playback cache', async ({ page }) => {
+  await page.locator('#unlock').click();
+  await expect.poll(() => page.evaluate(() => (window as any).context.state)).toBe('running');
+  const immediate = await page.evaluate(() => {
+    const w = window as any;
+    w.offlineRenders = 0;
+    w.offlineFinished = false;
+    const Native = window.OfflineAudioContext;
+    w.OfflineAudioContext = class extends Native {
+      constructor(channels: number, length: number, rate: number) {
+        super(channels, length, rate);
+        w.offlineRenders++;
+      }
+      override async startRendering() {
+        const buffer = await super.startRendering();
+        w.offlineFinished = true;
+        return buffer;
+      }
+    };
+    w.oscillators = 0;
+    const create = w.context.createOscillator.bind(w.context);
+    w.context.createOscillator = () => { w.oscillators++; return create(); };
+    w.sfx.play('tick', { minInterval: 0 });
+    return { offline: w.offlineRenders, oscillators: w.oscillators };
+  });
+  expect(immediate).toEqual({ offline: 0, oscillators: 1 });
+  await expect.poll(() => page.evaluate(() => (window as any).offlineFinished)).toBe(true);
+  const cached = await page.evaluate(() => {
+    const w = window as any;
+    const before = w.stats.starts;
+    w.sfx.play('tick', { minInterval: 0 });
+    return { starts: w.stats.starts - before, oscillators: w.oscillators, offline: w.offlineRenders };
+  });
+  expect(cached).toEqual({ starts: 1, oscillators: 1, offline: 1 });
+});

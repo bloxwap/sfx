@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { OfflineAudioContext as RealOfflineAudioContext } from 'node-web-audio-api';
 import {
   FakeAudioContext, FakeOfflineAudioContext, asReal, globals, installAudio, installEvents, setActivation, tick,
@@ -12,7 +13,7 @@ import {
 import type { TestContext } from 'node:test';
 
 const live = (): FakeAudioContext => FakeAudioContext.instances.at(-1)!;
-const bufferSources = (ctx: FakeBaseContext) => ctx.of('source').filter((node) => node.buffer && node.buffer.numberOfChannels === 2);
+const bufferSources = (ctx: FakeBaseContext) => ctx.of('source').filter((node) => node.buffer && !node.loop);
 
 async function reset({ offline = true } = {}) {
   await dispose();
@@ -226,7 +227,7 @@ describe('master bus', () => {
 describe('rendering', () => {
   beforeEach(() => reset());
 
-  test('the first play synthesizes live and renders a stereo buffer; later plays use one buffer node', async () => {
+  test('the first play synthesizes live and renders a mono buffer; later plays use one buffer node', async () => {
     play('chime');
     const ctx = live();
     assert.equal(ctx.of('oscillator').length, 2, 'live synthesis on first play');
@@ -234,7 +235,7 @@ describe('rendering', () => {
     await tick();
     assert.equal(FakeOfflineAudioContext.instances.length, 1);
     const offline = FakeOfflineAudioContext.instances[0];
-    assert.equal(offline.channels, 2);
+    assert.equal(offline.channels, 1);
     assert.equal(offline.sampleRate, ctx.sampleRate);
     // 1.176 s by the cleanup formula (source end + echo tail + two pads).
     assert.equal(offline.length, Math.ceil(1.176 * ctx.sampleRate));
@@ -244,7 +245,7 @@ describe('rendering', () => {
     play('chime');
     const added = ctx.nodes.slice(before) as FakeBufferSource[];
     assert.deepEqual(added.map((node) => node.kind), ['source'], 'exactly one node per buffered play');
-    assert.equal(added[0]!.buffer!.numberOfChannels, 2);
+    assert.equal(added[0]!.buffer!.numberOfChannels, 1);
     assert.deepEqual(added[0]!.outputs, [ctx.of('gain')[0]], 'straight into the bus');
     assert.equal(added[0]!.startedAt, 0);
   });
@@ -306,6 +307,9 @@ describe('rendering', () => {
     assert.equal(FakeOfflineAudioContext.instances.length, sounds.length);
     assert.equal(FakeAudioContext.constructed, 0);
     assert.ok(FakeOfflineAudioContext.instances.every((ctx) => ctx.sampleRate === 48000));
+    const bytes = FakeOfflineAudioContext.instances.reduce((sum, ctx) => sum + ctx.channels * ctx.length * 4, 0);
+    assert.ok(bytes <= 3_050_000, String(bytes));
+    assert.equal(FakeOfflineAudioContext.instances.filter((ctx) => ctx.channels === 1).length, 14);
     await preload(['toString', 'nope'] as string[] as SoundName[]);
     assert.equal(FakeOfflineAudioContext.instances.length, sounds.length, 'invalid names are skipped');
   });
@@ -343,6 +347,71 @@ describe('rendering', () => {
     assert.equal(noise.length, 12, "10 deposit + 2 toggle noise layers");
     assert.ok(noise.every((node) => node.loop && node.buffer === noise[0].buffer));
     assert.ok(noise.every((node) => node.offset! >= 0 && node.offset! < 1));
+  });
+});
+
+describe('noise sample cache', () => {
+  beforeEach(() => reset());
+
+  function noise(sampleRate: number) {
+    const ctx = new FakeOfflineAudioContext(2, sampleRate, sampleRate);
+    assert.equal(renderTo(asReal(ctx), 'tick'), true);
+    return { ctx, buffer: ctx.of('source')[0].buffer! };
+  }
+
+  test('generates once per rate across contexts, with independent buffers and per-layer offsets', (t) => {
+    let calls = 0;
+    t.mock.method(Math, 'random', () => (++calls % 100) / 100);
+    const first = noise(48000);
+    const original = first.buffer.getChannelData(0).slice();
+    for (let i = 0; i < 5; i++) {
+      const next = noise(48000);
+      assert.notEqual(next.buffer, first.buffer);
+      assert.notEqual(next.buffer.getChannelData(0), first.buffer.getChannelData(0));
+      assert.deepEqual(next.buffer.getChannelData(0), original);
+      assert.notEqual(next.ctx.of('source')[0].offset, first.ctx.of('source')[0].offset);
+    }
+    assert.equal(calls, 48000 + 6, 'only layer offsets consume randomness after generation');
+    first.buffer.getChannelData(0).fill(0);
+    assert.deepEqual(noise(48000).buffer.getChannelData(0), original, 'buffer mutation cannot alter cached samples');
+    noise(44100);
+    noise(44100);
+    assert.equal(calls, 48000 + 44100 + 9);
+  });
+
+  test('retains only the two most recently generated rates', (t) => {
+    const random = t.mock.method(Math, 'random', () => 0.5);
+    noise(3000);
+    noise(4000);
+    noise(3000);
+    noise(5000);
+    noise(4000);
+    assert.equal(random.mock.callCount(), 3000 + 4000 + 5000 + 5);
+    noise(3000);
+    assert.equal(random.mock.callCount(), 3000 + 4000 + 5000 + 3000 + 6, 'oldest generated rate was evicted');
+  });
+
+  test('dispose clears samples and context buffers, including caller-owned contexts', async (t) => {
+    const random = t.mock.method(Math, 'random', () => 0.25);
+    const first = noise(3000);
+    await dispose();
+    assert.equal(renderTo(asReal(first.ctx), 'tick'), true);
+    assert.notEqual(first.ctx.of('source')[1].buffer, first.buffer);
+    assert.equal(random.mock.callCount(), 6002);
+    noise(3000);
+    assert.equal(random.mock.callCount(), 6003);
+  });
+
+  test('SSR import neither accesses browser globals nor generates samples', () => {
+    const entry = new URL('../dist/index.js', import.meta.url).href;
+    execFileSync(process.execPath, ['--input-type=module', '-e', `
+      for (const name of ['window', 'document', 'AudioContext', 'OfflineAudioContext']) {
+        Object.defineProperty(globalThis, name, { get() { throw new Error(name + ' accessed'); } });
+      }
+      Math.random = () => { throw new Error('random samples generated'); };
+      globalThis.Float32Array = class { constructor() { throw new Error('samples allocated'); } };
+      await import(${JSON.stringify(entry)});
+    `]);
   });
 });
 
@@ -481,6 +550,8 @@ describe('play options', () => {
     assert.equal(source.playbackRate.value, 1.5);
     assert.equal(gain.gain.value, 0.5);
     assert.equal(panner.pan.value, -0.5);
+    assert.equal(panner.channelCount, 2);
+    assert.equal(panner.channelCountMode, 'explicit');
     assert.deepEqual(panner.outputs, [ctx.of('gain')[0]]);
   });
 

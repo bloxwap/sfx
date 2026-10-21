@@ -1,7 +1,7 @@
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { Window } from 'happy-dom';
-import { createElement, useRef, act, StrictMode } from 'react';
+import { createElement, useRef, act, memo, StrictMode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { createRoot, type Root } from 'react-dom/client';
 import { useBindSounds, useSound, useSoundPreference, SoundProvider, useSoundHandler, useSemanticSound, type SoundPreference } from '../dist/react.js';
@@ -66,6 +66,63 @@ test('provider overrides persisted settings and restores them on unmount', async
   assert.equal(getVolume(), 0.8);
   await act(async () => root!.render(null));
   assert.equal(getVolume(), 0.8);
+});
+
+test('provider keeps memoized consumers stable across parent renders and updates once per preference change', async () => {
+  setup();
+  let seen!: SoundPreference;
+  let renders = 0;
+  const Preference = memo(function Preference() { renders++; seen = useSoundPreference(); return null; });
+  function Parent({ enabled, volume }: { enabled?: boolean; volume?: number }) {
+    return createElement(SoundProvider, { enabled, volume }, createElement(Preference));
+  }
+  await act(async () => root!.render(createElement(Parent)));
+  const initial = seen;
+  const mounted = renders;
+  for (let i = 0; i < 100; i++) {
+    await act(async () => root!.render(createElement(Parent)));
+  }
+  assert.equal(renders, mounted);
+  assert.equal(seen, initial);
+
+  async function change(update: () => void) {
+    const before = renders;
+    await act(async () => { update(); });
+    assert.equal(renders, before + 1);
+  }
+  await change(() => seen.setEnabled(false));
+  assert.equal(seen.enabled, false);
+  await change(() => seen.setVolume(0.4));
+  assert.equal(seen.volume, 0.4);
+  await change(() => seen.setCategoryVolume('controls', 0.2));
+  assert.equal(seen.categoryVolumes?.controls, 0.2);
+  await change(() => root!.render(createElement(Parent, { enabled: true })));
+  assert.equal(seen.enabled, true);
+  await change(() => root!.render(createElement(Parent, { enabled: true, volume: 0.7 })));
+  assert.equal(seen.volume, 0.7);
+  await change(() => root!.render(createElement(Parent)));
+  assert.equal(seen.enabled, false);
+  assert.equal(seen.volume, 0.4);
+
+  const before = renders;
+  await act(async () => {
+    seen.setEnabled(false); seen.setVolume(0.4); seen.setCategoryVolume('controls', 0.2);
+  });
+  assert.equal(renders, before);
+});
+
+test('preferences without a provider retain identity until the store changes', async () => {
+  setup();
+  let seen!: SoundPreference;
+  function Preference() { seen = useSoundPreference(); return null; }
+  await act(async () => root!.render(createElement(Preference)));
+  const initial = seen;
+  await act(async () => root!.render(createElement(Preference)));
+  assert.equal(seen, initial);
+  await act(async () => { seen.setVolume(0.5); });
+  assert.notEqual(seen, initial);
+  assert.equal(seen.volume, 0.5);
+  assert.equal(seen.setVolume, initial.setVolume);
 });
 
 test('unavailable storage does not break effects or preference changes', async () => {

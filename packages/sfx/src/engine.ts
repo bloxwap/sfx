@@ -85,7 +85,8 @@ const lastPlayed = new Map<SoundName, number>();
 const rendered = new Map<SoundName, AudioBuffer>();
 const rendering = new Map<SoundName, Promise<AudioBuffer | null>>();
 const deferred = new Map<SoundName, () => void>();
-const noiseBuffers = new WeakMap<Ctx, AudioBuffer>();
+let noiseBuffers = new WeakMap<Ctx, AudioBuffer>();
+const noiseSamples = new Map<number, Float32Array>();
 
 /** Milliseconds from a monotonic clock where available. */
 export const now = (): number => (typeof performance === 'undefined' ? Date.now() : performance.now());
@@ -171,10 +172,17 @@ function listen(target: EventTarget | undefined, type: string, listener: () => v
 function noiseFor(ctx: Ctx): AudioBuffer {
   let buffer = noiseBuffers.get(ctx);
   if (!buffer) {
-    const length = Math.max(1, Math.floor(NOISE_SECONDS * ctx.sampleRate));
-    buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+    let samples = noiseSamples.get(ctx.sampleRate);
+    if (!samples) {
+      samples = new Float32Array(Math.max(1, Math.floor(NOISE_SECONDS * ctx.sampleRate)));
+      for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
+      // Keep only the two most recently generated rates; arbitrary render rates must not grow memory.
+      if (noiseSamples.size === 2) noiseSamples.delete(noiseSamples.keys().next().value!);
+      noiseSamples.set(ctx.sampleRate, samples);
+    }
+    // Buffers belong to their context: share samples, never an AudioBuffer across contexts.
+    buffer = ctx.createBuffer(1, samples.length, ctx.sampleRate);
+    buffer.getChannelData(0).set(samples);
     noiseBuffers.set(ctx, buffer);
   }
   return buffer;
@@ -264,13 +272,13 @@ function length(recipe: Recipe): number {
   return sourceEnd(recipe) + PAD + echoTail(recipe) + PAD;
 }
 
-/** Renders a sound to a fresh stereo buffer. Resolves null where offline rendering is unavailable or fails. */
-async function bake(name: SoundName, sampleRate: number): Promise<AudioBuffer | null> {
+/** Renders a sound to a fresh buffer. Resolves null where offline rendering is unavailable or fails. */
+async function bake(name: SoundName, sampleRate: number, channels = 2): Promise<AudioBuffer | null> {
   const Offline = offlineConstructor();
   if (!Offline) return null;
   const recipe = getRecipe(name);
   try {
-    const offline = new Offline(2, Math.ceil(length(recipe) * sampleRate), sampleRate);
+    const offline = new Offline(channels, Math.ceil(length(recipe) * sampleRate), sampleRate);
     synthesize(offline, recipe, offline.destination, 0);
     return await offline.startRendering();
   } catch {
@@ -284,7 +292,7 @@ function render(name: SoundName): Promise<AudioBuffer | null> {
   if (done) return Promise.resolve(done);
   let pending = rendering.get(name);
   if (!pending) {
-    pending = bake(name, context?.sampleRate ?? FALLBACK_RATE).then((buffer) => {
+    pending = bake(name, context?.sampleRate ?? FALLBACK_RATE, getRecipe(name).layers.some((layer) => layer.pan) ? 2 : 1).then((buffer) => {
       // Skip the store when dispose() ran meanwhile: the buffer may be at the old context's rate.
       if (rendering.get(name) === pending) {
         rendering.delete(name);
@@ -319,6 +327,9 @@ function route(ctx: Ctx, source: AudioNode, options: PlayOptions | undefined, de
   const pan = clamp(options?.pan, -1, 1, 0);
   if (pan !== 0 && typeof (ctx as { createStereoPanner?: unknown }).createStereoPanner === 'function') {
     const panner = ctx.createStereoPanner();
+    // Preserve the stereo pan law even when the cached source is mono.
+    panner.channelCount = 2;
+    panner.channelCountMode = 'explicit';
     panner.pan.value = pan;
     tail = tail.connect(panner);
     extra.push(panner);
@@ -608,6 +619,8 @@ export async function dispose(): Promise<void> {
   rendered.clear();
   rendering.clear();
   deferred.clear();
+  noiseSamples.clear();
+  noiseBuffers = new WeakMap();
   lastPlayed.clear();
   if (ctx && typeof ctx.close === 'function') {
     try { await ctx.close(); } catch { /* already closed */ }

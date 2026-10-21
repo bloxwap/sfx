@@ -36,6 +36,15 @@ export interface TrimmedAudio extends AudioBufferLike {
 const finite = (value: unknown, fallback: number): number =>
   typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 
+/** Clamps to [-1, 1]; NaN (and a short channel's missing samples) become silence. */
+const clamp = (x: number): number => (x > 1 ? 1 : x < -1 ? -1 : x || 0);
+
+/** Asymmetric scaling so -1 and 1 hit the integer range's ends exactly. */
+function quantize(x: number, neg: number): number {
+  const s = clamp(x);
+  return Math.round(s < 0 ? s * neg : s * (neg - 1));
+}
+
 /**
  * Encodes audio as a RIFF/WAVE file: little-endian, interleaved, samples clamped to [-1, 1]. 16/24-bit
  * are integer PCM (format 1); 32-bit is IEEE float (format 3, with the fact chunk the spec requires).
@@ -63,13 +72,6 @@ export function encodeWav(buffer: AudioBufferLike, options: WavOptions = {}): Ar
   if (header - 8 + dataSize + pad > 0xffffffff) throw new RangeError('audio is too long for a WAV file (4 GiB limit)');
 
   const inputs = Array.from({ length: sources }, (_, c) => buffer.getChannelData(c));
-  const reads: ((i: number) => number)[] =
-    channels === 1 && sources > 1
-      ? [(i) => { let sum = 0; for (const data of inputs) sum += data[i] as number; return sum / sources; }]
-      : Array.from({ length: channels }, (_, c) => {
-          const data = inputs[Math.min(c, sources - 1)] as Float32Array;
-          return (i: number) => data[i] as number;
-        });
 
   const out = new ArrayBuffer(header + dataSize + pad);
   const view = new DataView(out);
@@ -83,20 +85,30 @@ export function encodeWav(buffer: AudioBufferLike, options: WavOptions = {}): Ar
   if (float) { u16(0); text('fact'); u32(4); u32(frames); }
   text('data'); u32(dataSize);
 
-  for (let i = 0; i < frames; i++) {
-    for (const read of reads) {
-      const x = read(i);
-      // NaN (and a short channel's missing samples) become silence.
-      const s = x > 1 ? 1 : x < -1 ? -1 : x || 0;
-      if (float) {
-        view.setFloat32(p, s, true);
-      } else {
-        // Asymmetric scaling so -1 and 1 hit the integer range's ends exactly.
-        const v = Math.round(s < 0 ? s * 2 ** (bitDepth - 1) : s * (2 ** (bitDepth - 1) - 1));
-        if (bitDepth === 16) view.setInt16(p, v, true);
-        else { view.setUint8(p, v & 255); view.setUint8(p + 1, (v >> 8) & 255); view.setUint8(p + 2, (v >> 16) & 255); }
+  let mix: Float64Array | undefined;
+  if (channels === 1 && sources > 1) {
+    // Downmix in double precision, summing in channel order, before clamping and quantization.
+    mix = new Float64Array(frames);
+    for (let i = 0; i < frames; i++) {
+      let sum = 0;
+      for (const data of inputs) sum += data[i] as number;
+      mix[i] = sum / sources;
+    }
+  }
+  // Each channel is written at an interleaved stride: no per-sample reader calls or format checks.
+  const neg = 2 ** (bitDepth - 1);
+  for (let c = 0; c < channels; c++) {
+    const data = mix ?? (inputs[Math.min(c, sources - 1)] as Float32Array);
+    p = header + c * bytes;
+    if (float) {
+      for (let i = 0; i < frames; i++, p += blockAlign) view.setFloat32(p, clamp(data[i] as number), true);
+    } else if (bitDepth === 16) {
+      for (let i = 0; i < frames; i++, p += blockAlign) view.setInt16(p, quantize(data[i] as number, neg), true);
+    } else {
+      for (let i = 0; i < frames; i++, p += blockAlign) {
+        const v = quantize(data[i] as number, neg);
+        view.setInt16(p, v, true); view.setInt8(p + 2, v >> 16);
       }
-      p += bytes;
     }
   }
   return out;

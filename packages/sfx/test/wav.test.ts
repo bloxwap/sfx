@@ -10,9 +10,11 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { OfflineAudioContext } from 'node-web-audio-api';
 import { encodeWav, trimSilence, type AudioBufferLike } from '../dist/wav.js';
-import { duration, sounds } from '../dist/index.js';
+import { duration, sounds, renderTo } from '../dist/index.js';
 import { HELP, run, type RunDeps } from '../dist/cli/index.js';
 import { asReal } from './fake-audio.ts';
+
+import { encodeWav as referenceWav } from './wav-reference.ts';
 
 type RunLoaded = Awaited<ReturnType<NonNullable<RunDeps['load']>>>;
 
@@ -39,6 +41,39 @@ async function decode(wav: ArrayBuffer, sampleRate = 48000): Promise<AudioBuffer
 }
 
 describe('encodeWav', () => {
+  test('matches the original encoder for every built-in sound and output format', async () => {
+    for (const name of sounds) {
+      const ctx = new OfflineAudioContext(2, Math.ceil((duration(name) + 0.1) * 48000), 48000);
+      assert.equal(renderTo(asReal<BaseAudioContext>(ctx), name), true);
+      const buffer = await ctx.startRendering();
+      for (const bitDepth of [16, 24, 32] as const) {
+        for (const channels of [1, 2] as const) {
+          const options = { bitDepth, channels };
+          assert.deepEqual(encodeWav(buffer, options), referenceWav(buffer, options), name + JSON.stringify(options));
+        }
+      }
+    }
+  });
+
+  test('matches original rounding and missing-sample semantics across all paths', () => {
+    const values = [NaN, Infinity, -Infinity, 2, -2, -1, 1, -0.5, 0.5, -0, 0, 1 / 65536, -1 / 65536];
+    const buffers = [
+      audio([values]),
+      audio([values, [...values].reverse()]),
+      audio([values, [...values].reverse(), values.map(() => 0.0000001)]),
+      audio([values, [0.25], [-0.5]]),
+      audio([[]]),
+    ];
+    for (const buffer of buffers) {
+      for (const bitDepth of [16, 24, 32] as const) {
+        for (const channels of [undefined, 1, 2] as const) {
+          const options = { bitDepth, channels };
+          assert.deepEqual(encodeWav(buffer, options), referenceWav(buffer, options));
+        }
+      }
+    }
+  });
+
   test('16-bit PCM header, field by field', () => {
     const wav = encodeWav(audio([[0, 0, 0], [0, 0, 0]], 44100));
     const v = new DataView(wav);

@@ -1,5 +1,5 @@
 'use client';
-import { createContext, createElement, useCallback, useContext, useEffect, useSyncExternalStore, type ReactNode, type RefObject, type SyntheticEvent } from 'react';
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useSyncExternalStore, type ReactNode, type RefObject, type SyntheticEvent } from 'react';
 import { bind, type BindOptions } from './bind.js';
 import { play, setEnabled as applyEnabled, setVolume as applyVolume, unlock, type PlayOptions } from './engine.js';
 import { categories, type SoundCategory } from './recipes.js';
@@ -79,7 +79,7 @@ function usePreferenceStore(): SoundPreference {
   useEffect(() => {
     try { update(read(localStorage.getItem(STORAGE_KEY))); } catch { /* private browsing */ }
   }, []);
-  return { ...snapshot, ...settings };
+  return useMemo(() => ({ ...snapshot, ...settings }), [snapshot]);
 }
 
 /** Shared mute/volume preferences, persisted after mount and synchronized across tabs. SSR-safe. */
@@ -103,7 +103,7 @@ export interface SoundProviderProps {
 /** Mount one provider near the app root to control the shared audio engine. */
 export function SoundProvider({ children, enabled, volume, unlockOnInteraction = true }: SoundProviderProps) {
   const saved = usePreferenceStore();
-  const value = { ...saved, enabled: enabled ?? saved.enabled, volume: volume ?? saved.volume };
+  const value = useMemo(() => ({ ...saved, enabled: enabled ?? saved.enabled, volume: volume ?? saved.volume }), [saved, enabled, volume]);
   useEffect(() => { applyEnabled(value.enabled); applyVolume(value.volume); applyCategories(value); }, [value.enabled, value.volume, value.categoryVolumes]);
   useEffect(() => () => { applyEnabled(preference.enabled); applyVolume(preference.volume); applyCategories({ ...preference, ...settings }); }, []);
   useEffect(() => {

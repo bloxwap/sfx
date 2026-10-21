@@ -1,0 +1,18 @@
+<!doctype html><meta charset="utf-8"><title>SFX benchmark</title><button id="unlock">Unlock</button>
+<script type="module">
+import * as sfx from '/dist/index.js';
+window.sfx=sfx;window.counts={};
+for(const method of ['createBufferSource','createGain','createStereoPanner']) {
+ const original=AudioContext.prototype[method];
+ AudioContext.prototype[method]=function(...args){window.counts[method]=(window.counts[method]||0)+1;return original.apply(this,args)};
+}
+document.querySelector('button').onclick=async()=>{window.running=await sfx.unlock()};
+window.batch=(variant)=>{
+ sfx.setVolume(variant==='category'?.5:1,{category:'controls'});window.counts={};
+ const opts=variant==='options'?{volume:.5,pan:.3}:undefined,t=performance.now();
+ for(let i=0;i<10000;i++)sfx.play(sfx.sounds[i%sfx.sounds.length],opts);
+ const us=(performance.now()-t)/10;
+ if(window.counts.createBufferSource!==10000||sfx.activeVoices()!==24)throw Error('Playback/stealing verification failed');
+ return {us,nodes:{...window.counts}};
+};window.ready=true;
+</script>

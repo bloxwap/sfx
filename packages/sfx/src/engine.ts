@@ -58,6 +58,9 @@ interface Voice { readonly name: SoundName; stop(): void }
 type ContextConstructor = new (options?: AudioContextOptions) => AudioContext;
 type OfflineConstructor = new (channels: number, length: number, sampleRate: number) => OfflineAudioContext;
 
+const NOOP = (): void => {};
+let activationSeen = false;
+
 const FLOOR = 0.0001;
 const PAD = 0.05;
 const NOISE_SECONDS = 1;
@@ -108,9 +111,10 @@ function offlineConstructor(): OfflineConstructor | undefined {
 
 /** False only when the browser reports that the page has not seen a user gesture yet. */
 function activated(): boolean {
-  if (typeof navigator === 'undefined') return true;
-  const activation = (navigator as { userActivation?: { hasBeenActive?: boolean } }).userActivation;
-  return activation?.hasBeenActive !== false;
+  if (activationSeen || typeof navigator === 'undefined') return true;
+  const active = (navigator as { userActivation?: { hasBeenActive?: boolean } }).userActivation?.hasBeenActive;
+  activationSeen = active === true;
+  return active !== false;
 }
 
 /** The shared context and its master bus (volume → limiter → speakers), created on first need. */
@@ -163,7 +167,7 @@ function onVisibility(): void {
 
 /** Adds a listener where the target supports it; returns its remover. */
 function listen(target: EventTarget | undefined, type: string, listener: () => void): () => void {
-  if (typeof target?.addEventListener !== 'function') return () => {};
+  if (typeof target?.addEventListener !== 'function') return NOOP;
   target.addEventListener(type, listener);
   return () => target.removeEventListener(type, listener);
 }
@@ -321,29 +325,38 @@ function deferRender(name: SoundName): void {
 }
 
 /** Adds the per-play panner only when it changes something. */
-function route(ctx: Ctx, source: AudioNode, options: PlayOptions | undefined, destination: AudioNode): AudioNode[] {
-  const extra: AudioNode[] = [];
-  let tail = source;
+function route(ctx: Ctx, source: AudioNode, options: PlayOptions | undefined, destination: AudioNode): StereoPannerNode | undefined {
+  let panner: StereoPannerNode | undefined;
   const pan = clamp(options?.pan, -1, 1, 0);
   if (pan !== 0 && typeof (ctx as { createStereoPanner?: unknown }).createStereoPanner === 'function') {
-    const panner = ctx.createStereoPanner();
+    panner = ctx.createStereoPanner();
     // Preserve the stereo pan law even when the cached source is mono.
     panner.channelCount = 2;
     panner.channelCountMode = 'explicit';
     panner.pan.value = pan;
-    tail = tail.connect(panner);
-    extra.push(panner);
+    source = source.connect(panner);
   }
-  tail.connect(destination);
-  return extra;
+  source.connect(destination);
+  return panner;
 }
 
 /** Stops `voice` when `signal` aborts. Returns the remover, called once the voice is gone. */
 function watch(voice: Voice, signal: AbortSignal | undefined): () => void {
-  if (!signal) return () => {};
+  if (!signal) return NOOP;
   const abort = (): void => voice.stop();
   signal.addEventListener('abort', abort, { once: true });
   return () => signal.removeEventListener('abort', abort);
+}
+
+class BufferedVoice implements Voice {
+  constructor(
+    readonly name: SoundName,
+    readonly source: AudioBufferSourceNode,
+  ) {}
+
+  stop(): void {
+    try { this.source.stop(); } catch { /* already stopped */ }
+  }
 }
 
 function register(voice: Voice): void {
@@ -366,8 +379,10 @@ function schedule(ctx: Ctx, name: SoundName, options: PlayOptions | undefined, d
   const rate = clamp(options?.rate, 0.25, 4, 1);
   const delay = clamp(options?.delay, 0, 10, 0);
   const mix = ctx.createGain();
-  const nodes = [mix, ...route(ctx, mix, options, destination)];
-  nodes.push(...synthesize(ctx, recipe, mix, ctx.currentTime + delay, rate, clamp(options?.volume, 0, 2, 1)));
+  const panner = route(ctx, mix, options, destination);
+  const nodes = synthesize(ctx, recipe, mix, ctx.currentTime + delay, rate, clamp(options?.volume, 0, 2, 1));
+  nodes.push(mix);
+  if (panner) nodes.push(panner);
   return [nodes, delay + length(recipe) / rate];
 }
 
@@ -377,7 +392,6 @@ function start(ctx: AudioContext, name: SoundName, options: PlayOptions | undefi
   const multiplier = categoryVolumes[isCategory(options?.category) ? options.category : categoryOf(name)];
   const gain = clamp(options?.volume, 0, 2, 1) * multiplier;
   if (gain === 0) return;
-  if (multiplier !== 1) options = { ...options, volume: gain };
   const rate = clamp(options?.rate, 0.25, 4, 1);
   if (buffer) {
     // Hot path: one buffer source per play (plus a gain/panner only when asked for).
@@ -385,31 +399,27 @@ function start(ctx: AudioContext, name: SoundName, options: PlayOptions | undefi
     source.buffer = buffer;
     if (rate !== 1) source.playbackRate.value = rate;
     let head: AudioNode = source;
-    const nodes: AudioNode[] = [];
+    let level: GainNode | undefined;
     if (gain !== 1) {
-      const level = ctx.createGain();
+      level = ctx.createGain();
       level.gain.value = gain;
       head = source.connect(level);
-      nodes.push(level);
     }
-    nodes.push(...route(ctx, head, options, destination));
-    const voice: Voice = {
-      name,
-      stop() {
-        try { source.stop(); } catch { /* already stopped */ }
-      },
-    };
+    const panner = route(ctx, head, options, destination);
+    const voice = new BufferedVoice(name, source);
     const release = watch(voice, options?.signal);
     source.onended = () => {
       release();
       voices.delete(voice);
       source.disconnect();
-      for (const node of nodes) node.disconnect();
+      level?.disconnect();
+      panner?.disconnect();
     };
     register(voice);
     source.start(ctx.currentTime + clamp(options?.delay, 0, 10, 0));
     return;
   }
+  if (multiplier !== 1) options = { ...options, volume: gain };
   // First play of this sound: synthesize it live now, and render its buffer for next time.
   const [nodes, seconds] = schedule(ctx, name, options, destination);
   const end = ctx.currentTime + seconds;
@@ -609,6 +619,7 @@ export function getOutput(): AudioNode | null {
  */
 export async function dispose(): Promise<void> {
   stopAll();
+  activationSeen = false;
   for (const remove of listeners) remove();
   listeners = [];
   const ctx = context;

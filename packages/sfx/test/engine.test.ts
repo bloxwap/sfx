@@ -73,6 +73,45 @@ describe('play() gating', () => {
     assert.equal(FakeAudioContext.constructed, 1);
   });
 
+  test('activation is read until true, then latched until dispose', async (t) => {
+    let active = false;
+    const read = t.mock.fn(() => ({ hasBeenActive: active }));
+    globals.navigator = { get userActivation() { return read(); } };
+    play('tick');
+    assert.equal(FakeAudioContext.constructed, 0);
+    active = true;
+    play('tick');
+    active = false;
+    play('press');
+    assert.equal(read.mock.callCount(), 2, 'latched plays skip the browser getter');
+    assert.equal(activeVoices(), 2);
+    await dispose();
+    play('tick');
+    assert.equal(read.mock.callCount(), 3);
+    assert.equal(activeVoices(), 0, 'dispose resets the latch');
+  });
+
+  test('missing navigator, activation API or active flag never latches', async () => {
+    for (const navigator of [undefined, {}, { userActivation: {} }]) {
+      await dispose();
+      if (navigator === undefined) delete globals.navigator;
+      else globals.navigator = navigator;
+      play('tick');
+      assert.equal(activeVoices(), 1);
+      setActivation(false);
+      play('press');
+      assert.equal(activeVoices(), 1, 'a later false still gates playback');
+    }
+  });
+
+  test('force bypass never latches even when activation is true', () => {
+    setActivation(true);
+    play('tick', { force: true });
+    setActivation(false);
+    play('press');
+    assert.equal(activeVoices(), 1);
+  });
+
   test('setEnabled(false) mutes; non-booleans are ignored', () => {
     setEnabled(false);
     play('chime');
@@ -587,6 +626,55 @@ describe('voices', () => {
     assert.equal(activeVoices(), 0);
     assert.equal(source.disconnects, 1);
     assert.equal(ctx.of('gain').at(-1)!.disconnects, 1);
+  });
+
+  test('shared no-op release handles teardown with every combination of optional nodes', () => {
+    play('tick');
+    const ctx = live();
+    bufferSources(ctx)[0].end();
+    for (const options of [{}, { volume: 0.5 }, { pan: 0.5 }, { volume: 0.5, pan: 0.5 }]) {
+      const before = ctx.nodes.length;
+      play('tick', options);
+      const source = bufferSources(ctx).at(-1)!;
+      const extras = ctx.nodes.slice(before + 1);
+      source.end();
+      assert.equal(source.disconnects, 1);
+      for (const node of extras) assert.equal(node.disconnects, 1);
+      assert.equal(activeVoices(), 0, 'shared no-op release is safe without a signal');
+    }
+  });
+
+  test('stealing a delayed voice releases its signal and all routing nodes', async (t) => {
+    configure({ maxVoices: 1 });
+    const controller = new AbortController();
+    const remove = t.mock.method(controller.signal, 'removeEventListener');
+    play('tick', { signal: controller.signal, volume: 0.5, pan: -0.5, delay: 2 });
+    const ctx = live();
+    const source = bufferSources(ctx)[0];
+    const level = ctx.of('gain').at(-1)!;
+    const panner = ctx.of('panner')[0];
+    assert.equal(source.startedAt, 2);
+    play('press');
+    await tick();
+    assert.equal(activeVoices(), 1);
+    assert.equal(remove.mock.callCount(), 1);
+    assert.equal(source.disconnects, 1);
+    assert.equal(level.disconnects, 1);
+    assert.equal(panner.disconnects, 1);
+    controller.abort();
+    assert.equal(bufferSources(ctx)[1].stoppedAt, undefined);
+  });
+
+  test('cached category scaling preserves caller options and optional routing', () => {
+    const options = Object.freeze({ volume: 2, pan: 0.25, delay: 0.2, category: 'feedback' as const });
+    setVolume(0.25, { category: 'feedback' });
+    play('tick', options);
+    const ctx = live();
+    assert.equal(ctx.of('gain').at(-1)!.gain.value, 0.5);
+    assert.equal(ctx.of('panner')[0].pan.value, 0.25);
+    assert.equal(bufferSources(ctx)[0].startedAt, 0.2);
+    assert.equal(options.volume, 2);
+    setVolume(1, { category: 'feedback' });
   });
 
   test('the oldest voice is cut when maxVoices is reached', async () => {

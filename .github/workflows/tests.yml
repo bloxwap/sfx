@@ -1,7 +1,7 @@
 name: Tests
 
-# Gates every pull request (and main) on the same checks contributors run locally. Runs without a
-# path filter so it can be a required status check without blocking docs-only changes.
+# Gates pull requests (and main) on the same checks contributors run locally.
+# Doc-only PRs skip the test job; skipped jobs still satisfy the required check.
 on:
   pull_request:
   push:
@@ -12,13 +12,44 @@ permissions:
   contents: read
 
 concurrency:
-  group: tests-${{ github.ref }}
-  cancel-in-progress: true
+  group: tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  test:
+  changes:
     # Security: never run fork PR code on the self-hosted runner.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ github.event_name != 'pull_request' && 'true' || (steps.filter.outputs.code == 'true' || steps.filter.outputs.packaged == 'true') && 'true' || 'false' }}
+    steps:
+      # Skip doc-only PRs; keep MDX docs-site inputs and all non-PR events running.
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        if: github.event_name == 'pull_request'
+        id: filter
+        with:
+          predicate-quantifier: some-with-excludes
+          filters: |
+            code:
+              - '**'
+              - '!**/*.md'
+              - '!LICENSE'
+              - '!.github/ISSUE_TEMPLATE/**'
+              - '!.github/pull_request_template.md'
+              - '!CODEOWNERS'
+            # The pack dry run requires the packaged README and LICENSE.
+            packaged:
+              - 'packages/sfx/README.md'
+              - 'packages/sfx/LICENSE'
+
+  test:
+    needs: changes
+    # Security: never run fork PR code on the self-hosted runner.
+    if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 15
 

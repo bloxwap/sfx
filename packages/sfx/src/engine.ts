@@ -84,7 +84,8 @@ const voices = new Set<Voice>();
 const lastPlayed = new Map<SoundName, number>();
 const rendered = new Map<SoundName, AudioBuffer>();
 const rendering = new Map<SoundName, Promise<AudioBuffer | null>>();
-const noiseBuffers = new WeakMap<Ctx, AudioBuffer>();
+let noiseBuffers = new WeakMap<Ctx, AudioBuffer>();
+const noiseSamples = new Map<number, Float32Array>();
 
 /** Milliseconds from a monotonic clock where available. */
 export const now = (): number => (typeof performance === 'undefined' ? Date.now() : performance.now());
@@ -170,10 +171,17 @@ function listen(target: EventTarget | undefined, type: string, listener: () => v
 function noiseFor(ctx: Ctx): AudioBuffer {
   let buffer = noiseBuffers.get(ctx);
   if (!buffer) {
-    const length = Math.max(1, Math.floor(NOISE_SECONDS * ctx.sampleRate));
-    buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+    let samples = noiseSamples.get(ctx.sampleRate);
+    if (!samples) {
+      samples = new Float32Array(Math.max(1, Math.floor(NOISE_SECONDS * ctx.sampleRate)));
+      for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
+      // Keep only the two most recently generated rates; arbitrary render rates must not grow memory.
+      if (noiseSamples.size === 2) noiseSamples.delete(noiseSamples.keys().next().value!);
+      noiseSamples.set(ctx.sampleRate, samples);
+    }
+    // Buffers belong to their context: share samples, never an AudioBuffer across contexts.
+    buffer = ctx.createBuffer(1, samples.length, ctx.sampleRate);
+    buffer.getChannelData(0).set(samples);
     noiseBuffers.set(ctx, buffer);
   }
   return buffer;
@@ -591,6 +599,8 @@ export async function dispose(): Promise<void> {
   resuming = null;
   rendered.clear();
   rendering.clear();
+  noiseSamples.clear();
+  noiseBuffers = new WeakMap();
   lastPlayed.clear();
   if (ctx && typeof ctx.close === 'function') {
     try { await ctx.close(); } catch { /* already closed */ }

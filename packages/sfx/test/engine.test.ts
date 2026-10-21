@@ -7,7 +7,7 @@ import {
   type FakeBaseContext, type FakeBufferSource, type FakeGain, type FakePanner,
 } from './fake-audio.ts';
 import {
-  activeVoices, configure, dispose, duration, getOutput, getVolume, isEnabled, play, preload, renderBuffer, renderTo, setEnabled,
+  activeVoices, configure, define, dispose, duration, getOutput, getVolume, isEnabled, play, preload, renderBuffer, renderTo, setEnabled,
   setVolume, sounds, stopAll, unlock, type SoundName,
 } from '../dist/index.js';
 import type { TestContext } from 'node:test';
@@ -231,6 +231,8 @@ describe('rendering', () => {
     play('chime');
     const ctx = live();
     assert.equal(ctx.of('oscillator').length, 2, 'live synthesis on first play');
+    assert.equal(FakeOfflineAudioContext.instances.length, 0, 'offline graph is deferred');
+    await tick();
     assert.equal(FakeOfflineAudioContext.instances.length, 1);
     const offline = FakeOfflineAudioContext.instances[0];
     assert.equal(offline.channels, 1);
@@ -246,6 +248,50 @@ describe('rendering', () => {
     assert.equal(added[0]!.buffer!.numberOfChannels, 1);
     assert.deepEqual(added[0]!.outputs, [ctx.of('gain')[0]], 'straight into the bus');
     assert.equal(added[0]!.startedAt, 0);
+  });
+
+  test('repeated cold plays share a deferred fill; preload can fill it first', async () => {
+    play('tick');
+    play('tick');
+    assert.equal(live().of('oscillator').length, 2);
+    assert.equal(FakeOfflineAudioContext.instances.length, 0);
+    await preload(['tick']);
+    await tick();
+    assert.equal(FakeOfflineAudioContext.instances.length, 1);
+  });
+
+  test('idle scheduling is feature detected and invalidated callbacks cannot refill caches', async (t) => {
+    const callbacks: (() => void)[] = [];
+    globals.requestIdleCallback = function (callback: () => void, options: { timeout: number }) {
+      assert.equal(this, globalThis);
+      assert.equal(options.timeout, 100);
+      callbacks.push(callback);
+    };
+    t.after(() => { delete globals.requestIdleCallback; });
+    play('tick');
+    play('tick');
+    assert.equal(callbacks.length, 1);
+    assert.equal(FakeOfflineAudioContext.instances.length, 0);
+    callbacks.shift()!();
+    await preload(['tick']);
+    assert.equal(FakeOfflineAudioContext.instances.length, 1);
+
+    play('press');
+    await dispose();
+    callbacks.shift()!();
+    assert.equal(FakeOfflineAudioContext.instances.length, 1, 'disposed callback skipped');
+
+    const recipe = { level: 1, layers: [{ wave: 'sine' as const, freq: 440, at: 0, attack: 0.01, decay: 0.1, peak: 1 }] };
+    const name = define('deferred-replacement', recipe);
+    play(name);
+    define(name, { ...recipe, level: 0.5 });
+    play(name);
+    callbacks.shift()!();
+    assert.equal(FakeOfflineAudioContext.instances.length, 1, 'old recipe callback skipped');
+    callbacks.shift()!();
+    await preload([name]);
+    assert.equal(FakeOfflineAudioContext.instances.length, 2);
+    assert.equal(FakeOfflineAudioContext.instances[1].of('gain')[0].gain.value, 0.5);
   });
 
   test('a render in flight is shared, not repeated', async () => {
@@ -1142,9 +1188,12 @@ describe('render cache', () => {
     assert.deepEqual(live().nodes.map((node) => node.kind).slice(-1), ['source'], 'buffered after the retry');
   });
 
-  test('a render still in flight at dispose() is not cached for the next context', async () => {
+  test('a render still in flight at dispose() is not cached for the next context', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
     FakeAudioContext.next = { sampleRate: 44100 };
     play('tick');
+    t.mock.timers.tick(0);
+    t.mock.timers.reset();
     FakeAudioContext.next = {};
     await dispose();
     await tick();

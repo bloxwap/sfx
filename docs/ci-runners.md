@@ -46,7 +46,9 @@ Install these on the Mac before the runner accepts jobs. Workflows will not
 | `gpg` (Homebrew `gnupg`) | Preinstalled on the minis |
 
 The Documentation **build** job looks for `gtar` and, if needed, prepends
-`$(brew --prefix gnu-tar)/bin` to `PATH`. It does not install the formula.
+`$(brew --prefix gnu-tar)/bin` to `PATH` when it uploads the Pages artifact
+(main only; pull requests still build and `docs:check` without uploading).
+It does not install the formula.
 
 Node.js 24 and npm are installed per job by `actions/setup-node`. Playwright
 browsers are installed by `npx playwright install` (no `--with-deps`) and stay

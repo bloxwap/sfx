@@ -4,7 +4,7 @@
 //   buffered  — this library's hot path: one AudioBufferSourceNode reading a pre-rendered buffer
 // Fails if the buffered path is not at least MIN_SPEEDUP× cheaper on average, so regressions show up in CI.
 import { OfflineAudioContext } from 'node-web-audio-api';
-import { synthesize } from '../dist/engine.js';
+import { dispose, preload, synthesize } from '../dist/engine.js';
 import { duration, recipes, sounds, type Recipe } from '../dist/recipes.js';
 
 const SAMPLE_RATE = 48000;
@@ -56,4 +56,24 @@ console.log(`\n${'mean'.padEnd(13)} ${mean('nodes').toFixed(1).padStart(5)} ${me
 if (speedup < MIN_SPEEDUP) {
   console.error(`::error::buffered playback is only ${speedup.toFixed(1)}× cheaper than live synthesis (expected ≥ ${MIN_SPEEDUP}×)`);
   process.exit(1);
+}
+
+// Measure the actual play cache, without creating a live context or changing public exports.
+let retainedBytes = 0;
+const originalOffline = globalThis.OfflineAudioContext;
+Object.assign(globalThis, { OfflineAudioContext: class extends OfflineAudioContext {
+  override async startRendering() {
+    const buffer = await super.startRendering();
+    retainedBytes += buffer.numberOfChannels * buffer.length * Float32Array.BYTES_PER_ELEMENT;
+    return buffer;
+  }
+} });
+try {
+  await preload();
+  console.log(`\n48 kHz preloaded catalog: ${retainedBytes.toLocaleString('en-US')} bytes of sample data`);
+  if (retainedBytes > 3_050_000) throw new Error('Catalog cache exceeds 3.05 MB');
+} finally {
+  await dispose();
+  if (originalOffline) globalThis.OfflineAudioContext = originalOffline;
+  else Reflect.deleteProperty(globalThis, 'OfflineAudioContext');
 }

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { compareCache } from '../cache-equivalence.ts';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -112,4 +113,14 @@ test('WebKit recovers the interrupted state through its native context', async (
   });
   await expect.poll(() => page.evaluate(() => (window as any).context.state)).toBe('running');
   expect(await page.evaluate(() => (window as any).stats.resumes)).toBeGreaterThan(0);
+});
+
+test('mono cache preserves stereo output at center and non-zero pan', async ({ page }) => {
+  await page.addScriptTag({ content: `window.compareCache = ${compareCache.toString()};` });
+  const { bytes, maxDiff } = await page.evaluate(async () => {
+    const { recipes } = await import('/dist/recipes.js' as string);
+    return (window as any).compareCache((window as any).sfx, recipes, OfflineAudioContext, 1e-5);
+  });
+  console.log(`mono vs stereo cache: max sample difference ${maxDiff}`);
+  expect(bytes).toBeLessThanOrEqual(3_050_000);
 });

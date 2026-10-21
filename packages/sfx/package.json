@@ -60,6 +60,8 @@
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "build": "npm run clean && tsrs -p tsconfig.json && tsrs -p tsconfig.cli.json",
     "typecheck": "npm run build && tsrs -p tsconfig.dev.json",
+    "build:tsc": "npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.cli.json",
+    "typecheck:tsc": "npm run build:tsc && tsc -p tsconfig.dev.json",
     "test": "npm run build && node --test \"test/**/*.test.ts\"",
     "coverage": "npm run build && node --enable-source-maps --test --experimental-test-coverage --test-coverage-exclude='test/**' --test-coverage-exclude='scripts/**' --test-coverage-exclude='src/cli/sfx-wav.ts' --test-coverage-exclude='**/node_modules/**' --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-branches=100 \"test/**/*.test.ts\"",
     "bench": "npm run build && node bench/schedule.bench.ts",
@@ -105,7 +107,8 @@
     "node-web-audio-api": "^2.2.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "tsrs": "0.18.0-ts7.1.0-dev.20260929"
+    "tsrs": "0.18.0-ts7.1.0-dev.20260929",
+    "typescript": "^7.0.2"
   },
   "engines": {
     "node": ">=18"

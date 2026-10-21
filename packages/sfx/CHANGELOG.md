@@ -5,6 +5,22 @@ All notable changes to `@bloxwap/sfx` are documented here. This project follows
 
 ## Unreleased
 
+## 0.2.1 — 2026-10-20
+
+Performance release. No API changes.
+
+- The first `play()` of a sound no longer renders its playback buffer inside the caller's event handler. The
+  cache fill runs after the current task (`requestIdleCallback` where available), which cuts first-play
+  main-thread time by about 70% (#59).
+- Sounds whose recipes don't pan are cached as mono buffers: 36% less retained sample memory for the catalog and
+  about 20% cheaper cached plays in Chromium. Panned plays up-mix explicitly, so output is unchanged.
+  `renderBuffer()` still returns stereo (#60).
+- `<SoundProvider>` memoizes its context value, so `useSoundPreference()` consumers stop re-rendering with every
+  parent render (#61).
+- `encodeWav()` is 2–4× faster for 16/24-bit PCM, with byte-identical output (#62).
+- Noise samples are generated once per sample rate instead of once per render: about 20% faster `preload()` (#63).
+- The cached `play()` path allocates 31–45% less JS garbage per call (#64).
+
 ## 0.2.0 — 2026-10-19
 
 - `play()` option `signal`: an `AbortSignal` that stops that play, and only that play. A queued request is

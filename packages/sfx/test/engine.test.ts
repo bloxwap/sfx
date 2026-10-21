@@ -12,7 +12,7 @@ import {
 import type { TestContext } from 'node:test';
 
 const live = (): FakeAudioContext => FakeAudioContext.instances.at(-1)!;
-const bufferSources = (ctx: FakeBaseContext) => ctx.of('source').filter((node) => node.buffer && node.buffer.numberOfChannels === 2);
+const bufferSources = (ctx: FakeBaseContext) => ctx.of('source').filter((node) => node.buffer && !node.loop);
 
 async function reset({ offline = true } = {}) {
   await dispose();
@@ -226,13 +226,13 @@ describe('master bus', () => {
 describe('rendering', () => {
   beforeEach(() => reset());
 
-  test('the first play synthesizes live and renders a stereo buffer; later plays use one buffer node', async () => {
+  test('the first play synthesizes live and renders a mono buffer; later plays use one buffer node', async () => {
     play('chime');
     const ctx = live();
     assert.equal(ctx.of('oscillator').length, 2, 'live synthesis on first play');
     assert.equal(FakeOfflineAudioContext.instances.length, 1);
     const offline = FakeOfflineAudioContext.instances[0];
-    assert.equal(offline.channels, 2);
+    assert.equal(offline.channels, 1);
     assert.equal(offline.sampleRate, ctx.sampleRate);
     // 1.176 s by the cleanup formula (source end + echo tail + two pads).
     assert.equal(offline.length, Math.ceil(1.176 * ctx.sampleRate));
@@ -242,7 +242,7 @@ describe('rendering', () => {
     play('chime');
     const added = ctx.nodes.slice(before) as FakeBufferSource[];
     assert.deepEqual(added.map((node) => node.kind), ['source'], 'exactly one node per buffered play');
-    assert.equal(added[0]!.buffer!.numberOfChannels, 2);
+    assert.equal(added[0]!.buffer!.numberOfChannels, 1);
     assert.deepEqual(added[0]!.outputs, [ctx.of('gain')[0]], 'straight into the bus');
     assert.equal(added[0]!.startedAt, 0);
   });
@@ -260,6 +260,9 @@ describe('rendering', () => {
     assert.equal(FakeOfflineAudioContext.instances.length, sounds.length);
     assert.equal(FakeAudioContext.constructed, 0);
     assert.ok(FakeOfflineAudioContext.instances.every((ctx) => ctx.sampleRate === 48000));
+    const bytes = FakeOfflineAudioContext.instances.reduce((sum, ctx) => sum + ctx.channels * ctx.length * 4, 0);
+    assert.ok(bytes <= 3_050_000, String(bytes));
+    assert.equal(FakeOfflineAudioContext.instances.filter((ctx) => ctx.channels === 1).length, 14);
     await preload(['toString', 'nope'] as string[] as SoundName[]);
     assert.equal(FakeOfflineAudioContext.instances.length, sounds.length, 'invalid names are skipped');
   });
@@ -435,6 +438,8 @@ describe('play options', () => {
     assert.equal(source.playbackRate.value, 1.5);
     assert.equal(gain.gain.value, 0.5);
     assert.equal(panner.pan.value, -0.5);
+    assert.equal(panner.channelCount, 2);
+    assert.equal(panner.channelCountMode, 'explicit');
     assert.deepEqual(panner.outputs, [ctx.of('gain')[0]]);
   });
 

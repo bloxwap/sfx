@@ -42,6 +42,8 @@ export class FakeFilter extends FakeNode {
 }
 
 export class FakePanner extends FakeNode {
+  channelCount = 2;
+  channelCountMode: ChannelCountMode = 'clamped-max';
   pan = new FakeParam(0);
 }
 

@@ -263,13 +263,13 @@ function length(recipe: Recipe): number {
   return sourceEnd(recipe) + PAD + echoTail(recipe) + PAD;
 }
 
-/** Renders a sound to a fresh stereo buffer. Resolves null where offline rendering is unavailable or fails. */
-async function bake(name: SoundName, sampleRate: number): Promise<AudioBuffer | null> {
+/** Renders a sound to a fresh buffer. Resolves null where offline rendering is unavailable or fails. */
+async function bake(name: SoundName, sampleRate: number, channels = 2): Promise<AudioBuffer | null> {
   const Offline = offlineConstructor();
   if (!Offline) return null;
   const recipe = getRecipe(name);
   try {
-    const offline = new Offline(2, Math.ceil(length(recipe) * sampleRate), sampleRate);
+    const offline = new Offline(channels, Math.ceil(length(recipe) * sampleRate), sampleRate);
     synthesize(offline, recipe, offline.destination, 0);
     return await offline.startRendering();
   } catch {
@@ -283,7 +283,7 @@ function render(name: SoundName): Promise<AudioBuffer | null> {
   if (done) return Promise.resolve(done);
   let pending = rendering.get(name);
   if (!pending) {
-    pending = bake(name, context?.sampleRate ?? FALLBACK_RATE).then((buffer) => {
+    pending = bake(name, context?.sampleRate ?? FALLBACK_RATE, getRecipe(name).layers.some((layer) => layer.pan) ? 2 : 1).then((buffer) => {
       // Skip the store when dispose() ran meanwhile: the buffer may be at the old context's rate.
       if (rendering.get(name) === pending) {
         rendering.delete(name);
@@ -303,6 +303,9 @@ function route(ctx: Ctx, source: AudioNode, options: PlayOptions | undefined, de
   const pan = clamp(options?.pan, -1, 1, 0);
   if (pan !== 0 && typeof (ctx as { createStereoPanner?: unknown }).createStereoPanner === 'function') {
     const panner = ctx.createStereoPanner();
+    // Preserve the stereo pan law even when the cached source is mono.
+    panner.channelCount = 2;
+    panner.channelCountMode = 'explicit';
     panner.pan.value = pan;
     tail = tail.connect(panner);
     extra.push(panner);

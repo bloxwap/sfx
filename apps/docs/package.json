@@ -7,9 +7,10 @@
     "predev": "npm --workspace @bloxwap/sfx run build",
     "dev": "next dev --port 3903",
     "prebuild": "npm --workspace @bloxwap/sfx run build",
-    "build": "next build",
+    "build": "next typegen && tsrs --noEmit -p . && next build",
     "postbuild": "node scripts/check-export.ts",
-    "check": "node scripts/hig-packages.mjs && next typegen && tsc --noEmit",
+    "check": "node scripts/hig-packages.mjs && next typegen && tsrs --noEmit",
+    "check:tsc": "node scripts/hig-packages.mjs && next typegen && tsc --noEmit",
     "preview": "node scripts/preview.ts",
     "postinstall": "fumadocs-mdx",
     "smoke": "playwright test"
@@ -36,6 +37,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "tailwindcss": "^4.2.0",
+    "tsrs": "0.18.0-ts7.1.0-dev.20260929",
     "typescript": "^7.0.2",
     "@bloxwap/hig-og-fonts": "file:../../vendor/bloxwap-hig/bloxwap-hig-og-fonts-0.1.0-candidate.shae3390bbd.tgz"
   },

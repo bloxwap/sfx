@@ -243,6 +243,20 @@ npm run size        # gzip bundle-size budget
 npm run dev         # docs and sound board at http://localhost:3903
 ```
 
+Type checking and the library build use [`tsrs`](https://github.com/oxc-project/tsrs), a Rust
+port of the TypeScript 7 compiler that emits byte-identical output to `tsc`. tsrs ships binaries for
+macOS on Apple Silicon and Linux (x64/arm64) only. On Windows or an Intel Mac, use the `tsc`
+fallbacks instead:
+
+```sh
+npm run build:tsc       # library build with the regular TypeScript compiler
+npm run typecheck:tsc   # build plus test/bench/script type check with tsc
+npm run docs:check:tsc  # docs type check with tsc
+```
+
+`npm test`, `npm run coverage`, and the docs build call the tsrs build first; on those platforms run
+`npm run build:tsc`, then the Node test runner directly (`npm --workspace @bloxwap/sfx exec -- node --test "test/**/*.test.ts"`).
+
 Requires Node.js 24 or newer. CI runs on self-hosted Apple Silicon Mac minis; see
 [docs/ci-runners.md](docs/ci-runners.md) for the runner labels and tools.
 

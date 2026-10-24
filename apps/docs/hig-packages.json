@@ -1,0 +1,29 @@
+{
+  "repository": "bloxwap/hig",
+  "version": "0.1.0",
+  "release": "https://github.com/bloxwap/hig/releases/tag/v0.1.0",
+  "packages": [
+    "@bloxwap/hig-tokens",
+    "@bloxwap/hig-react",
+    "@bloxwap/hig-contracts",
+    "@bloxwap/hig-og-fonts"
+  ],
+  "ogFonts": [
+    {
+      "asset": "BloxwapSans-Bold.ttf",
+      "name": "Bloxwap Sans",
+      "weight": 700,
+      "style": "normal",
+      "bytes": 447388,
+      "sha256": "13e10451ecec4e33733b196454f1232a16d34d5014dce66daaee4d0c58600e1b"
+    },
+    {
+      "asset": "BloxwapSans-Black.ttf",
+      "name": "Bloxwap Sans",
+      "weight": 900,
+      "style": "normal",
+      "bytes": 445912,
+      "sha256": "a99894c158cff3cff828b7d17ec12f075352848843944a730caa9d64c0362ea2"
+    }
+  ]
+}

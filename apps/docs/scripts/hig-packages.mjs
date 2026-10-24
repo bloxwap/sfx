@@ -1,30 +1,31 @@
-// Verify the reviewed candidate files, installed workspace packages and byte-identical OG card faces (hig#115).
-import {readFile,readdir} from 'node:fs/promises';
+// Verify exact registry versions, lockfile integrity and byte-identical OG card faces (hig#56/#115).
+import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {ogFonts} from '@bloxwap/hig-og-fonts';
 import {readOgFont} from '@bloxwap/hig-og-fonts/node';
 
 const root=new URL('../../../',import.meta.url),docs=new URL('../',import.meta.url);
-const vendor=new URL('vendor/bloxwap-hig/',root);
-const provenance=JSON.parse(await readFile(new URL('provenance.json',vendor),'utf8'));
+const provenance=JSON.parse(await readFile(new URL('hig-packages.json',docs),'utf8'));
 const manifest=JSON.parse(await readFile(new URL('package.json',docs),'utf8'));
+const lock=JSON.parse(await readFile(new URL('package-lock.json',root),'utf8'));
 async function installedManifest(name){
  for(const base of [docs,root]){
   try{return JSON.parse(await readFile(new URL(`node_modules/${name}/package.json`,base),'utf8'));}catch{/* Try the workspace root. */}
  }
  throw new Error(`${name} is not installed; run npm ci`);
 }
-for(const artifact of provenance.artifacts){
- const data=await readFile(new URL(artifact.file,vendor));
- assert.equal(data.length,artifact.bytes,`${artifact.file}: packed size changed`);
- assert.equal(createHash('sha256').update(data).digest('hex'),artifact.sha256,`${artifact.file}: reviewed tarball changed`);
- const spec=manifest.dependencies[artifact.package]??manifest.devDependencies?.[artifact.package];
- assert.equal(spec,`file:../../vendor/bloxwap-hig/${artifact.file}`,`${artifact.package}: use the reviewed file dependency`);
- assert.equal((await installedManifest(artifact.package)).version,provenance.version,`${artifact.package}: installed version differs from provenance`);
+for(const name of provenance.packages){
+ const spec=manifest.dependencies[name]??manifest.devDependencies?.[name];
+ assert.equal(spec,provenance.version,`${name}: use the exact reviewed registry version`);
+ const entry=lock.packages[`apps/docs/node_modules/${name}`]??lock.packages[`node_modules/${name}`];
+ assert.ok(entry,`${name}: missing from the lockfile`);
+ assert.equal(entry.version,provenance.version,`${name}: lockfile version differs`);
+ assert.equal(entry.resolved,`https://registry.npmjs.org/${name}/-/${name.split('/')[1]}-${provenance.version}.tgz`,`${name}: must resolve from npm`);
+ assert.match(entry.integrity,/^sha512-[A-Za-z0-9+/]+={0,2}$/,`${name}: lockfile must pin registry integrity`);
+ assert.equal((await installedManifest(name)).version,provenance.version,`${name}: installed version differs`);
 }
 assert.ok(!manifest.dependencies['@bloxwap/hig-native-fonts']&&!manifest.devDependencies?.['@bloxwap/hig-native-fonts'],'OG cards must use the OG-only package');
-assert.ok(!(await readdir(vendor)).some(file=>file.includes('hig-native-fonts')),'Do not vendor the native font bundle for OG cards');
 assert.equal(provenance.ogFonts.length,2,'The renderer uses only the approved Bold and Black faces');
 for(const face of provenance.ogFonts){
  const descriptor=ogFonts.find(font=>font.asset===face.asset);
@@ -34,4 +35,4 @@ for(const face of provenance.ogFonts){
  assert.equal(data.length,face.bytes,`${face.asset}: approved byte length changed`);
  assert.equal(createHash('sha256').update(data).digest('hex'),face.sha256,`${face.asset}: approved font bytes changed`);
 }
-console.log(`HIG ${provenance.version}: ${provenance.artifacts.length} reviewed tarballs and exact Bold/Black OG faces verified.`);
+console.log(`HIG ${provenance.version}: ${provenance.packages.length} pinned registry packages and exact Bold/Black OG faces verified.`);

@@ -82,9 +82,12 @@ test('recipe editor edits, previews and copies; semantic preferences survive nav
   expect(await page.evaluate(() => (window as any).audioProof.contexts)).toBe(0);
   await preview.getByRole('button', { name: 'Accept action' }).click();
   await expect.poll(() => page.evaluate(() => (window as any).audioProof.running)).toBe(true);
+  await expect.poll(() => page.evaluate(() => (window as any).audioProof.starts)).toBe(1);
   const before = await page.evaluate(() => (window as any).audioProof.starts);
   await preview.getByRole('button', { name: 'Accept action' }).focus();
-  await page.keyboard.press('Space');
+  // Space clicks on keyup. Keep this independent activation outside play()'s
+  // 16 ms same-sound cooldown, even on fast self-hosted WebKit runners.
+  await page.keyboard.press('Space', { delay: 50 });
   await expect.poll(() => page.evaluate(() => (window as any).audioProof.starts)).toBe(before + 1);
   await expect(preview.getByRole('status')).toHaveText('Action accepted');
   await preview.getByRole('checkbox', { name: 'Enable sound', exact: true }).uncheck();

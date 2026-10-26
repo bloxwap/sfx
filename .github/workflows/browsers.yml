@@ -81,7 +81,7 @@ jobs:
           ready=0
           i=0
           while [ "$i" -lt 60 ]; do
-            if curl -fsS http://127.0.0.1:3903/sfx/ >/dev/null; then
+            if curl -fsS http://127.0.0.1:3903/sfx/ >/dev/null 2>&1; then
               ready=1
               break
             fi

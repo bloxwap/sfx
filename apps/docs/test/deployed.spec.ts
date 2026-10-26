@@ -110,12 +110,14 @@ test('HIG shell: install tabs and copy, search states, callout, 404, keyboard an
   await page.goto(live!);
   await page.locator('html[data-docs-hydrated=true]').waitFor();
 
-  // Keyboard: the header, hero actions and install tabs are reachable in order with a visible HIG focus ring.
+  // Keyboard: every reached element has a visible HIG focus ring, and the install tab is reachable.
   const reached: string[] = [];
   for (let step = 0; step < 8; step++) {
     await page.keyboard.press('Tab');
     reached.push(await page.evaluate(() => {
-      const active = document.activeElement as HTMLElement;
+      const active = document.activeElement;
+      // macOS keyboard navigation settings can make WebKit skip native controls and leave the page.
+      if (!active || active === document.body || active === document.documentElement) return 'document';
       if (getComputedStyle(active).outlineStyle === 'none') return 'no-focus-ring';
       return (active.getAttribute('aria-label') ?? active.textContent ?? '').trim();
     }));

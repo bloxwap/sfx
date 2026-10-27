@@ -3,23 +3,29 @@ title: Releasing
 description: How a version of @bloxwap/sfx reaches npm.
 ---
 
-Releases are published from GitHub Actions on the self-hosted Mac minis.
-[npm trusted publishing does not support self-hosted runners](https://docs.npmjs.com/trusted-publishers/),
-so the job authenticates with the org-level `NPM_TOKEN` secret (`NODE_AUTH_TOKEN`).
-That drops OIDC trusted publishing and automatic provenance.
+Releases publish with provenance from the `publish` job on GitHub-hosted
+`ubuntu-24.04`, the sole permanent exception to the Mac-mini runner policy.
+[npm trusted publishing requires GitHub-hosted runners](https://docs.npmjs.com/trusted-publishers/).
+The job uses Node 24, pinned npm 11.6.1, OIDC, and the `npm-release` environment.
+npm tries OIDC first and falls back to `NODE_AUTH_TOKEN` from the org-level
+`NPM_TOKEN` secret while the npm Trusted Publisher is being configured.
+`--provenance` attaches provenance even during this token fallback.
 
 ## Flow
 
 1. Open a PR that bumps `version` in `packages/sfx/package.json` and updates `packages/sfx/CHANGELOG.md`.
 2. Merge it after the **Tests**, **Documentation**, and **Security** checks pass.
 3. Create a GitHub release tagged `v<version>`, for example `v0.2.1`.
-4. The **Publish to npm** workflow checks that the tag matches the package version, verifies `NPM_TOKEN`, runs the full test suite (`prepublishOnly`), and publishes.
+4. The **Publish to npm** workflow checks that the tag matches the package version, waits for `npm-release` approval, verifies the fallback token when present (otherwise defers OIDC authentication to npm), runs the full test suite (`prepublishOnly`), and publishes.
 
 Pre-release versions (`0.2.0-beta.1`) publish under the matching dist-tag (`beta`, `alpha`, `rc`) instead of `latest`.
 
 ## One-time setup
 
-- Share the bloxwap org `NPM_TOKEN` secret (granular, publish rights for `@bloxwap` packages) with this repository.
+- Configure the GitHub `npm-release` environment with required reviewers. The YAML environment name alone does not create an approval gate.
+- Keep the bloxwap org `NPM_TOKEN` secret (granular, publish rights for `@bloxwap` packages) available as a transitional fallback so releases continue before npm setup.
+- Configure the npm Trusted Publisher for `@bloxwap/sfx`: organization **bloxwap**, repository **sfx**, workflow filename **publish_npm.yml**, environment **npm-release**, allowing direct `npm publish`.
+- Verify a trusted publish succeeds, then delete `NPM_TOKEN` and its workflow references. The auth check accepts OIDC without a token; registry commands such as `whoami` still require a token.
 - In the repository settings, set GitHub Pages to deploy from **GitHub Actions**.
 - Protect `main`, and require the **Tests** check.
-- Keep at least one self-hosted Apple Silicon runner online with the labels and tools in [`docs/ci-runners.md`](https://github.com/bloxwap/sfx/blob/main/docs/ci-runners.md). Publish, Pages deploy, and coverage upload all run there.
+- Keep at least one self-hosted Apple Silicon runner online with the labels and tools in [`docs/ci-runners.md`](https://github.com/bloxwap/sfx/blob/main/docs/ci-runners.md). The security scan, Pages deploy, and coverage upload still run there; npm publish builds and tests on Ubuntu.

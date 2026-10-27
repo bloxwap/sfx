@@ -11,7 +11,12 @@ The repository is an npm workspace:
 | `apps/docs` | This site: Next.js, Fumadocs, and a static export for GitHub Pages |
 
 Requires Node.js 24 or later. GitHub Actions runs the same checks on self-hosted
-Apple Silicon Mac minis; the runner labels and tools are listed in
+Apple Silicon Mac minis, except the npm publish job on GitHub-hosted `ubuntu-24.04`
+(required by npm trusted publishing). It uses the `npm-release` environment with required
+reviewers and publishes with provenance. `NPM_TOKEN` is only a transitional fallback:
+configure and verify the npm Trusted Publisher (`bloxwap`, `sfx`, `publish_npm.yml`,
+`npm-release`), then delete the token and its workflow references. See [Releasing](./releasing).
+The runner labels and tools are listed in
 [`docs/ci-runners.md`](https://github.com/bloxwap/sfx/blob/main/docs/ci-runners.md).
 
 ```sh

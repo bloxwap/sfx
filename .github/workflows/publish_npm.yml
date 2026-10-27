@@ -3,10 +3,8 @@ name: Publish to npm
 # Publishing a GitHub release publishes @bloxwap/sfx at the version in packages/sfx/package.json.
 # Release flow: bump the version in a PR, merge it, then create a release tagged v<version>.
 #
-# npm trusted publishing does not support self-hosted runners
-# (https://docs.npmjs.com/trusted-publishers/). This job authenticates with the
-# org-level NPM_TOKEN secret instead. That drops OIDC trusted publishing and
-# automatic provenance.
+# npm OIDC and provenance require a GitHub-hosted runner; only publish is exempt
+# from the Mac-mini runner policy. Keep this filename for the npm Trusted Publisher.
 on:
   release:
     types: [published]
@@ -34,21 +32,26 @@ jobs:
 
   publish:
     needs: security
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ubuntu-24.04
+    environment: npm-release
     timeout-minutes: 20
     permissions:
       contents: read
-    env:
-      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      id-token: write
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # Keep npm new enough for the same CLI surface we already validate.
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
           package-manager-cache: false
+
+      - name: Install npm with trusted publishing support
+        # Exact CLI bootstrap version is required for OIDC; it is not a project dependency.
+        run: npm install --global npm@11.6.1 # zizmor: ignore[adhoc-packages]
 
       - run: npm ci
 
@@ -78,26 +81,30 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "value=${TAG:-latest}" >> "$GITHUB_OUTPUT"
 
-      - name: Check npm CLI
-        run: |
-          npm --version
-          npx --yes semver -r '>=11.5.1' "$(npm --version)" > /dev/null || npm install -g npm@latest
-
       # Check authentication even if the version below is already published.
       - name: Verify npm publish authentication
+        # Transitional fallback: delete after the npm Trusted Publisher works.
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: node packages/sfx/scripts/check-publish-auth.ts
 
       - name: Skip if this version is already on npm
         id: exists
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
         run: |
-          if npm view "@bloxwap/sfx@${{ steps.tag.outputs.version }}" version > /dev/null 2>&1; then
-            echo "::warning::@bloxwap/sfx@${{ steps.tag.outputs.version }} is already published"
+          if npm view "@bloxwap/sfx@$VERSION" version > /dev/null 2>&1; then
+            echo "::warning::@bloxwap/sfx@$VERSION is already published"
             echo "published=true" >> "$GITHUB_OUTPUT"
           fi
 
       # prepack builds and prepublishOnly runs the full test suite before anything is uploaded;
       # publishConfig.access is public.
-      # Token publish does not attach provenance (trusted publishing is unavailable here).
+      # Provenance is attached with either OIDC or the transitional token.
       - name: Publish @bloxwap/sfx@${{ steps.tag.outputs.version }}
         if: steps.exists.outputs.published != 'true'
-        run: npm publish --workspace @bloxwap/sfx --tag ${{ steps.tag.outputs.value }}
+        # Transitional fallback: delete after the npm Trusted Publisher works.
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TAG: ${{ steps.tag.outputs.value }}
+        run: npm publish --workspace @bloxwap/sfx --tag "$NPM_TAG" --provenance

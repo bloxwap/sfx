@@ -22,7 +22,7 @@ concurrency:
 jobs:
   security:
     # Single-job publish: adds the scan serially.
-    uses: bloxwap/.github/.github/workflows/security-scan.yml@6755bcc6a591531ae95a5babfa389c329f71ba0b # v1.0.2
+    uses: bloxwap/.github/.github/workflows/security-scan.yml@2a70724cd0d803abef5f5a7c64c46065f4fda19b # v1.1.0
     permissions:
       contents: read
     with:
@@ -42,9 +42,9 @@ jobs:
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Keep npm new enough for the same CLI surface we already validate.
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'

@@ -4,7 +4,8 @@ on:
   pull_request:
   # Weekly: advisories for already-merged dependencies appear between PRs.
   schedule:
-    - cron: '17 5 * * 1'
+    - cron: '50 2 * * 0'   # Sundays 2:50 AM Pacific
+      timezone: "America/Los_Angeles"
   workflow_dispatch:
 
 permissions:

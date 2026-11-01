@@ -118,7 +118,10 @@ test('HIG shell: install tabs and copy, search states, callout, 404, keyboard an
       const active = document.activeElement;
       // macOS keyboard navigation settings can make WebKit skip native controls and leave the page.
       if (!active || active === document.body || active === document.documentElement) return 'document';
-      if (getComputedStyle(active).outlineStyle === 'none') return 'no-focus-ring';
+      // HIG buttons ring with an outline; HIG text fields (e.g. the demo's Deposit amount, reached when WebKit
+      // skips buttons and links) ring with a box-shadow instead.
+      const style = getComputedStyle(active);
+      if (style.outlineStyle === 'none' && style.boxShadow === 'none') return 'no-focus-ring';
       return (active.getAttribute('aria-label') ?? active.textContent ?? '').trim();
     }));
   }

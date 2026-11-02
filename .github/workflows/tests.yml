@@ -60,23 +60,26 @@ jobs:
           node-version: '24'
           package-manager-cache: false
 
-      - run: npm ci
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: '1.4.2'
+      - run: bun install --frozen-lockfile
 
       - name: Lint
-        run: npm run lint
+        run: bun run lint
 
       - name: Type check
-        run: npm run typecheck
+        run: bun run typecheck
 
       # Builds, runs the suite, and fails if any source file drops below the coverage thresholds.
       - name: Tests and coverage gate
-        run: npm run coverage
+        run: bun run coverage
 
       - name: Bundle size budget
-        run: npm run size
+        run: bun run size
 
       - name: Scheduling benchmark
-        run: npm run bench
+        run: bun run bench
 
       # Tests import dist/ directly, so check the published entry points separately: every
       # "exports" subpath must import by package name in plain Node (SSR-safe, no window).

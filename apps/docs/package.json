@@ -17,9 +17,7 @@
   },
   "dependencies": {
     "@bloxwap/font": "0.1.4",
-    "@bloxwap/hig-contracts": "0.1.0",
-    "@bloxwap/hig-react": "0.1.0",
-    "@bloxwap/hig-tokens": "0.1.0",
+    "@bloxwap/hig": "0.2.0",
     "@bloxwap/sfx": "0.2.1",
     "fumadocs-core": "16.17.7",
     "fumadocs-mdx": "15.4.9",
@@ -38,8 +36,7 @@
     "@types/react-dom": "^19.3.0",
     "tailwindcss": "^4.3.3",
     "tsrs": "0.18.0-ts7.1.0-dev.20260929",
-    "typescript": "^7.0.2",
-    "@bloxwap/hig-og-fonts": "0.1.0"
+    "typescript": "^7.0.2"
   },
   "engines": {
     "node": ">=24"

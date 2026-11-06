@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Callout as HIGCallout } from '@bloxwap/hig-react/status';
+import { Callout as HIGCallout } from '@bloxwap/hig/react/status';
 
 const severities = { info: 'info', note: 'note', idea: 'tip', warn: 'warning', warning: 'warning', error: 'error', success: 'success' } as const;
 const titles = { info: 'Note', note: 'Note', tip: 'Tip', warning: 'Important', error: 'Error', success: 'Success' } as const;

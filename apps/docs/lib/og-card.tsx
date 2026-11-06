@@ -1,5 +1,5 @@
-import { readOgFont } from '@bloxwap/hig-og-fonts/node';
-import { tokens } from '@bloxwap/hig-tokens';
+import { readOgFont } from '@bloxwap/hig/og-fonts/node';
+import { tokens } from '@bloxwap/hig/tokens';
 import { ImageResponse } from 'next/og';
 import { sounds } from '@bloxwap/sfx';
 import { socialImageSize } from './social';

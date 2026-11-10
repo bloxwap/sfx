@@ -360,7 +360,7 @@ class BufferedVoice implements Voice {
 }
 
 function register(voice: Voice): void {
-  if (voices.size >= maxVoices) {
+  while (voices.size >= maxVoices) {
     const oldest = voices.values().next().value;
     if (oldest) {
       voices.delete(oldest);

@@ -690,6 +690,20 @@ describe('voices', () => {
     assert.equal(activeVoices(), 2);
   });
 
+  test('lowering maxVoices cuts the oldest voices on the next play', async () => {
+    for (let i = 0; i < 10; i++) play('tick');
+    assert.equal(activeVoices(), 10);
+    configure({ maxVoices: 2 });
+    play('press');
+    assert.equal(activeVoices(), 2);
+    const sources = bufferSources(live());
+    assert.equal(sources.length, 11);
+    for (const source of sources.slice(0, 9)) assert.equal(source.stoppedAt, 0);
+    for (const source of sources.slice(9)) assert.equal(source.stoppedAt, undefined);
+    await tick();
+    assert.equal(activeVoices(), 2);
+  });
+
   test('stopAll stops buffered and live voices', async () => {
     play('tick');
     play('chime', { pan: 0.5 });

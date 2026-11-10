@@ -374,3 +374,82 @@ test('composed handler preserves actions, cancellation and nested controls; sema
   await act(async () => root!.render(createElement(SoundProvider, { volume: 1, enabled: true }, createElement(Control, { intent: 'error' })))); semantic();
   assert.ok(FakeAudioContext.instances.at(-1)!.of('gain').some(node => node.gain.value === 0.5));
 });
+
+for (const [input, expected] of [[5, 1], [-1, 0], [NaN, 0.4], [Infinity, 0.4], ['bad', 0.4]] as const) {
+  test(`provider normalizes volume ${input} to ${expected}`, async () => {
+    setup();
+    dom.localStorage.setItem('bloxwap:sfx', JSON.stringify({ enabled: false, volume: 0.4 }));
+    let seen!: SoundPreference;
+    function Preference() { seen = useSoundPreference(); return null; }
+    await act(async () => root!.render(createElement(SoundProvider, { volume: input as number }, createElement(Preference))));
+    assert.equal(seen.volume, expected);
+    assert.equal(seen.volume, getVolume());
+  });
+}
+
+test('provider rejects non-boolean enabled overrides', async () => {
+  setup();
+  dom.localStorage.setItem('bloxwap:sfx', JSON.stringify({ enabled: false, volume: 0.4 }));
+  let seen!: SoundPreference;
+  function Preference() { seen = useSoundPreference(); return null; }
+  await act(async () => root!.render(createElement(SoundProvider, { enabled: 'no' as unknown as boolean }, createElement(Preference))));
+  assert.equal(seen.enabled, false);
+  assert.equal(seen.enabled, isEnabled());
+});
+
+test('nested providers warn once in development and stay silent in production or without process', async (t) => {
+  setup();
+  const warn = t.mock.method(console, 'warn', () => {});
+  const original = process.env.NODE_ENV;
+  const nodeProcess = process;
+  const tree = () => createElement(StrictMode, null, createElement(SoundProvider, null, createElement(SoundProvider)));
+  try {
+    process.env.NODE_ENV = 'production';
+    await act(async () => root!.render(tree()));
+    assert.equal(warn.mock.callCount(), 0);
+    await act(async () => root!.render(null));
+    globals.process = undefined;
+    await act(async () => root!.render(tree()));
+    assert.equal(warn.mock.callCount(), 0);
+    await act(async () => root!.render(null));
+    globals.process = nodeProcess;
+    process.env.NODE_ENV = 'development';
+    await act(async () => root!.render(tree()));
+    assert.equal(warn.mock.callCount(), 1);
+    assert.match(String(warn.mock.calls[0].arguments[0]), /only one.*provider.*own.*engine/i);
+    await act(async () => root!.render(null));
+    await act(async () => root!.render(tree()));
+    assert.equal(warn.mock.callCount(), 1);
+  } finally {
+    globals.process = nodeProcess;
+    if (original === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = original;
+  }
+});
+
+test('nested provider restores the latest enclosing policy on unmount', async () => {
+  setup();
+  dom.localStorage.setItem('bloxwap:sfx', JSON.stringify({ enabled: true, volume: 0.9, categoryVolumes: { controls: 0.2 } }));
+  const tree = (inner: boolean, volume = 0.3) => createElement(SoundProvider, { enabled: false, volume }, inner ? createElement(SoundProvider, { enabled: true, volume: 0.8 }) : null);
+  await act(async () => root!.render(tree(true)));
+  assert.equal(isEnabled(), false);
+  await act(async () => root!.render(tree(true, 0.5)));
+  setVolume(0.7, { category: 'controls' });
+  await act(async () => root!.render(tree(false, 0.5)));
+  assert.equal(isEnabled(), false);
+  assert.equal(getVolume(), 0.5);
+  assert.equal(getVolume({ category: 'controls' }), 0.2);
+  await act(async () => root!.render(null));
+  assert.equal(isEnabled(), true);
+  assert.equal(getVolume(), 0.9);
+});
+
+test('provider reapplication overwrites imperative category volume', async () => {
+  setup();
+  dom.localStorage.setItem('bloxwap:sfx', JSON.stringify({ enabled: true, volume: 1, categoryVolumes: { controls: 0.2 } }));
+  await act(async () => root!.render(createElement(SoundProvider)));
+  setVolume(0.7, { category: 'controls' });
+  assert.equal(getVolume({ category: 'controls' }), 0.7);
+  await act(async () => root!.render(createElement(SoundProvider, { volume: 0.5 })));
+  assert.equal(getVolume({ category: 'controls' }), 0.2);
+});

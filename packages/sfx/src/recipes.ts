@@ -331,9 +331,8 @@ export function getRecipe(name: SoundName): Recipe {
   return custom.get(name) ?? recipes[name as BuiltinSoundName];
 }
 
-/** Registers an immutable recipe. Built-in sounds and prototype-property names are reserved. */
-export function registerRecipe<Name extends string>(name: Name, recipe: Recipe): Name {
-  if (!name.trim() || name in Object.prototype || own.call(recipeTable, name)) throw new RangeError('Sound name is empty or already reserved');
+/** Validation shared by define(); tests run every built-in through define() to hold them to it. */
+function validateRecipe(recipe: Recipe): void {
   const positive = (value: number): boolean => Number.isFinite(value) && value > 0;
   const nonnegative = (value: number): boolean => Number.isFinite(value) && value >= 0;
   if (!recipe || !positive(recipe.level) || !Array.isArray(recipe.layers) || !recipe.layers.length) throw new RangeError('A recipe needs a positive level and layers');
@@ -348,6 +347,13 @@ export function registerRecipe<Name extends string>(name: Name, recipe: Recipe):
   }
   const echo = recipe.echo;
   if (echo && (!positive(echo.delay) || echo.delay > 1 || !nonnegative(echo.feedback) || echo.feedback >= 1 || !nonnegative(echo.wet) || !positive(echo.lowpass))) throw new RangeError('Invalid echo');
+}
+
+/** Registers an immutable recipe. Built-in sounds and prototype-property names are reserved. */
+export function registerRecipe<Name extends string>(name: Name, recipe: Recipe): Name {
+  if (!name.trim() || name in Object.prototype || own.call(recipeTable, name)) throw new RangeError('Sound name is empty or already reserved');
+  validateRecipe(recipe);
+  const echo = recipe.echo;
   custom.set(name, Object.freeze({
     level: recipe.level,
     layers: Object.freeze(recipe.layers.map(layer => Object.freeze({ ...layer }))),

@@ -1,7 +1,29 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { duration, isSound, sounds, type BuiltinSoundName as SoundName } from '../dist/index.js';
+import { define, duration, isSound, sounds, type BuiltinSoundName as SoundName, type Recipe } from '../dist/index.js';
 import { echoTail, recipes, sourceEnd, type NoiseLayer, type ToneLayer } from '../dist/recipes.js';
+
+// define() runs the same validator custom recipes get; a fresh name per copy avoids the reserved-name check.
+let copies = 0;
+const validate = (recipe: unknown): void => { define(`builtin-copy-${copies++}`, recipe as Recipe); };
+
+test('every built-in passes the validation define() applies', () => {
+  for (const [name, recipe] of Object.entries(recipes)) {
+    assert.doesNotThrow(() => validate(recipe), name);
+  }
+});
+
+test('define() validation rejects broken copies of built-ins', () => {
+  const recipe = recipes.chime;
+  const tone = recipe.layers.find((layer): layer is ToneLayer => 'wave' in layer)!;
+  for (const broken of [
+    { ...recipe, layers: [{ ...tone, to: 0 }] },
+    { ...recipe, echo: { ...recipe.echo!, feedback: 1 } },
+    { ...recipe, echo: { ...recipe.echo!, delay: 1.5 } },
+  ]) {
+    assert.throws(() => validate(broken), RangeError);
+  }
+});
 
 const ORDER: SoundName[] = [
   'chime', 'sparkle', 'droplet', 'bloom', 'whisper', 'tick', 'press', 'release', 'toggle', 'success',

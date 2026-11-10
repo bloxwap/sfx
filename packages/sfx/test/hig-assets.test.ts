@@ -2,8 +2,26 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { approvedCues, semanticPresets } from '../dist/semantic.js';
+import { approvedCues, semanticPresets, type FeedbackIntent } from '../dist/semantic.js';
 import { recipes } from '../dist/recipes.js';
+
+test('semantic presets and manifest intents only use approved cues', () => {
+  const manifest = JSON.parse(readFileSync(new URL('../assets/hig/manifest.json', import.meta.url), 'utf8'));
+  for (const presets of [semanticPresets, manifest.semanticPresets]) {
+    for (const [intent, preset] of Object.entries(presets) as [string, { sound: string | null }][]) {
+      assert.ok(preset.sound === null || (approvedCues as readonly string[]).includes(preset.sound), intent);
+    }
+  }
+  for (const cue of manifest.cues) {
+    const intents = Object.keys(manifest.semanticPresets).filter(intent => manifest.semanticPresets[intent].sound === cue.name);
+    assert.ok(intents.length > 0, cue.name);
+    for (const intent of intents) {
+      const sound = semanticPresets[intent as FeedbackIntent].sound;
+      assert.ok(sound !== null && approvedCues.includes(sound), intent);
+      assert.equal(sound, cue.name, intent);
+    }
+  }
+});
 
 test('approved artifacts match recipes, semantic intent, format, hashes and envelope/level metadata', () => {
   const manifest = JSON.parse(readFileSync(new URL('../assets/hig/manifest.json', import.meta.url), 'utf8'));

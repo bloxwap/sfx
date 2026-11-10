@@ -1,5 +1,5 @@
 'use client';
-import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useSyncExternalStore, type ReactNode, type RefObject, type SyntheticEvent } from 'react';
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode, type RefObject, type SyntheticEvent } from 'react';
 import { bind, type BindOptions } from './bind.js';
 import { play, setEnabled as applyEnabled, setVolume as applyVolume, unlock, type PlayOptions } from './engine.js';
 import { categories, type SoundCategory } from './recipes.js';
@@ -121,13 +121,24 @@ export function SoundProvider({ children, enabled, volume, unlockOnInteraction =
   return createElement(SoundContext.Provider, { value }, children);
 }
 
-/** Binds the mounted subtree and removes its listeners on unmount or when options change. */
+/** Binds the subtree and removes its listeners on unmount.
+ * Elements that mount later or are swapped are (re)bound on this component's next commit.
+ * A child swapping the element without this component re-rendering is picked up on its next render.
+ */
 export function useBindSounds(ref: RefObject<HTMLElement | null>, options: BindOptions = {}): void {
   const { keyboard, hoverInterval } = options;
+  const binding = useRef<{ element: HTMLElement; keyboard: boolean | undefined; hoverInterval: number | undefined; unbind: () => void } | null>(null);
   useEffect(() => {
-    if (!ref.current) return;
-    return bind(ref.current, { ...(keyboard === undefined ? {} : { keyboard }), ...(hoverInterval === undefined ? {} : { hoverInterval }) });
-  }, [ref, keyboard, hoverInterval]);
+    const element = ref.current;
+    const previous = binding.current;
+    if (previous && previous.element === element && previous.keyboard === keyboard && previous.hoverInterval === hoverInterval) return;
+    previous?.unbind();
+    binding.current = element ? { element, keyboard, hoverInterval, unbind: bind(element, { ...(keyboard === undefined ? {} : { keyboard }), ...(hoverInterval === undefined ? {} : { hoverInterval }) }) } : null;
+  });
+  useEffect(() => () => {
+    binding.current?.unbind();
+    binding.current = null;
+  }, []);
 }
 
 /** A stable event handler for a sound, with optional per-call overrides. */

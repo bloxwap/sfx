@@ -159,6 +159,86 @@ test('binding cleans up on options changes and unmount, and useSound plays', asy
 });
 
 
+test('binding follows elements that mount later and removes listeners from swapped or hidden elements', async (t) => {
+  setup();
+  await unlock(); await preload(['press']);
+  const added = t.mock.method(dom.HTMLElement.prototype, 'addEventListener');
+  const removed = t.mock.method(dom.HTMLElement.prototype, 'removeEventListener');
+  function Control({ id }: { id: string | null }) {
+    const ref = useRef<HTMLElement | null>(null);
+    useBindSounds(ref);
+    return id === null ? null : createElement('button', { key: id, ref, 'data-sound-press': '' }, id);
+  }
+  const render = async (id: string | null) => { await act(async () => root!.render(createElement(Control, { id }))); };
+  await render(null);
+  await render(null);
+  await render('first');
+  const first = dom.document.querySelector('button')!;
+  const context = FakeAudioContext.instances.at(-1)!;
+  const before = context.of('source').length;
+  first.dispatchEvent(new dom.PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+  assert.equal(context.of('source').length, before + 1, 'late-mounted element plays');
+  await render('second');
+  const second = dom.document.querySelector('button')!;
+  assert.notEqual(second, first);
+  const assertRemoved = (element: typeof first) => {
+    const listeners = added.mock.calls.filter(call => call.this === element && call.arguments[2] === true);
+    assert.equal(listeners.length, 8);
+    for (const call of listeners) assert.ok(removed.mock.calls.some(removal => removal.this === element && removal.arguments[0] === call.arguments[0] && removal.arguments[1] === call.arguments[1]), 'old listener removed');
+  };
+  assertRemoved(first);
+  const swapped = context.of('source').length;
+  first.dispatchEvent(new dom.PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+  assert.equal(context.of('source').length, swapped);
+  assert.equal(added.mock.calls.filter(call => call.this === second && call.arguments[2] === true).length, 8, 'replacement element bound');
+  await render(null);
+  assertRemoved(second);
+});
+
+test('binding moves on a direct element swap', async (t) => {
+  setup();
+  const removed = t.mock.method(dom.HTMLElement.prototype, 'removeEventListener');
+  function Control({ id }: { id: number }) {
+    const ref = useRef<HTMLElement | null>(null);
+    useBindSounds(ref);
+    return createElement('button', { ref, key: id });
+  }
+  await act(async () => root!.render(createElement(Control, { id: 0 })));
+  const first = dom.document.querySelector('button')!;
+  await act(async () => root!.render(createElement(Control, { id: 1 })));
+  assert.equal(removed.mock.calls.filter(call => call.this === first).length, 8, 'swapped element listeners removed');
+});
+
+test('StrictMode leaves one binding and unrelated renders do not rebind; option changes do', async (t) => {
+  setup();
+  const added = t.mock.method(dom.HTMLElement.prototype, 'addEventListener');
+  const removed = t.mock.method(dom.HTMLElement.prototype, 'removeEventListener');
+  function Control({ keyboard, hoverInterval }: { keyboard?: boolean; hoverInterval?: number }) {
+    const ref = useRef<HTMLElement | null>(null);
+    useBindSounds(ref, { keyboard, hoverInterval });
+    return createElement('button', { ref });
+  }
+  const render = async (options = {}) => { await act(async () => root!.render(createElement(StrictMode, null, createElement(Control, options)))); };
+  await render();
+  const button = dom.document.querySelector('button')!;
+  const additions = () => added.mock.calls.filter(call => call.this === button && call.arguments[2] === true).length;
+  const removals = () => removed.mock.calls.filter(call => call.this === button).length;
+  assert.equal(additions(), 16);
+  assert.equal(removals(), 8);
+  await render();
+  assert.equal(additions(), 16);
+  assert.equal(removals(), 8);
+  await render({ hoverInterval: 20 });
+  assert.equal(additions(), 24);
+  assert.equal(removals(), 16);
+  await render({ keyboard: false, hoverInterval: 20 });
+  assert.equal(additions(), 30);
+  assert.equal(removals(), 24);
+  await act(async () => root!.render(null));
+  assert.equal(removals(), additions());
+});
+
+
 test('category preferences migrate, persist, synchronize and restore policy overrides', async () => {
   setup();
   dom.localStorage.setItem('bloxwap:sfx', JSON.stringify({ enabled: true, volume: 0.6, categoryVolumes: { controls: 0.2, money: -1, hover: 4, feedback: 'bad', alien: 1 } }));

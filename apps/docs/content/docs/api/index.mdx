@@ -69,7 +69,7 @@ interface BindOptions {
 }
 ```
 
-Plays sounds for `data-sound-hover`, `data-sound-press`, `data-sound-release`, and `data-sound-toggle` under `root` (default: `document`). Returns a function that removes the listeners. Binding the same root again returns the same function. Without a DOM, it returns a no-op. See [Declarative binding](/docs/guides/binding).
+Plays sounds for `data-sound-hover`, `data-sound-press`, `data-sound-release`, and `data-sound-toggle` under `root` (default: `document`). Returns a function that removes the listeners. Binding the same root again shares its listeners and returns a separate remover; the listeners are removed when the last remover runs. Without a DOM, it returns a no-op. See [Declarative binding](/docs/guides/binding).
 
 ## unlock()
 

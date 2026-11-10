@@ -55,16 +55,61 @@ beforeEach(async () => {
 });
 
 describe('bind()', () => {
-  test('uses one capture listener per event type, and binding again is a no-op', () => {
+  test('shares capture listeners until the last caller removes its binding', () => {
     const added: [string, boolean | AddEventListenerOptions | undefined][] = [];
+    const active = new Map<string, Set<EventListenerOrEventListenerObject>>();
     const original = root.addEventListener.bind(root);
-    root.addEventListener = (type: string, listener: EventListenerOrEventListenerObject, capture?: boolean | AddEventListenerOptions) => { added.push([type, capture]); original(type, listener, capture); };
+    const remove = root.removeEventListener.bind(root);
+    root.addEventListener = (type: string, listener: EventListenerOrEventListenerObject, capture?: boolean | AddEventListenerOptions) => {
+      added.push([type, capture]);
+      if (!active.has(type)) active.set(type, new Set());
+      active.get(type)!.add(listener);
+      original(type, listener, capture);
+    };
+    root.removeEventListener = (type: string, listener: EventListenerOrEventListenerObject, capture?: boolean | EventListenerOptions) => {
+      active.get(type)?.delete(listener);
+      remove(type, listener, capture);
+    };
     const unbind = bind(root);
-    assert.equal(bind(root), unbind, 'same root returns the same unbind');
+    const second = bind(root);
     assert.ok(added.every(([, capture]) => capture === true));
     const counts = Object.fromEntries(['pointerenter', 'pointerup', 'click', 'keyup'].map((type) => [type, added.filter(([t]) => t === type).length]));
     assert.deepEqual(counts, { pointerenter: 1, pointerup: 1, click: 1, keyup: 1 });
+    assert.equal(added.length, 8, 'rebinding adds no listeners');
+    root.innerHTML = '<button data-sound-press>Save</button>';
+    second();
+    pointer('pointerdown', root.firstElementChild!);
+    assert.equal(played(), 1, 'second remover preserves the first caller’s sounds');
+    second();
+    pointer('pointerdown', root.firstElementChild!);
+    assert.equal(played(), 2, 'repeated removal does not release another owner');
+    assert.notEqual(second, unbind, 'each caller receives its own remover');
     unbind();
+    assert.ok([...active.values()].every((listeners) => listeners.size === 0), 'every listener is removed');
+    pointer('pointerdown', root.firstElementChild!);
+    assert.equal(played(), 2, 'silent after the last owner leaves');
+    unbind();
+  });
+
+  test('first options win until all owners leave, then binding starts fresh', () => {
+    root.innerHTML = '<button data-sound-press data-sound-hover>Save</button>';
+    const button = root.firstElementChild!;
+    const first = bind(root, { keyboard: false, hoverInterval: 0 });
+    const second = bind(root, { keyboard: true, hoverInterval: 1000 });
+    first();
+    first();
+    key('keydown', button, { key: 'Enter' });
+    assert.equal(played(), 0, 'first keyboard option still wins');
+    pointer('pointerenter', button);
+    pointer('pointerenter', button);
+    assert.equal(played(), 2, 'first hover interval still wins');
+    second();
+    const fresh = bind(root);
+    first();
+    second();
+    key('keydown', button, { key: 'Enter' });
+    assert.equal(played(), 3, 'fresh binding uses new options and survives stale removers');
+    fresh();
   });
 
   test('defaults to the document and plays for elements added later', () => {

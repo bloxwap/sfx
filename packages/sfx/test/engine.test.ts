@@ -750,6 +750,52 @@ describe('suspended contexts', () => {
     assert.equal(ctx.of('filter').length, 2, 'tick + press noise');
   });
 
+  test('a disposed context rejecting resume preserves the new context queue', async (t) => {
+    t.after(() => dispose());
+    let reject!: (error: Error) => void;
+    FakeAudioContext.next = { state: 'suspended', resume: () => new Promise((_, fail) => { reject = fail; }) };
+    play('tick');
+    const old = live();
+    await dispose();
+    const current = pendingResume();
+    play('tick');
+    const ctx = live();
+    reject(new Error('closed'));
+    await tick();
+    current.finish();
+    await tick();
+    assert.equal(ctx.of('oscillator').length, 1, 'new context plays the queued tick exactly once');
+    assert.equal(ctx.of('filter').length, 1, 'tick noise plays once too');
+    assert.equal(old.of('oscillator').length, 0, 'disposed context never plays');
+  });
+
+  test('a disposed context settling resume preserves the new context resume', async (t) => {
+    t.after(() => dispose());
+    for (const rejects of [false, true]) {
+      await dispose();
+      let settle!: () => void;
+      FakeAudioContext.next = {
+        state: 'suspended',
+        resume: () => new Promise((resolve, reject) => { settle = () => rejects ? reject(new Error('closed')) : resolve(); }),
+      };
+      play('tick');
+      await dispose();
+      const current = pendingResume();
+      play('tick');
+      const ctx = live();
+      settle();
+      await tick();
+      assert.equal(ctx.of('oscillator').length, 0, 'old resume does not play queued sounds');
+      play('press');
+      play('press');
+      assert.equal(ctx.resumes, 1, 'new context keeps its single pending resume');
+      current.finish();
+      await tick();
+      assert.equal(ctx.of('oscillator').length, 1, 'old resume does not drain the tick queue');
+      assert.equal(ctx.of('filter').length, 2, 'tick and press each play once');
+    }
+  });
+
   test('requests older than 250 ms are dropped instead of playing late', async (t) => {
     let finish!: () => void;
     FakeAudioContext.next = { state: 'suspended', resume: (ctx) => new Promise((resolve) => { finish = () => { ctx.state = 'running'; resolve(); }; }) };

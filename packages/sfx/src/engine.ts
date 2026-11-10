@@ -469,7 +469,11 @@ function resume(ctx: AudioContext): Promise<void> {
     } catch (error) {
       promise = Promise.reject(error);
     }
-    resuming = promise.then(flush, () => { queued = []; }).finally(() => { resuming = null; });
+    const pending = promise.then(
+      () => { if (context === ctx) flush(); },
+      () => { if (context === ctx) queued = []; },
+    ).finally(() => { if (resuming === pending) resuming = null; });
+    resuming = pending;
   }
   return resuming;
 }

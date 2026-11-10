@@ -256,6 +256,15 @@ Attach only to `onClick` to preserve native keyboard activation without pointer 
 `FeedbackController`/`createWebSoundAdapter` and preferences instead of mounting a second
 SFX preference owner. Sound, haptics and motion remain independently controllable.
 
+The provider owns global enabled, master volume and category volumes. Imperative
+`setEnabled`/`setVolume` calls (including category volumes) are overwritten whenever a
+provider or `useSoundPreference` effect re-applies. Nested providers warn once per page
+in development and restore the enclosing provider's current enabled/volume/category
+policy on unmount; top-level providers restore stored preferences. Use one provider:
+while multiple providers are mounted, their effects still share the same engine.
+Provider overrides accept boolean enabled values and clamp finite numeric volumes to
+0–1; invalid values fall back to the saved preference.
+
 The approved native subset is available at `@bloxwap/sfx/assets/hig/*`, with a manifest.
 Regenerate from this checkout with `npm ci && npm run export:hig` (Node 24). The lockfile pins
 the optional offline renderer. Only four 48 kHz mono PCM16 WAVs ship; native hosts import

@@ -6,6 +6,8 @@ import { categories, type SoundCategory } from './recipes.js';
 import { semanticPresets, type FeedbackIntent } from './semantic.js';
 import type { SoundName } from './recipes.js';
 
+declare const process: { env: { NODE_ENV?: string } };
+
 const STORAGE_KEY = 'bloxwap:sfx';
 const EMPTY = Object.freeze({});
 const defaults: { enabled: boolean; volume: number; categoryVolumes?: Partial<Record<SoundCategory, number>> } = { enabled: true, volume: 1 };
@@ -73,6 +75,7 @@ const settings = {
 function applyCategories(value: SoundPreference): void {
   for (const category of categories) applyVolume(value.categoryVolumes?.[category] ?? 1, { category });
 }
+let warned = false;
 const SoundContext = createContext<SoundPreference | null>(null);
 
 function usePreferenceStore(): SoundPreference {
@@ -101,12 +104,30 @@ export interface SoundProviderProps {
   unlockOnInteraction?: boolean;
 }
 
-/** Mount one provider near the app root to control the shared audio engine. */
+/** Mount one provider near the app root. It owns the engine's global enabled,
+ * master volume and category volumes: imperative setEnabled/setVolume calls
+ * (including category volumes) are overwritten whenever a provider or
+ * useSoundPreference effect re-applies. Nested providers warn in development
+ * and restore the enclosing provider's current policy on unmount.
+ * Invalid overrides fall back to saved preferences; finite volumes clamp to 0–1.
+ */
 export function SoundProvider({ children, enabled, volume, unlockOnInteraction = true }: SoundProviderProps) {
   const saved = usePreferenceStore();
-  const value = useMemo(() => ({ ...saved, enabled: enabled ?? saved.enabled, volume: volume ?? saved.volume }), [saved, enabled, volume]);
+  const context = useContext(SoundContext);
+  const parent = useRef(context);
+  useEffect(() => { parent.current = context; }, [context]);
+  const value = useMemo(() => ({ ...saved, enabled: typeof enabled === 'boolean' ? enabled : saved.enabled, volume: typeof volume === 'number' && Number.isFinite(volume) ? Math.min(1, Math.max(0, volume)) : saved.volume }), [saved, enabled, volume]);
   useEffect(() => { applyEnabled(value.enabled); applyVolume(value.volume); applyCategories(value); }, [value.enabled, value.volume, value.categoryVolumes]);
-  useEffect(() => () => { applyEnabled(preference.enabled); applyVolume(preference.volume); applyCategories({ ...preference, ...settings }); }, []);
+  useEffect(() => {
+    if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production' && parent.current && !warned) {
+      warned = true;
+      console.warn('Only one SoundProvider should own the engine.');
+    }
+    return () => {
+      const value = parent.current ?? { ...preference, ...settings };
+      applyEnabled(value.enabled); applyVolume(value.volume); applyCategories(value);
+    };
+  }, []);
   useEffect(() => {
     if (!unlockOnInteraction || !value.enabled || value.volume <= 0) return;
     const onInteraction = (event: Event): void => {

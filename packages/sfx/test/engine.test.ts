@@ -735,6 +735,39 @@ describe('voices', () => {
 describe('suspended contexts', () => {
   beforeEach(() => reset());
 
+  test('queued plays snapshot volume, rate, pan and delay at call time', async () => {
+    await preload(['tick']);
+    const control = pendingResume();
+    const options = { volume: 0.5, rate: 1.5, pan: -0.5, delay: 0.2 };
+    play('tick', options);
+    const ctx = live();
+    assert.equal(bufferSources(ctx).length, 0);
+    Object.assign(options, { volume: 2, rate: 4, pan: 1, delay: 1 });
+    ctx.currentTime = 3;
+    const before = ctx.nodes.length;
+    control.finish();
+    await tick();
+    const [source, gain, panner] = ctx.nodes.slice(before) as [FakeBufferSource, FakeGain, FakePanner];
+    assert.deepEqual({
+      volume: gain.gain.value, rate: source.playbackRate.value,
+      pan: panner.pan.value, start: source.startedAt,
+    }, { volume: 0.5, rate: 1.5, pan: -0.5, start: 3.2 });
+  });
+
+  test('queued plays retain the original signal when options are mutated', async () => {
+    await preload(['tick']);
+    const control = pendingResume();
+    const controller = new AbortController();
+    const options = { signal: controller.signal };
+    play('tick', options);
+    options.signal = new AbortController().signal;
+    controller.abort();
+    control.finish();
+    await tick();
+    assert.equal(bufferSources(live()).length, 0);
+    assert.equal(activeVoices(), 0);
+  });
+
   test('plays while suspended share one resume and play once each after it', async () => {
     let finish!: () => void;
     FakeAudioContext.next = { state: 'suspended', resume: (ctx) => new Promise((resolve) => { finish = () => { ctx.state = 'running'; resolve(); }; }) };

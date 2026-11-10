@@ -501,7 +501,7 @@ export function play(name: SoundName = 'chime', options?: PlayOptions): void {
   lastPlayed.set(name, t);
   if (ctx.state !== 'running') {
     const wait = !eager || !asleep(ctx);
-    if (wait && queued.length < 16) queued.push({ name, options, at: t });
+    if (wait && queued.length < 16) queued.push({ name, options: options && { ...options }, at: t });
     void resume(ctx);
     if (wait) return;
   }

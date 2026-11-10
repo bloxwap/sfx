@@ -1326,6 +1326,41 @@ describe('renderBuffer()', () => {
 describe('render cache', () => {
   beforeEach(() => reset());
 
+  for (const sampleRate of [44100, 48000]) {
+    test(`preload before a gesture only plays cached buffers at ${sampleRate} Hz`, async () => {
+      setActivation(false);
+      await preload(['tick']);
+      assert.equal(FakeAudioContext.constructed, 0);
+      FakeAudioContext.next = { sampleRate };
+      setActivation(true);
+      play('tick');
+      const ctx = live();
+      assert.ok(bufferSources(ctx).every((source) => source.buffer!.sampleRate === ctx.sampleRate), 'every cached buffer matches the live rate');
+      assert.equal(ctx.of('oscillator').length, sampleRate === 48000 ? 0 : 1);
+      await tick();
+      play('tick');
+      play('tick');
+      assert.ok(bufferSources(ctx).length >= 2);
+      assert.ok(bufferSources(ctx).every((source) => source.buffer!.sampleRate === ctx.sampleRate));
+      assert.deepEqual(FakeOfflineAudioContext.instances.map((offline) => offline.sampleRate), sampleRate === 48000 ? [48000] : [48000, 44100]);
+    });
+  }
+
+  test('a preload in flight when the context opens cannot refill the cache at the fallback rate', async () => {
+    const pending = preload(['tick']);
+    FakeAudioContext.next = { sampleRate: 44100 };
+    await unlock();
+    await pending;
+    play('tick');
+    const ctx = live();
+    assert.ok(bufferSources(ctx).every((source) => source.buffer!.sampleRate === ctx.sampleRate), 'stale preload cannot populate the cache');
+    assert.equal(ctx.of('oscillator').length, 1);
+    await tick();
+    play('tick');
+    assert.equal(bufferSources(ctx)[0].buffer!.sampleRate, 44100);
+    assert.deepEqual(FakeOfflineAudioContext.instances.map((offline) => offline.sampleRate), [48000, 44100]);
+  });
+
   test('an offline constructor that throws synchronously does not poison the cache', async () => {
     const Saved = globals.OfflineAudioContext;
     globals.OfflineAudioContext = function Broken() { throw new Error('no offline'); };

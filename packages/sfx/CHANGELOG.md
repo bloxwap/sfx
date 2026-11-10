@@ -5,6 +5,28 @@ All notable changes to `@bloxwap/sfx` are documented here. This project follows
 
 ## Unreleased
 
+Invariant fixes. No API removals; two documented behavior changes (`bind()` removers, nested `<SoundProvider>`).
+
+- A `resume()` still pending on a disposed context no longer drops sounds queued on the new context or
+  triggers a second resume (#92).
+- Cached `play()` buffers now always match the live context's sample rate: sounds preloaded before the first
+  gesture re-render once on devices not running at 48 kHz instead of resampling on every play (#93).
+- Lowering `configure({ maxVoices })` brings the sounding voices down to the new cap on the next play,
+  stealing the oldest (#94).
+- A `play()` queued on a suspended context plays with its options as they were at call time (#95).
+- **Behavior change:** each `bind()` call returns its own idempotent remover. Calls on the same root share
+  listeners, which stay until the last remover runs, so one caller's cleanup can't silence another's.
+  `bind(root) === bind(root)` is no longer true (#96).
+- `useBindSounds` binds an element that mounts after the hook or replaces the previous one, on the
+  component's next commit (#97).
+- `useSound` and `useSoundHandler` return callbacks that stay stable across renders with inline or omitted
+  options (#98).
+- **Behavior change:** a `<SoundProvider>` nested in another restores the enclosing provider's policy on
+  unmount instead of the stored preference, and warns once in development (#99). Invalid `volume`/`enabled`
+  overrides fall back to the saved preference, and finite volumes clamp to 0–1 (#100).
+- Built-in recipes are tested against `define()`'s validation, and semantic presets are typed to the
+  approved HIG cues (#101, #102).
+
 ## 0.2.1 — 2026-10-20
 
 Performance release. No API changes.

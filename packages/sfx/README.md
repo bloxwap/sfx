@@ -142,7 +142,7 @@ import {
 | --- | --- |
 | `play(name = 'chime', options?)` | Plays a sound now. `options`: `volume` (0–2), `rate` (0.25–4), `pan` (-1–1), `delay` (seconds, 0–10), `minInterval` (ms, overrides `configure()`), `force` (skip the user-gesture check), `signal` (AbortSignal that stops this play only). Never throws. |
 | `define(name, recipe)` | Registers or replaces an immutable custom recipe. Built-in names are reserved. Invalid data throws `RangeError`. |
-| `preload(names?)` | Renders sounds (all of them by default) to buffers. Safe to call before any user gesture. |
+| `preload(names?)` | Renders sounds (all of them by default) to buffers. Safe to call before any user gesture. Devices not running at 48 kHz re-render once after the first gesture. |
 | `bind(root = document, options?)` | Wires `data-sound-*` attributes under `root`. Returns `unbind()`. Options: `keyboard`, `hoverInterval`. |
 | `unlock()` | Creates and resumes audio from inside a gesture. `bind()` calls it on the first press. |
 | `setEnabled(on)` / `isEnabled()` | Global mute. Sounds already playing finish; sounds waiting on a suspended context are dropped. |

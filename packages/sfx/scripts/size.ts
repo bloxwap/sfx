@@ -5,8 +5,8 @@ import { brotliCompressSync, gzipSync } from 'node:zlib';
 
 // Custom recipe validation adds to the full API; play/bind still tree-shake it away.
 // Category metadata and preference controls add a small fixed cost.
-// Context and promise guards keep disposed resumes from affecting the current context.
-const BUDGET_GZIP = 6688;
+// Invariant guards (#92 disposed resumes, #93 sample-rate cache invalidation) add a few cold-path bytes.
+const BUDGET_GZIP = 6720;
 
 const entries: [label: string, contents: string][] = [
   ['full bundle', `export * from './dist/index.js';`],

@@ -239,6 +239,70 @@ test('StrictMode leaves one binding and unrelated renders do not rebind; option 
 });
 
 
+test('useSound keeps inline options stable and plays with changed field values', async () => {
+  setup();
+  await unlock(); await preload(['tick']);
+  let trigger!: ReturnType<typeof useSound>;
+  function Control({ volume }: { volume: number }) {
+    trigger = useSound('tick', { volume, minInterval: 0 });
+    return null;
+  }
+  await act(async () => root!.render(createElement(Control, { volume: 0.5 })));
+  const initial = trigger;
+  await act(async () => root!.render(createElement(Control, { volume: 0.5 })));
+  assert.equal(trigger, initial);
+  await act(async () => root!.render(createElement(Control, { volume: 0.25 })));
+  assert.notEqual(trigger, initial);
+  trigger();
+  assert.equal(FakeAudioContext.instances.at(-1)!.of('gain').at(-1)!.gain.value, 0.25);
+  trigger({ volume: 0.75 });
+  assert.equal(FakeAudioContext.instances.at(-1)!.of('gain').at(-1)!.gain.value, 0.75);
+});
+
+test('useSoundHandler keeps a stable handler with no options across renders', async () => {
+  setup();
+  let trigger!: ReturnType<typeof useSoundHandler>;
+  let sound!: ReturnType<typeof useSound>;
+  let actions = 0;
+  const handler = () => { actions++; };
+  function Control() { trigger = useSoundHandler('tick', handler); sound = useSound('tick'); return null; }
+  await act(async () => root!.render(createElement(Control)));
+  const initial = trigger;
+  const initialSound = sound;
+  await act(async () => root!.render(createElement(Control)));
+  assert.equal(trigger, initial);
+  assert.equal(sound, initialSound);
+  trigger(asReal({ defaultPrevented: true }));
+  assert.equal(actions, 1);
+});
+
+test('useSoundHandler keeps inline options stable and uses changed playback and suppression fields', async () => {
+  setup();
+  await unlock(); await preload(['tick']);
+  let trigger!: ReturnType<typeof useSoundHandler>;
+  function Control({ volume, disabled = false }: { volume: number; disabled?: boolean }) {
+    trigger = useSoundHandler('tick', undefined, { volume, disabled, minInterval: 0 });
+    return null;
+  }
+  const button = dom.document.createElement('button');
+  const event = asReal<Parameters<typeof trigger>[0]>({ target: button, currentTarget: button, defaultPrevented: false });
+  await act(async () => root!.render(createElement(Control, { volume: 0.5 })));
+  const initial = trigger;
+  await act(async () => root!.render(createElement(Control, { volume: 0.5 })));
+  assert.equal(trigger, initial);
+  await act(async () => root!.render(createElement(Control, { volume: 0.25 })));
+  assert.notEqual(trigger, initial);
+  trigger(event);
+  const context = FakeAudioContext.instances.at(-1)!;
+  assert.equal(context.of('gain').at(-1)!.gain.value, 0.25);
+  const changed = trigger;
+  const before = context.of('source').length;
+  await act(async () => root!.render(createElement(Control, { volume: 0.25, disabled: true })));
+  assert.notEqual(trigger, changed);
+  trigger(event);
+  assert.equal(context.of('source').length, before);
+});
+
 test('category preferences migrate, persist, synchronize and restore policy overrides', async () => {
   setup();
   dom.localStorage.setItem('bloxwap:sfx', JSON.stringify({ enabled: true, volume: 0.6, categoryVolumes: { controls: 0.2, money: -1, hover: 4, feedback: 'bad', alien: 1 } }));

@@ -7,6 +7,7 @@ import { semanticPresets, type FeedbackIntent } from './semantic.js';
 import type { SoundName } from './recipes.js';
 
 const STORAGE_KEY = 'bloxwap:sfx';
+const EMPTY = Object.freeze({});
 const defaults: { enabled: boolean; volume: number; categoryVolumes?: Partial<Record<SoundCategory, number>> } = { enabled: true, volume: 1 };
 let preference = defaults;
 const listeners = new Set<() => void>();
@@ -142,8 +143,8 @@ export function useBindSounds(ref: RefObject<HTMLElement | null>, options: BindO
 }
 
 /** A stable event handler for a sound, with optional per-call overrides. */
-export function useSound(name: SoundName, options?: PlayOptions): (overrides?: PlayOptions) => void {
-  return useCallback((overrides?: PlayOptions) => play(name, { ...options, ...overrides }), [name, options]);
+export function useSound(name: SoundName, options: PlayOptions = EMPTY): (overrides?: PlayOptions) => void {
+  return useCallback((overrides?: PlayOptions) => play(name, { ...options, ...overrides }), [name, options.volume, options.rate, options.pan, options.delay, options.category, options.minInterval, options.force, options.signal]);
 }
 
 
@@ -156,13 +157,13 @@ export interface SoundHandlerOptions extends PlayOptions {
 /** Compose only onClick (keyboard clicks included), never both pointerdown and click.
  * The host runs first; cancellation, nested targets and disabled/busy state suppress sound.
  */
-export function useSoundHandler<E extends SyntheticEvent>(name: SoundName, handler?: (event: E) => void, options: SoundHandlerOptions = {}): (event: E) => void {
+export function useSoundHandler<E extends SyntheticEvent>(name: SoundName, handler?: (event: E) => void, options: SoundHandlerOptions = EMPTY): (event: E) => void {
   const preference = useSoundPreference();
   return useCallback((event: E) => {
     handler?.(event);
     if (event.defaultPrevented || event.target !== event.currentTarget && (event.target as Element).closest('button,a,input,select,[role="button"],[role="switch"]') !== event.currentTarget || options.disabled || options.busy || options.suppressed || !preference.enabled || preference.volume <= 0) return;
     play(name, options);
-  }, [name, handler, options, preference.enabled, preference.volume]);
+  }, [name, handler, options.volume, options.rate, options.pan, options.delay, options.category, options.minInterval, options.force, options.signal, options.disabled, options.busy, options.suppressed, preference.enabled, preference.volume]);
 }
 
 /** HIG semantic mapping; outcomes must be called after the operation completes.

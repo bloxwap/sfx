@@ -28,7 +28,18 @@ const INERT = ':disabled, [aria-disabled="true"], [inert]';
 
 /** An event already turned into a sound by one root is ignored by every other root it reaches. */
 const handled = new WeakSet<Event>();
-const bound = new WeakMap<Node, () => void>();
+interface Binding { count: number; remove: () => void }
+const bound = new WeakMap<Node, Binding>();
+
+function retain(binding: Binding): () => void {
+  binding.count++;
+  let active = true;
+  return () => {
+    if (!active) return;
+    active = false;
+    if (!--binding.count) binding.remove();
+  };
+}
 let lastHover = -Infinity;
 let finePointer: MediaQueryList | null | undefined;
 
@@ -65,14 +76,15 @@ function fire(event: Event, element: Element, kind: Kind): void {
 /**
  * Plays sounds for every `data-sound-hover`, `-press`, `-release` and `-toggle` element under `root`
  * (default: the document), including elements added later. Uses one delegated capture listener per
- * event type, and unlocks audio on the first pointer or key press. Binding the same root again is a
- * no-op. Returns a function that removes the listeners.
+ * event type, and unlocks audio on the first pointer or key press. Calls on the same root share
+ * listeners and the first caller's options until all bindings are removed. Each call returns its
+ * own idempotent remover; listeners are removed only when the last caller removes its binding.
  */
 export function bind(root?: ParentNode | null, options: BindOptions = {}): () => void {
   const target = (root ?? (typeof document === 'undefined' ? null : document)) as (Node & EventTarget) | null;
   if (!target || typeof target.addEventListener !== 'function') return () => {};
   const existing = bound.get(target);
-  if (existing) return existing;
+  if (existing) return retain(existing);
 
   const keyboard = options.keyboard !== false;
   const hoverInterval = options.hoverInterval ?? 150;
@@ -147,10 +159,10 @@ export function bind(root?: ParentNode | null, options: BindOptions = {}): () =>
   for (const [type, listener] of listeners) target.addEventListener(type, listener, true);
 
   const unbind = () => {
-    if (bound.get(target) !== unbind) return;
     bound.delete(target);
     for (const [type, listener] of listeners) target.removeEventListener(type, listener, true);
   };
-  bound.set(target, unbind);
-  return unbind;
+  const binding = { count: 0, remove: unbind };
+  bound.set(target, binding);
+  return retain(binding);
 }

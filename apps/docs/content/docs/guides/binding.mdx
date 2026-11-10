@@ -44,7 +44,7 @@ An empty or unknown value falls back to the default. Attributes are read when th
 
 ## Unbinding
 
-`bind()` is idempotent per root: calling it twice returns the same `unbind` function. Call `unbind()` to remove the listeners, for example when a component unmounts.
+Each `bind()` call returns its own `unbind` function. Calls on the same root share one set of listeners (and the first caller's options), and the listeners stay until every caller has called its `unbind()`, so one component unmounting can't silence another's binding. Calling an `unbind()` more than once is harmless. Call `unbind()` to remove your binding, for example when a component unmounts.
 
 ```ts
 const unbind = bind(dialog);

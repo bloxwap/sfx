@@ -18,7 +18,7 @@
   "dependencies": {
     "@bloxwap/font": "0.1.4",
     "@bloxwap/hig": "0.2.0",
-    "@bloxwap/sfx": "0.2.1",
+    "@bloxwap/sfx": "0.3.0",
     "fumadocs-core": "16.17.7",
     "fumadocs-mdx": "15.4.9",
     "fumadocs-ui": "16.17.7",

@@ -5,6 +5,8 @@ All notable changes to `@bloxwap/sfx` are documented here. This project follows
 
 ## Unreleased
 
+## 0.3.0 — 2026-11-10
+
 Invariant fixes. No API removals; two documented behavior changes (`bind()` removers, nested `<SoundProvider>`).
 
 - A `resume()` still pending on a disposed context no longer drops sounds queued on the new context or

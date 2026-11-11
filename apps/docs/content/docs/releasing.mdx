@@ -15,7 +15,7 @@ npm tries OIDC first and falls back to `NODE_AUTH_TOKEN` from the org-level
 
 1. Open a PR that bumps `version` in `packages/sfx/package.json` and updates `packages/sfx/CHANGELOG.md`.
 2. Merge it after the **Tests**, **Documentation**, and **Security** checks pass.
-3. Create a GitHub release tagged `v<version>`, for example `v0.2.1`.
+3. Create a GitHub release tagged `v<version>`, for example `v0.3.0`.
 4. The **Publish to npm** workflow checks that the tag matches the package version, waits for `npm-release` approval, verifies the fallback token when present (otherwise defers OIDC authentication to npm), runs the full test suite (`prepublishOnly`), and publishes.
 
 Pre-release versions (`0.2.0-beta.1`) publish under the matching dist-tag (`beta`, `alpha`, `rc`) instead of `latest`.

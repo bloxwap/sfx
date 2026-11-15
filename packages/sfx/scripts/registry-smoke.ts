@@ -64,6 +64,7 @@ try {
     if (framework === 'vite') {
       await writeFile(join(directory, 'client.tsx'), client);
       await writeFile(join(directory, 'main.tsx'), "import { createRoot } from 'react-dom/client'; import { Client } from './client'; createRoot(document.getElementById('root')!).render(<Client />);");
+      // nosemgrep: javascript.lang.security.audit.unknown-value-with-script-tag.unknown-value-with-script-tag -- static Vite fixture HTML; directory is only the write path, not interpolated into the script tag
       await writeFile(join(directory, 'index.html'), '<!doctype html><html lang="en"><title>Registry Vite smoke</title><body><div id="root"></div><script type="module" src="/main.tsx"></script></body></html>');
       await writeFile(join(directory, 'tsconfig.json'), JSON.stringify({ compilerOptions: { target: 'ES2022', module: 'ESNext', moduleResolution: 'bundler', jsx: 'react-jsx', strict: true, noEmit: true, skipLibCheck: true }, include: ['*.tsx'] }));
       await command('npx', ['tsc', '--noEmit'], directory);

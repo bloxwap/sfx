@@ -5,6 +5,13 @@ All notable changes to `@bloxwap/sfx` are documented here. This project follows
 
 ## Unreleased
 
+## 0.3.1 — 2026-11-14
+
+Release-process only; no code changes from 0.3.0.
+
+- Published from GitHub Actions through npm trusted publishing (OIDC) with provenance, validating the
+  `@bloxwap/sfx` trusted publisher for `publish_npm.yml` in the `npm-release` environment.
+
 ## 0.3.0 — 2026-11-10
 
 Invariant fixes. No API removals; two documented behavior changes (`bind()` removers, nested `<SoundProvider>`).

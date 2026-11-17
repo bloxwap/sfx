@@ -21,6 +21,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
+          fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
@@ -35,8 +36,33 @@ jobs:
       - name: Verify the published version
         run: |
           if [ -z "$SMOKE_VERSION" ]; then
-            SMOKE_VERSION=$(npm view @bloxwap/sfx version)
+            if ! [[ "$PUBLISHED_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+              echo 'Expected the successful publish run commit or an explicit version.' >&2
+              exit 1
+            fi
+            SMOKE_VERSION=$(git show "$PUBLISHED_COMMIT:packages/sfx/package.json" | node -pe "JSON.parse(require('node:fs').readFileSync(0, 'utf8')).version")
           fi
+          export SMOKE_VERSION
+          # npm can accept a publish before the version is available for installation.
+          # Never let the previous latest dist-tag turn this release check green.
+          node --input-type=module <<'JS'
+          import { setTimeout } from 'node:timers/promises';
+          const version = process.env.SMOKE_VERSION;
+          if (!/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(version ?? '')) throw new Error('Expected an exact package version');
+          const url = `https://registry.npmjs.org/@bloxwap%2fsfx/${encodeURIComponent(version)}`;
+          const deadline = Date.now() + 10 * 60_000;
+          console.log(`Waiting for @bloxwap/sfx@${version} to become available on npm`);
+          for (;;) {
+            try {
+              const response = await fetch(url, { signal: AbortSignal.timeout(10_000), cache: 'no-store' });
+              if (response.ok && (await response.json()).version === version) break;
+            } catch { /* Registry propagation can include temporary network failures. */ }
+            if (Date.now() >= deadline) throw new Error(`npm did not make @bloxwap/sfx@${version} available within 10 minutes`);
+            await setTimeout(10_000);
+          }
+          console.log(`Verifying @bloxwap/sfx@${version}`);
+          JS
           bun run smoke:registry "$SMOKE_VERSION"
         env:
           SMOKE_VERSION: ${{ inputs.version }}
+          PUBLISHED_COMMIT: ${{ github.event.workflow_run.head_sha }}

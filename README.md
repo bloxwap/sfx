@@ -34,7 +34,7 @@ ESM only. Works in all modern browsers, and is a silent no-op on the server.
 
 ## Release status
 
-`0.3.1` is an early developer preview; expect breaking changes before `1.0`.
+`0.4.0` is an early developer preview; expect breaking changes before `1.0`.
 
 ## Usage
 

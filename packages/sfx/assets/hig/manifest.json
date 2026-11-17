@@ -5,9 +5,9 @@
     "repository": "https://github.com/bloxwap/hig",
     "commit": "1a776b9326c6ba03702894943b3edbfd178c4b40"
   },
-  "package": "@bloxwap/sfx@0.3.1",
+  "package": "@bloxwap/sfx@0.4.0",
   "sourceRepository": "https://github.com/bloxwap/sfx",
-  "sourceSha256": "2b82a8fd748efd84f2dae61bb1867a2faf24d2f8b6d45cf4c9ffbb157ac39e84",
+  "sourceSha256": "d9d394e1b8be9db0bbe8f4b851d221671d017d8c75018e4f740881239d142459",
   "renderer": "node-web-audio-api@2.2.0",
   "command": "npm ci && npm run export:hig",
   "flags": [
@@ -105,11 +105,11 @@
         ]
       },
       "recipeSha256": "c7cf1c8b622b6fa3b81bc0098af3edc0df168a2a985a9c5fdb8ee48ab1f81eda",
-      "sha256": "571955a39717c429205fcb76d8f1259313aecf9d7ffcf1af6e9566b65acb6429",
-      "frames": 4240,
-      "durationMs": 88.33333333333333,
-      "peak": 0.14019775390625,
-      "rms": 0.00859674122108432
+      "sha256": "a94329cec6034a50cf0036ea5b0c00b1ff69e3a527cdc65ed954fc8ba4733177",
+      "frames": 4026,
+      "durationMs": 83.875,
+      "peak": 0.1522216796875,
+      "rms": 0.01066976999678749
     },
     {
       "name": "toggle",
@@ -138,11 +138,11 @@
         ]
       },
       "recipeSha256": "248794bd0795cad967145ba1781e76e7a4ff4f97293f49b1712c93ff8b9d4da8",
-      "sha256": "9c2d1b186195d5211b87bba4d048aa3d4496efa6702fd281ae012f2baa920d67",
-      "frames": 5357,
-      "durationMs": 111.60416666666667,
-      "peak": 0.1417236328125,
-      "rms": 0.00986514415044196
+      "sha256": "11dcc62ee6c99d8e364ce5b956891eeddf8c317f62a149f7d44f65d91b80b8eb",
+      "frames": 5505,
+      "durationMs": 114.6875,
+      "peak": 0.11846923828125,
+      "rms": 0.010208630525307747
     },
     {
       "name": "success",
@@ -223,11 +223,11 @@
         ]
       },
       "recipeSha256": "9fdb0d7120f9f322dd179798924ffeee091b7829a83eed1882b0a31759e038f0",
-      "sha256": "95157f78c081a67f0557ed95e831bebce10cdf16ae5ad275f49b935eeb06464c",
+      "sha256": "82162c1d7f690a5617077ddbf9b9712f75820c5176dc8ed79fb2d7080cf553de",
       "frames": 15072,
       "durationMs": 314,
-      "peak": 0.1781005859375,
-      "rms": 0.025616086826925403
+      "peak": 0.17828369140625,
+      "rms": 0.02546074337738659
     }
   ]
 }

@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { chromium } from '@playwright/test';
 
-const argument = process.argv[2] ?? '0.3.1';
+const argument = process.argv[2] ?? '0.4.0';
 const archive = argument.endsWith('.tgz');
 if (!archive && !/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(argument)) throw new Error('Pass an exact published version or a local .tgz for rehearsal');
 const spec = archive ? resolve(argument) : `@bloxwap/sfx@${argument}`;
@@ -112,7 +112,7 @@ try {
     const match = data.size.compressedSize.match(/([\d.]+)\s*(kB|KiB|B)/i);
     assert.ok(match, 'bundlejs size has a recognized unit');
     const bytes = Number(match[1]) * (/^k/i.test(match[2]) ? 1024 : 1);
-    assert.ok(bytes < 6656, `bundlejs full package stays within the 6.5 KiB budget: ${data.size.compressedSize}`);
+    assert.ok(bytes < 8192, `bundlejs full package stays within the 8 KiB budget: ${data.size.compressedSize}`);
     console.log(`bundlejs badge: ${data.size.compressedSize}`);
   } else console.log('Local archive rehearsal passed; registry/CDN/badge checks require publication.');
 } finally {

@@ -1,29 +1,33 @@
 # Self-hosted CI runners
 
 GitHub Actions jobs run on Apple Silicon Mac minis labeled
-`[self-hosted, macOS, ARM64]` in runner group JWS, with exactly one permanent
-exception: job `publish` in `.github/workflows/publish_npm.yml` runs on
-GitHub-hosted `ubuntu-24.04`. All other jobs, including its prerequisite
-`security` scan, stay on the minis.
+`[self-hosted, macOS, ARM64]` in runner group JWS. The sole exception is the final
+npm upload job on GitHub-hosted `ubuntu-24.04`; release preparation stays on the minis.
 
 On the minis, workflows must not call `apt`, `sudo`, `xvfb-run`, or
 `playwright install --with-deps`. Inline scripts are POSIX / BSD-portable and
 write scratch files under `$RUNNER_TEMP`. `actions/setup-python` cannot install
 on these minis (`/Users/runner` is not writable); this repository does not need Python.
 
-## npm trusted publishing exception
+## npm publishing
 
 [npm trusted publishing requires GitHub-hosted runners](https://docs.npmjs.com/trusted-publishers/).
-The publish job uses Node 24, pinned npm 11.6.1, `id-token: write`, and
-`npm publish --provenance`, building and testing on Ubuntu itself with package-manager
-caching disabled. Its `npm-release` environment must have required reviewers configured.
+The release security scan and `prepare` job run on the minis. Preparation checks
+the release version and npm registry, installs dependencies, builds and tests,
+then packs the tested build with lifecycle scripts disabled. Already-published
+versions skip preparation and upload.
 
-The org-level `NPM_TOKEN` is scoped only to authentication verification and publishing
-as a transitional fallback. npm tries OIDC first, then token authentication; provenance
-is attached with either method. Configure the npm Trusted Publisher for organization
-`bloxwap`, repository `sfx`, workflow filename `publish_npm.yml`, and environment
-`npm-release`. After verifying OIDC publishing, delete `NPM_TOKEN` and its workflow
-references. Token-only registry commands still require separate credentials.
+The `publish` job only sets up Node 24 and pinned npm 11.6.1, downloads that run's
+artifact by ID, and publishes the tarball with provenance and lifecycle scripts
+disabled. It does not check out the repository, install project dependencies,
+build, or test. Its `npm-release` environment must have required reviewers configured.
+
+Configure the npm Trusted Publisher for organization `bloxwap`, repository `sfx`,
+workflow filename `publish_npm.yml`, and environment `npm-release`. The org-level
+`NPM_TOKEN` remains scoped to the publish step as a transitional fallback until
+OIDC publishing is verified; then remove the token and its workflow reference.
+The separate **Prepare npm release** workflow remains available for manually
+publishing signed tarballs with `--provenance-file`.
 
 ## Labels
 
@@ -94,7 +98,7 @@ CoreAudio on these machines.
   runner must be allowed to request ID tokens for those jobs.
 - Configure required reviewers for the `npm-release` environment. Merely naming
   the environment in YAML does not enable approval protection.
-- Configure and verify the npm Trusted Publisher above before deleting the fallback token.
+- Configure and verify the npm Trusted Publisher before deleting the fallback `NPM_TOKEN` secret.
 - First-time contributors to this repository need approval to run workflows
   from fork pull requests (`first_time_contributors`).
 

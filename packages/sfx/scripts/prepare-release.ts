@@ -1,6 +1,6 @@
 // Optional signed provenance for a packed tarball (Sigstore OIDC on the Mac minis).
-// Routine npm publishes use NPM_TOKEN and do not attach provenance, because npm
-// trusted publishing does not support self-hosted runners.
+// Routine releases use a separate minimal GitHub-hosted upload job with npm
+// trusted publishing; this script supports manually publishing signed tarballs.
 import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';

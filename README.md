@@ -273,15 +273,15 @@ npm run typecheck:tsc   # build plus test/bench/script type check with tsc
 npm run docs:check:tsc  # docs type check with tsc
 ```
 
-Requires Node.js 24 or newer. CI runs on self-hosted Apple Silicon Mac minis, except
-for the npm publish job on GitHub-hosted `ubuntu-24.04` (required by npm trusted publishing).
-See [docs/ci-runners.md](docs/ci-runners.md) for runner labels and tools.
+Requires Node.js 24 or newer. CI and release preparation run on self-hosted Apple
+Silicon Mac minis. Only the final npm upload uses a GitHub-hosted runner for
+trusted publishing. See [docs/ci-runners.md](docs/ci-runners.md) for runner details.
 
-A GitHub release tagged `v<version>` publishes with provenance through the `npm-release`
-environment, which must have required reviewers configured. `NPM_TOKEN` remains only as a
-transitional fallback until the npm Trusted Publisher is verified: organization `bloxwap`,
-repository `sfx`, workflow `publish_npm.yml`, environment `npm-release`. Then delete the token
-and its workflow references. See [Releasing](https://bloxwap.github.io/sfx/docs/releasing/).
+A GitHub release tagged `v<version>` builds, tests, and packs on the minis, then
+publishes that tarball with provenance through the `npm-release` environment,
+which must have required reviewers configured. `NPM_TOKEN` remains a transitional
+fallback until the npm Trusted Publisher is verified.
+See [Releasing](https://bloxwap.github.io/sfx/docs/releasing/).
 
 ## License
 

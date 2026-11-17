@@ -3,8 +3,8 @@ name: Publish to npm
 # Publishing a GitHub release publishes @bloxwap/sfx at the version in packages/sfx/package.json.
 # Release flow: bump the version in a PR, merge it, then create a release tagged v<version>.
 #
-# npm OIDC and provenance require a GitHub-hosted runner; only publish is exempt
-# from the Mac-mini runner policy. Keep this filename for the npm Trusted Publisher.
+# Build and test on the Mac minis. Only the final upload uses a GitHub-hosted
+# runner, required by npm trusted publishing.
 on:
   release:
     types: [published]
@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   security:
-    # Single-job publish: adds the scan serially.
+    # Scan before preparing the release tarball.
     uses: bloxwap/.github/.github/workflows/security-scan.yml@2a70724cd0d803abef5f5a7c64c46065f4fda19b # v1.1.0
     permissions:
       contents: read
@@ -30,14 +30,17 @@ jobs:
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
 
-  publish:
+  prepare:
     needs: security
-    runs-on: ubuntu-24.04
-    environment: npm-release
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 20
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      tag: ${{ steps.tag.outputs.value }}
+      published: ${{ steps.exists.outputs.published }}
+      artifact-id: ${{ steps.artifact.outputs.artifact-id }}
     permissions:
       contents: read
-      id-token: write
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -46,14 +49,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
           package-manager-cache: false
-
-      - name: Install npm with trusted publishing support
-        # Exact CLI bootstrap version is required for OIDC; it is not a project dependency.
-        run: npm install --global npm@11.6.1 # zizmor: ignore[adhoc-packages]
-
-      - run: npm ci
 
       - name: Determine version and npm tag
         id: tag
@@ -81,13 +77,6 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "value=${TAG:-latest}" >> "$GITHUB_OUTPUT"
 
-      # Check authentication even if the version below is already published.
-      - name: Verify npm publish authentication
-        # Transitional fallback: delete after the npm Trusted Publisher works.
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: node packages/sfx/scripts/check-publish-auth.ts
-
       - name: Skip if this version is already on npm
         id: exists
         env:
@@ -98,13 +87,62 @@ jobs:
             echo "published=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # prepack builds and prepublishOnly runs the full test suite before anything is uploaded;
-      # publishConfig.access is public.
-      # Provenance is attached with either OIDC or the transitional token.
-      - name: Publish @bloxwap/sfx@${{ steps.tag.outputs.version }}
+      - run: npm ci
         if: steps.exists.outputs.published != 'true'
-        # Transitional fallback: delete after the npm Trusted Publisher works.
+
+      # npm test builds the library before running the full suite.
+      - run: npm test
+        if: steps.exists.outputs.published != 'true'
+
+      - name: Pack the tested build
+        if: steps.exists.outputs.published != 'true'
+        id: pack
         env:
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          DIRECTORY=$(mktemp -d "$RUNNER_TEMP/sfx-publish.XXXXXX")
+          npm pack --workspace @bloxwap/sfx --ignore-scripts --pack-destination "$DIRECTORY"
+          mv "$DIRECTORY/bloxwap-sfx-$VERSION.tgz" "$DIRECTORY/package.tgz"
+          echo "path=$DIRECTORY/package.tgz" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.exists.outputs.published != 'true'
+        id: artifact
+        with:
+          name: npm-package
+          path: ${{ steps.pack.outputs.path }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  publish:
+    needs: prepare
+    if: needs.prepare.outputs.published != 'true'
+    runs-on: ubuntu-24.04
+    environment: npm-release
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+
+      - name: Install pinned npm with trusted publishing support
+        run: npm install --global npm@11.6.1 # zizmor: ignore[adhoc-packages]
+
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          artifact-ids: ${{ needs.prepare.outputs.artifact-id }}
+          path: ${{ runner.temp }}/npm-package
+          merge-multiple: true
+
+      - name: Publish @bloxwap/sfx@${{ needs.prepare.outputs.version }}
+        env:
+          # Transitional fallback until the npm Trusted Publisher is verified.
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_TAG: ${{ steps.tag.outputs.value }}
-        run: npm publish --workspace @bloxwap/sfx --tag "$NPM_TAG" --provenance
+          NPM_TAG: ${{ needs.prepare.outputs.tag }}
+        run: npm publish "$RUNNER_TEMP/npm-package/package.tgz" --access public --tag "$NPM_TAG" --ignore-scripts --provenance

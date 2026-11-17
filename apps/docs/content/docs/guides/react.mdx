@@ -102,8 +102,8 @@ toggle uses toggle (80 ms), success/error use their matching recipes (400 ms).
 Press/release/cancel/disclosure/warning/notification are intentionally silent. Live market
 updates remain silent. Essential information belongs in visible state/status, never only sound.
 
-For a HIG app, use `@bloxwap/hig-feedback`'s `FeedbackController` and `createWebSoundAdapter` instead
-of adding a second preference/controller store. Pass the SFX engine as the host adapter;
+For a HIG app, use `FeedbackController` from `@bloxwap/hig/feedback` and
+`createWebSoundAdapter` from `@bloxwap/hig/feedback/web-sound` instead of adding a second preference/controller store. Pass the SFX engine as the host adapter;
 HIG owns independent sound/haptic/motion settings, storage (including native storage), policy,
 source/id deduplication, per-source cooldowns, suppression and lifecycle. SFX's hook cadence
 is a per-recipe guard, not a substitute for HIG event identity or controlled-value validation.

@@ -690,6 +690,20 @@ describe('voices', () => {
     assert.equal(activeVoices(), 2);
   });
 
+  test('lowering maxVoices cuts the oldest voices on the next play', async () => {
+    for (let i = 0; i < 10; i++) play('tick');
+    assert.equal(activeVoices(), 10);
+    configure({ maxVoices: 2 });
+    play('press');
+    assert.equal(activeVoices(), 2);
+    const sources = bufferSources(live());
+    assert.equal(sources.length, 11);
+    for (const source of sources.slice(0, 9)) assert.equal(source.stoppedAt, 0);
+    for (const source of sources.slice(9)) assert.equal(source.stoppedAt, undefined);
+    await tick();
+    assert.equal(activeVoices(), 2);
+  });
+
   test('stopAll stops buffered and live voices', async () => {
     play('tick');
     play('chime', { pan: 0.5 });
@@ -721,6 +735,39 @@ describe('voices', () => {
 describe('suspended contexts', () => {
   beforeEach(() => reset());
 
+  test('queued plays snapshot volume, rate, pan and delay at call time', async () => {
+    await preload(['tick']);
+    const control = pendingResume();
+    const options = { volume: 0.5, rate: 1.5, pan: -0.5, delay: 0.2 };
+    play('tick', options);
+    const ctx = live();
+    assert.equal(bufferSources(ctx).length, 0);
+    Object.assign(options, { volume: 2, rate: 4, pan: 1, delay: 1 });
+    ctx.currentTime = 3;
+    const before = ctx.nodes.length;
+    control.finish();
+    await tick();
+    const [source, gain, panner] = ctx.nodes.slice(before) as [FakeBufferSource, FakeGain, FakePanner];
+    assert.deepEqual({
+      volume: gain.gain.value, rate: source.playbackRate.value,
+      pan: panner.pan.value, start: source.startedAt,
+    }, { volume: 0.5, rate: 1.5, pan: -0.5, start: 3.2 });
+  });
+
+  test('queued plays retain the original signal when options are mutated', async () => {
+    await preload(['tick']);
+    const control = pendingResume();
+    const controller = new AbortController();
+    const options = { signal: controller.signal };
+    play('tick', options);
+    options.signal = new AbortController().signal;
+    controller.abort();
+    control.finish();
+    await tick();
+    assert.equal(bufferSources(live()).length, 0);
+    assert.equal(activeVoices(), 0);
+  });
+
   test('plays while suspended share one resume and play once each after it', async () => {
     let finish!: () => void;
     FakeAudioContext.next = { state: 'suspended', resume: (ctx) => new Promise((resolve) => { finish = () => { ctx.state = 'running'; resolve(); }; }) };
@@ -734,6 +781,52 @@ describe('suspended contexts', () => {
     await tick();
     assert.equal(ctx.of('oscillator').length, 1, 'tick played once');
     assert.equal(ctx.of('filter').length, 2, 'tick + press noise');
+  });
+
+  test('a disposed context rejecting resume preserves the new context queue', async (t) => {
+    t.after(() => dispose());
+    let reject!: (error: Error) => void;
+    FakeAudioContext.next = { state: 'suspended', resume: () => new Promise((_, fail) => { reject = fail; }) };
+    play('tick');
+    const old = live();
+    await dispose();
+    const current = pendingResume();
+    play('tick');
+    const ctx = live();
+    reject(new Error('closed'));
+    await tick();
+    current.finish();
+    await tick();
+    assert.equal(ctx.of('oscillator').length, 1, 'new context plays the queued tick exactly once');
+    assert.equal(ctx.of('filter').length, 1, 'tick noise plays once too');
+    assert.equal(old.of('oscillator').length, 0, 'disposed context never plays');
+  });
+
+  test('a disposed context settling resume preserves the new context resume', async (t) => {
+    t.after(() => dispose());
+    for (const rejects of [false, true]) {
+      await dispose();
+      let settle!: () => void;
+      FakeAudioContext.next = {
+        state: 'suspended',
+        resume: () => new Promise((resolve, reject) => { settle = () => rejects ? reject(new Error('closed')) : resolve(); }),
+      };
+      play('tick');
+      await dispose();
+      const current = pendingResume();
+      play('tick');
+      const ctx = live();
+      settle();
+      await tick();
+      assert.equal(ctx.of('oscillator').length, 0, 'old resume does not play queued sounds');
+      play('press');
+      play('press');
+      assert.equal(ctx.resumes, 1, 'new context keeps its single pending resume');
+      current.finish();
+      await tick();
+      assert.equal(ctx.of('oscillator').length, 1, 'old resume does not drain the tick queue');
+      assert.equal(ctx.of('filter').length, 2, 'tick and press each play once');
+    }
   });
 
   test('requests older than 250 ms are dropped instead of playing late', async (t) => {
@@ -1265,6 +1358,41 @@ describe('renderBuffer()', () => {
 
 describe('render cache', () => {
   beforeEach(() => reset());
+
+  for (const sampleRate of [44100, 48000]) {
+    test(`preload before a gesture only plays cached buffers at ${sampleRate} Hz`, async () => {
+      setActivation(false);
+      await preload(['tick']);
+      assert.equal(FakeAudioContext.constructed, 0);
+      FakeAudioContext.next = { sampleRate };
+      setActivation(true);
+      play('tick');
+      const ctx = live();
+      assert.ok(bufferSources(ctx).every((source) => source.buffer!.sampleRate === ctx.sampleRate), 'every cached buffer matches the live rate');
+      assert.equal(ctx.of('oscillator').length, sampleRate === 48000 ? 0 : 1);
+      await tick();
+      play('tick');
+      play('tick');
+      assert.ok(bufferSources(ctx).length >= 2);
+      assert.ok(bufferSources(ctx).every((source) => source.buffer!.sampleRate === ctx.sampleRate));
+      assert.deepEqual(FakeOfflineAudioContext.instances.map((offline) => offline.sampleRate), sampleRate === 48000 ? [48000] : [48000, 44100]);
+    });
+  }
+
+  test('a preload in flight when the context opens cannot refill the cache at the fallback rate', async () => {
+    const pending = preload(['tick']);
+    FakeAudioContext.next = { sampleRate: 44100 };
+    await unlock();
+    await pending;
+    play('tick');
+    const ctx = live();
+    assert.ok(bufferSources(ctx).every((source) => source.buffer!.sampleRate === ctx.sampleRate), 'stale preload cannot populate the cache');
+    assert.equal(ctx.of('oscillator').length, 1);
+    await tick();
+    play('tick');
+    assert.equal(bufferSources(ctx)[0].buffer!.sampleRate, 44100);
+    assert.deepEqual(FakeOfflineAudioContext.instances.map((offline) => offline.sampleRate), [48000, 44100]);
+  });
 
   test('an offline constructor that throws synchronously does not poison the cache', async () => {
     const Saved = globals.OfflineAudioContext;

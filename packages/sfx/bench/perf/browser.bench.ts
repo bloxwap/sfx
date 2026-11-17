@@ -10,10 +10,10 @@ const raw:any={metadata:{runs,node:process.version,warmup:1},preload:[],render:{
 const rows:unknown[][]=[];
 const row=(name:string,s:number[],unit='ms')=>rows.push([name,median(s),p95(s),unit]);
 try {
- if(!await fetch(base+'/bench/perf/fixture.html').then(r=>r.ok).catch(()=>false)) {
+ if(!await fetch(base+'/bench/perf/fixture.html').then(r=>r.ok).catch(()=>false)) { // nosemgrep: typescript.react.security.react-insecure-request.react-insecure-request -- loopback readiness check for the local bench server
   server=spawn(process.execPath,['test/browser/server.ts'],{cwd:new URL('../..',import.meta.url),stdio:'ignore'});
   let ready=false;
-  for(let i=0;i<100;i++){if(await fetch(base+'/bench/perf/fixture.html').then(r=>r.ok).catch(()=>false)){ready=true;break}await new Promise(r=>setTimeout(r,100))}
+  for(let i=0;i<100;i++){if(await fetch(base+'/bench/perf/fixture.html').then(r=>r.ok).catch(()=>false)){ready=true;break}await new Promise(r=>setTimeout(r,100))} // nosemgrep: typescript.react.security.react-insecure-request.react-insecure-request -- loopback readiness check for the local bench server
   if(!ready)throw Error('Browser server failed to start');
  }
  browser=await chromium.launch({headless:true,executablePath:process.env.BENCH_CHROMIUM_EXECUTABLE,args:['--autoplay-policy=no-user-gesture-required']});raw.metadata.chromium=browser.version();raw.metadata.executable=process.env.BENCH_CHROMIUM_EXECUTABLE??'playwright default';

@@ -11,7 +11,7 @@ const BASE = 'http://127.0.0.1:3908';
 const variants = process.argv.length > 2 ? process.argv.slice(2) : ['base'];
 variants.forEach(variantPath);
 if (!Number.isInteger(RUNS) || RUNS < 1) throw Error('BENCH_RUNS must be a positive integer');
-const up = () => fetch(`${BASE}/bench/perf/variants.fixture.html`).then((r) => r.ok).catch(() => false);
+const up = () => fetch(`${BASE}/bench/perf/variants.fixture.html`).then((r) => r.ok).catch(() => false); // nosemgrep: typescript.react.security.react-insecure-request.react-insecure-request -- loopback readiness check for the local bench server
 let server;
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 try {

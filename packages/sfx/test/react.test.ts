@@ -161,6 +161,150 @@ test('binding cleans up on options changes and unmount, and useSound plays', asy
 });
 
 
+test('binding follows elements that mount later and removes listeners from swapped or hidden elements', async (t) => {
+  setup();
+  await unlock(); await preload(['press']);
+  const added = t.mock.method(dom.HTMLElement.prototype, 'addEventListener');
+  const removed = t.mock.method(dom.HTMLElement.prototype, 'removeEventListener');
+  function Control({ id }: { id: string | null }) {
+    const ref = useRef<HTMLElement | null>(null);
+    useBindSounds(ref);
+    return id === null ? null : createElement('button', { key: id, ref, 'data-sound-press': '' }, id);
+  }
+  const render = async (id: string | null) => { await act(async () => root!.render(createElement(Control, { id }))); };
+  await render(null);
+  await render(null);
+  await render('first');
+  const first = dom.document.querySelector('button')!;
+  const context = FakeAudioContext.instances.at(-1)!;
+  const before = context.of('source').length;
+  first.dispatchEvent(new dom.PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+  assert.equal(context.of('source').length, before + 1, 'late-mounted element plays');
+  await render('second');
+  const second = dom.document.querySelector('button')!;
+  assert.notEqual(second, first);
+  const assertRemoved = (element: typeof first) => {
+    const listeners = added.mock.calls.filter(call => call.this === element && call.arguments[2] === true);
+    assert.equal(listeners.length, 10);
+    for (const call of listeners) assert.ok(removed.mock.calls.some(removal => removal.this === element && removal.arguments[0] === call.arguments[0] && removal.arguments[1] === call.arguments[1]), 'old listener removed');
+  };
+  assertRemoved(first);
+  const swapped = context.of('source').length;
+  first.dispatchEvent(new dom.PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+  assert.equal(context.of('source').length, swapped);
+  assert.equal(added.mock.calls.filter(call => call.this === second && call.arguments[2] === true).length, 10, 'replacement element bound');
+  await render(null);
+  assertRemoved(second);
+});
+
+test('binding moves on a direct element swap', async (t) => {
+  setup();
+  const removed = t.mock.method(dom.HTMLElement.prototype, 'removeEventListener');
+  function Control({ id }: { id: number }) {
+    const ref = useRef<HTMLElement | null>(null);
+    useBindSounds(ref);
+    return createElement('button', { ref, key: id });
+  }
+  await act(async () => root!.render(createElement(Control, { id: 0 })));
+  const first = dom.document.querySelector('button')!;
+  await act(async () => root!.render(createElement(Control, { id: 1 })));
+  assert.equal(removed.mock.calls.filter(call => call.this === first).length, 10, 'swapped element listeners removed');
+});
+
+test('StrictMode leaves one binding and unrelated renders do not rebind; option changes do', async (t) => {
+  setup();
+  const added = t.mock.method(dom.HTMLElement.prototype, 'addEventListener');
+  const removed = t.mock.method(dom.HTMLElement.prototype, 'removeEventListener');
+  function Control({ keyboard, hoverInterval }: { keyboard?: boolean; hoverInterval?: number }) {
+    const ref = useRef<HTMLElement | null>(null);
+    useBindSounds(ref, { keyboard, hoverInterval });
+    return createElement('button', { ref });
+  }
+  const render = async (options = {}) => { await act(async () => root!.render(createElement(StrictMode, null, createElement(Control, options)))); };
+  await render();
+  const button = dom.document.querySelector('button')!;
+  const additions = () => added.mock.calls.filter(call => call.this === button && call.arguments[2] === true).length;
+  const removals = () => removed.mock.calls.filter(call => call.this === button).length;
+  assert.equal(additions(), 20);
+  assert.equal(removals(), 10);
+  await render();
+  assert.equal(additions(), 20);
+  assert.equal(removals(), 10);
+  await render({ hoverInterval: 20 });
+  assert.equal(additions(), 30);
+  assert.equal(removals(), 20);
+  await render({ keyboard: false, hoverInterval: 20 });
+  assert.equal(additions(), 40);
+  assert.equal(removals(), 30);
+  await act(async () => root!.render(null));
+  assert.equal(removals(), additions());
+});
+
+
+test('useSound keeps inline options stable and plays with changed field values', async () => {
+  setup();
+  await unlock(); await preload(['tick']);
+  let trigger!: ReturnType<typeof useSound>;
+  function Control({ volume }: { volume: number }) {
+    trigger = useSound('tick', { volume, minInterval: 0 });
+    return null;
+  }
+  await act(async () => root!.render(createElement(Control, { volume: 0.5 })));
+  const initial = trigger;
+  await act(async () => root!.render(createElement(Control, { volume: 0.5 })));
+  assert.equal(trigger, initial);
+  await act(async () => root!.render(createElement(Control, { volume: 0.25 })));
+  assert.notEqual(trigger, initial);
+  trigger();
+  assert.equal(FakeAudioContext.instances.at(-1)!.of('gain').at(-1)!.gain.value, 0.25);
+  trigger({ volume: 0.75 });
+  assert.equal(FakeAudioContext.instances.at(-1)!.of('gain').at(-1)!.gain.value, 0.75);
+});
+
+test('useSoundHandler keeps a stable handler with no options across renders', async () => {
+  setup();
+  let trigger!: ReturnType<typeof useSoundHandler>;
+  let sound!: ReturnType<typeof useSound>;
+  let actions = 0;
+  const handler = () => { actions++; };
+  function Control() { trigger = useSoundHandler('tick', handler); sound = useSound('tick'); return null; }
+  await act(async () => root!.render(createElement(Control)));
+  const initial = trigger;
+  const initialSound = sound;
+  await act(async () => root!.render(createElement(Control)));
+  assert.equal(trigger, initial);
+  assert.equal(sound, initialSound);
+  trigger(asReal({ defaultPrevented: true }));
+  assert.equal(actions, 1);
+});
+
+test('useSoundHandler keeps inline options stable and uses changed playback and suppression fields', async () => {
+  setup();
+  await unlock(); await preload(['tick']);
+  let trigger!: ReturnType<typeof useSoundHandler>;
+  function Control({ volume, disabled = false }: { volume: number; disabled?: boolean }) {
+    trigger = useSoundHandler('tick', undefined, { volume, disabled, minInterval: 0 });
+    return null;
+  }
+  const button = dom.document.createElement('button');
+  const event = asReal<Parameters<typeof trigger>[0]>({ target: button, currentTarget: button, defaultPrevented: false });
+  await act(async () => root!.render(createElement(Control, { volume: 0.5 })));
+  const initial = trigger;
+  await act(async () => root!.render(createElement(Control, { volume: 0.5 })));
+  assert.equal(trigger, initial);
+  await act(async () => root!.render(createElement(Control, { volume: 0.25 })));
+  assert.notEqual(trigger, initial);
+  trigger(event);
+  const context = FakeAudioContext.instances.at(-1)!;
+  assert.equal(context.of('gain').at(-1)!.gain.value, 0.25);
+  const changed = trigger;
+  const before = context.of('source').length;
+  await act(async () => root!.render(createElement(Control, { volume: 0.25, disabled: true })));
+  assert.notEqual(trigger, changed);
+  trigger(event);
+  assert.equal(context.of('source').length, before);
+});
+
 test('category preferences migrate, persist, synchronize and restore policy overrides', async () => {
   setup();
   dom.localStorage.setItem('bloxwap:sfx', JSON.stringify({ enabled: true, volume: 0.6, categoryVolumes: { controls: 0.2, money: -1, hover: 4, feedback: 'bad', alien: 1 } }));
@@ -302,4 +446,83 @@ test('sessionStorage events cannot overwrite sound preferences', async () => {
   assert.equal(isEnabled(), true);
   await act(async () => { event(dom.localStorage); });
   assert.equal(isEnabled(), false);
+});
+
+for (const [input, expected] of [[5, 1], [-1, 0], [NaN, 0.4], [Infinity, 0.4], ['bad', 0.4]] as const) {
+  test(`provider normalizes volume ${input} to ${expected}`, async () => {
+    setup();
+    dom.localStorage.setItem('bloxwap:sfx', JSON.stringify({ enabled: false, volume: 0.4 }));
+    let seen!: SoundPreference;
+    function Preference() { seen = useSoundPreference(); return null; }
+    await act(async () => root!.render(createElement(SoundProvider, { volume: input as number }, createElement(Preference))));
+    assert.equal(seen.volume, expected);
+    assert.equal(seen.volume, getVolume());
+  });
+}
+
+test('provider rejects non-boolean enabled overrides', async () => {
+  setup();
+  dom.localStorage.setItem('bloxwap:sfx', JSON.stringify({ enabled: false, volume: 0.4 }));
+  let seen!: SoundPreference;
+  function Preference() { seen = useSoundPreference(); return null; }
+  await act(async () => root!.render(createElement(SoundProvider, { enabled: 'no' as unknown as boolean }, createElement(Preference))));
+  assert.equal(seen.enabled, false);
+  assert.equal(seen.enabled, isEnabled());
+});
+
+test('nested providers warn once in development and stay silent in production or without process', async (t) => {
+  setup();
+  const warn = t.mock.method(console, 'warn', () => {});
+  const original = process.env.NODE_ENV;
+  const nodeProcess = process;
+  const tree = () => createElement(StrictMode, null, createElement(SoundProvider, null, createElement(SoundProvider)));
+  try {
+    process.env.NODE_ENV = 'production';
+    await act(async () => root!.render(tree()));
+    assert.equal(warn.mock.callCount(), 0);
+    await act(async () => root!.render(null));
+    globals.process = undefined;
+    await act(async () => root!.render(tree()));
+    assert.equal(warn.mock.callCount(), 0);
+    await act(async () => root!.render(null));
+    globals.process = nodeProcess;
+    process.env.NODE_ENV = 'development';
+    await act(async () => root!.render(tree()));
+    assert.equal(warn.mock.callCount(), 1);
+    assert.match(String(warn.mock.calls[0].arguments[0]), /only one.*provider.*own.*engine/i);
+    await act(async () => root!.render(null));
+    await act(async () => root!.render(tree()));
+    assert.equal(warn.mock.callCount(), 1);
+  } finally {
+    globals.process = nodeProcess;
+    if (original === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = original;
+  }
+});
+
+test('nested provider restores the latest enclosing policy on unmount', async () => {
+  setup();
+  dom.localStorage.setItem('bloxwap:sfx', JSON.stringify({ enabled: true, volume: 0.9, categoryVolumes: { controls: 0.2 } }));
+  const tree = (inner: boolean, volume = 0.3) => createElement(SoundProvider, { enabled: false, volume }, inner ? createElement(SoundProvider, { enabled: true, volume: 0.8 }) : null);
+  await act(async () => root!.render(tree(true)));
+  assert.equal(isEnabled(), false);
+  await act(async () => root!.render(tree(true, 0.5)));
+  await act(async () => setVolume(0.7, { category: 'controls' }));
+  await act(async () => root!.render(tree(false, 0.5)));
+  assert.equal(isEnabled(), false);
+  assert.equal(getVolume(), 0.5);
+  assert.equal(getVolume({ category: 'controls' }), 0.7);
+  await act(async () => root!.render(null));
+  assert.equal(isEnabled(), true);
+  assert.equal(getVolume(), 0.9);
+});
+
+test('provider reapplication preserves imperative category volume', async () => {
+  setup();
+  dom.localStorage.setItem('bloxwap:sfx', JSON.stringify({ enabled: true, volume: 1, categoryVolumes: { controls: 0.2 } }));
+  await act(async () => root!.render(createElement(SoundProvider)));
+  await act(async () => setVolume(0.7, { category: 'controls' }));
+  assert.equal(getVolume({ category: 'controls' }), 0.7);
+  await act(async () => root!.render(createElement(SoundProvider, { volume: 0.5 })));
+  assert.equal(getVolume({ category: 'controls' }), 0.7);
 });

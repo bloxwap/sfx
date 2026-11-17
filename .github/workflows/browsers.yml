@@ -50,10 +50,13 @@ jobs:
         with:
           node-version: '24'
           package-manager-cache: false
-      - run: npm ci
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: '1.4.2'
+      - run: bun install --frozen-lockfile
       # Self-hosted minis already persist ~/Library/Caches/ms-playwright.
       # Do not upload that tree with actions/cache — it exceeded the job timeout.
-      - run: npx playwright install chromium webkit
+      - run: bunx playwright install chromium webkit
       # Chromium and WebKit need a real audio backend. CoreAudio is native on
       # these runners. Start a PulseAudio null sink only if Homebrew already
       # provided the binaries — do not apt or brew install here.
@@ -67,15 +70,15 @@ jobs:
           else
             echo "Using native CoreAudio (PulseAudio not on PATH)"
           fi
-      - run: npm run test:browser
+      - run: bun run test:browser
       - name: Build and verify static docs and preserved demos
         env:
           NEXT_PUBLIC_BASE_PATH: /sfx
           NEXT_PUBLIC_SITE_URL: https://bloxwap.github.io
           NEXT_TELEMETRY_DISABLED: '1'
         run: |
-          npm run docs:build
-          npm run docs:preview > "$RUNNER_TEMP/sfx-docs-preview.log" 2>&1 &
+          bun run docs:build
+          bun run docs:preview > "$RUNNER_TEMP/sfx-docs-preview.log" 2>&1 &
           PREVIEW_PID=$!
           trap 'kill "$PREVIEW_PID" 2>/dev/null || true' EXIT
           ready=0
@@ -93,7 +96,7 @@ jobs:
             cat "$RUNNER_TEMP/sfx-docs-preview.log" 2>/dev/null || true
             exit 1
           fi
-          DOCS_URL=http://127.0.0.1:3903/sfx/ npm run docs:smoke
+          DOCS_URL=http://127.0.0.1:3903/sfx/ bun run docs:smoke
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:

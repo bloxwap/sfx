@@ -1,5 +1,5 @@
 'use client';
-import { createElement, Fragment, useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
+import { createContext, createElement, useContext, useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
 import type { BindOptions } from './bind.js';
 import type { PlayOptions } from './engine.js';
 import { categories, type SoundCategory, type SoundName } from './recipes.js';
@@ -7,6 +7,8 @@ import { semanticPresets, type FeedbackIntent } from './semantic.js';
 import { defaults, getPreference, getSavedPreference, restorePreference, subscribePreference, subscribeSavedPreference, overridePreference, setEnabled, setVolume, type Preference } from './preferences.js';
 
 const STORAGE_KEY = 'bloxwap:sfx';
+declare const process: { env: { NODE_ENV?: string } };
+const EMPTY = Object.freeze({});
 export interface SoundPreference extends Preference {
   setEnabled(enabled: boolean): void;
   setVolume(volume: number): void;
@@ -68,6 +70,8 @@ type Backend = Pick<typeof import('./index.js'), 'play' | 'unlock' | 'bind'>;
 
 /** Both entry points share preference policy; only their playback and environment adapters differ. */
 export function createBindings(engine: Backend, web: boolean) {
+  const OwnershipContext = createContext(false);
+  let warned = false;
   function useSoundPreference(): SoundPreference {
     const value = useSyncExternalStore(subscribePreference, getPreference, () => defaults);
     useEffect(() => { if (web) return persist(); }, []);
@@ -75,7 +79,14 @@ export function createBindings(engine: Backend, web: boolean) {
   }
   function SoundProvider({ children, enabled, volume, unlockOnInteraction = true }: SoundProviderProps) {
     const owner = useRef({});
+    const nested = useContext(OwnershipContext);
     const preference = useSoundPreference();
+    useEffect(() => {
+      if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production' && nested && !warned) {
+        warned = true;
+        console.warn('Only one SoundProvider should own the engine.');
+      }
+    }, [nested]);
     useEffect(() => {
       overridePreference(owner.current, { ...(enabled === undefined ? {} : { enabled }), ...(volume === undefined ? {} : { volume }) });
     }, [enabled, volume]);
@@ -90,7 +101,7 @@ export function createBindings(engine: Backend, web: boolean) {
         document.removeEventListener('keydown', onInteraction, true);
       };
     }, [unlockOnInteraction, preference.enabled, preference.volume]);
-    return createElement(Fragment, null, children);
+    return createElement(OwnershipContext.Provider, { value: true }, children);
   }
   function useBindSounds(ref: RefObject<HTMLElement | null>, options: BindOptions = {}): void {
     const binding = useRef<{ element: HTMLElement; keyboard: boolean | undefined; hoverInterval: number | undefined; unbind(): void } | null>(null);
@@ -102,10 +113,10 @@ export function createBindings(engine: Backend, web: boolean) {
     });
     useEffect(() => () => { binding.current?.unbind(); binding.current = null; }, []);
   }
-  function useSound(name: SoundName, options?: PlayOptions): (overrides?: PlayOptions) => void {
-    return useCallback((overrides?: PlayOptions) => engine.play(name, { ...options, ...overrides }), [name, options]);
+  function useSound(name: SoundName, options: PlayOptions = EMPTY): (overrides?: PlayOptions) => void {
+    return useCallback((overrides?: PlayOptions) => engine.play(name, { ...options, ...overrides }), [name, options.volume, options.rate, options.pan, options.delay, options.category, options.minInterval, options.force, options.signal]);
   }
-  function useSoundHandler<E extends SoundEvent>(name: SoundName, handler?: (event: E) => void, options: SoundHandlerOptions = {}): (event: E) => void {
+  function useSoundHandler<E extends SoundEvent>(name: SoundName, handler?: (event: E) => void, options: SoundHandlerOptions = EMPTY): (event: E) => void {
     const preference = useSoundPreference();
     return useCallback((event: E) => {
       handler?.(event);
@@ -117,7 +128,7 @@ export function createBindings(engine: Backend, web: boolean) {
         if (control && control !== host && host.contains(control)) return;
       }
       engine.play(name, options);
-    }, [name, handler, options, preference.enabled, preference.volume]);
+    }, [name, handler, options.volume, options.rate, options.pan, options.delay, options.category, options.minInterval, options.force, options.signal, options.disabled, options.busy, options.suppressed, preference.enabled, preference.volume]);
   }
   function useSemanticSound(intent: FeedbackIntent, reducedMotion = false): () => void {
     const preference = useSoundPreference();

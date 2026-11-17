@@ -94,6 +94,7 @@ const rendered = new Map<SoundName, AudioBuffer>();
 let renderingBytes = 0;
 const rendering = new Map<SoundName, Promise<AudioBuffer | null>>();
 const deferred = new Map<SoundName, () => void>();
+let renderRate = FALLBACK_RATE;
 let noiseBuffers = new WeakMap<Ctx, AudioBuffer>();
 const noiseSamples = new Map<number, Float32Array>();
 
@@ -158,6 +159,12 @@ function audio(): AudioContext | null {
     return null;
   }
   context = ctx;
+  if (renderRate !== ctx.sampleRate) {
+    rendered.clear();
+    rendering.clear();
+    deferred.clear();
+    renderRate = ctx.sampleRate;
+  }
   bus = gain;
   output = last;
   listeners = [
@@ -329,8 +336,8 @@ function render(name: SoundName): Promise<AudioBuffer | null> {
   if (done) return Promise.resolve(done);
   let pending = rendering.get(name);
   if (!pending) {
-    pending = bake(name, context?.sampleRate ?? FALLBACK_RATE, getRecipe(name).layers.some((layer) => layer.pan) ? 2 : 1).then((buffer) => {
-      // Skip the store when dispose() ran meanwhile: the buffer may be at the old context's rate.
+    pending = bake(name, renderRate, getRecipe(name).layers.some((layer) => layer.pan) ? 2 : 1).then((buffer) => {
+      // Skip stale renders after disposal, a rate change or recipe replacement.
       if (rendering.get(name) === pending) {
         rendering.delete(name);
         if (buffer) {
@@ -564,6 +571,7 @@ export function play(name: SoundName = 'chime', options?: PlayOptions): void {
 /**
  * Renders sounds to buffers ahead of time (all of them by default), so their first play is as cheap
  * as every other. Works before any user gesture: rendering is offline and makes no sound.
+ * Devices not running at 48 kHz re-render once after the first gesture.
  */
 export async function preload(names: readonly SoundName[] = Object.keys(recipes) as SoundName[]): Promise<boolean> {
   const unique = [...new Set(names)];
@@ -683,6 +691,7 @@ export async function dispose(): Promise<void> {
   rendered.clear();
   rendering.clear();
   deferred.clear();
+  renderRate = FALLBACK_RATE;
   noiseSamples.clear();
   noiseBuffers = new WeakMap();
   lastPlayed.clear();

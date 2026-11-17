@@ -1,8 +1,8 @@
 /*
- * Host bridge for the packaged HIG plain CSS (@bloxwap/hig-tokens/css and @bloxwap/hig-react/css,
- * imported by app/global.css from the vendored 0.1.0 candidate tarballs). It only translates
+ * Host bridge for the packaged HIG plain CSS (@bloxwap/hig/tokens/css and @bloxwap/hig/react/css,
+ * imported by app/global.css from the published HIG 0.2.0 package). It only translates
  * Fumadocs/host names to HIG roles (including the radius, motion and density roles that
- * @bloxwap/hig-tokens/css now emits) and lists the SDK-specific exceptions. No palette, role value,
+ * @bloxwap/hig/tokens/css now emits) and lists the SDK-specific exceptions. No palette, role value,
  * font family or control recipe is redefined here.
  */
 :root, .dark {

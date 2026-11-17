@@ -1,6 +1,6 @@
 {
   "name": "@bloxwap/sfx",
-  "version": "0.2.1",
+  "version": "0.3.1",
   "description": "Interface sound effects for the web and React Native from one set of recipes: synthesized live with Web Audio on the web, played from baked PCM by a tiny Expo module on iOS and Android. Zero runtime JS dependencies.",
   "type": "module",
   "sideEffects": false,
@@ -124,10 +124,10 @@
   "devDependencies": {
     "@playwright/test": "^1.64.1",
     "@types/node": "^26.6.5",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "esbuild": "^0.28.2",
-    "happy-dom": "^21.0.1",
+    "happy-dom": "^21.0.4",
     "node-web-audio-api": "^2.2.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

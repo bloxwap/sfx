@@ -1,12 +1,9 @@
 {
   "repository": "bloxwap/hig",
-  "version": "0.1.0",
-  "release": "https://github.com/bloxwap/hig/releases/tag/v0.1.0",
+  "version": "0.2.0",
+  "release": "https://github.com/bloxwap/hig/releases/tag/v0.2.0",
   "packages": [
-    "@bloxwap/hig-tokens",
-    "@bloxwap/hig-react",
-    "@bloxwap/hig-contracts",
-    "@bloxwap/hig-og-fonts"
+    "@bloxwap/hig"
   ],
   "ogFonts": [
     {

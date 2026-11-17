@@ -7,7 +7,7 @@ import {
   SearchDialogIcon, SearchDialogInput, SearchDialogList, SearchDialogOverlay,
   type SharedProps,
 } from 'fumadocs-ui/components/dialog/search';
-import { Alert } from '@bloxwap/hig-react/status';
+import { Alert } from '@bloxwap/hig/react/status';
 import { assetUrl } from '@/lib/site';
 
 /** No-results state in HIG copy and geometry; the static index never needs a network retry. */

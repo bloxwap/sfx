@@ -1,0 +1,3 @@
+[install]
+# Match npm's layout: CI imports workspace packages by name from the root node_modules.
+linker = "hoisted"

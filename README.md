@@ -34,7 +34,7 @@ ESM only. Works in all modern browsers, and is a silent no-op on the server.
 
 ## Release status
 
-`0.2.1` is an early developer preview; expect breaking changes before `1.0`.
+`0.3.1` is an early developer preview; expect breaking changes before `1.0`.
 
 ## Usage
 
@@ -154,7 +154,7 @@ import {
 | --- | --- |
 | `play(name = 'chime', options?)` | Plays a sound now. `options`: `volume` (0-2), `rate` (0.25-4), `pan` (-1 to 1), `delay` (seconds, 0-10), `minInterval` (ms, overrides `configure()`), `force` (skip the user-gesture check), `signal` (AbortSignal that stops this play only). Never throws. |
 | `define(name, recipe)` | Registers or replaces an immutable custom recipe. Up to 128 custom names, 64 layers per sound and 10 seconds including echo; invalid or over-budget data throws `RangeError`. Built-in names are reserved. |
-| `preload(names?)` | Renders sounds (all of them by default) to buffers. Resolves `true` only when every requested sound is cached; `false` on failure or disposal. Safe before any gesture. |
+| `preload(names?)` | Renders sounds (all of them by default) to buffers. Resolves `true` only when every requested sound is cached; `false` on failure or disposal. Safe before any gesture; devices not running at 48 kHz re-render once after the first gesture. |
 | `bind(root = document, options?)` | Wires `data-sound-*` attributes under `root`. Each call owns a subscription and returns its own `unbind()`; listeners remain until all subscribers release them. The latest subscriber supplies options. Options: `keyboard`, `hoverInterval`. |
 | `unlock()` | Creates and resumes audio from inside a gesture. `bind()` calls it on the first press. |
 | `setEnabled(on)` / `isEnabled()` | Global mute. Sounds already playing finish. |

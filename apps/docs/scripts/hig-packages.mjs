@@ -2,8 +2,8 @@
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
-import {ogFonts} from '@bloxwap/hig-og-fonts';
-import {readOgFont} from '@bloxwap/hig-og-fonts/node';
+import {ogFonts} from '@bloxwap/hig/og-fonts';
+import {readOgFont} from '@bloxwap/hig/og-fonts/node';
 
 const root=new URL('../../../',import.meta.url),docs=new URL('../',import.meta.url);
 const provenance=JSON.parse(await readFile(new URL('hig-packages.json',docs),'utf8'));
@@ -13,7 +13,7 @@ async function installedManifest(name){
  for(const base of [docs,root]){
   try{return JSON.parse(await readFile(new URL(`node_modules/${name}/package.json`,base),'utf8'));}catch{/* Try the workspace root. */}
  }
- throw new Error(`${name} is not installed; run npm ci`);
+ throw new Error(`${name} is not installed; run bun install --frozen-lockfile`);
 }
 for(const name of provenance.packages){
  const spec=manifest.dependencies[name]??manifest.devDependencies?.[name];
@@ -25,7 +25,7 @@ for(const name of provenance.packages){
  assert.match(entry.integrity,/^sha512-[A-Za-z0-9+/]+={0,2}$/,`${name}: lockfile must pin registry integrity`);
  assert.equal((await installedManifest(name)).version,provenance.version,`${name}: installed version differs`);
 }
-assert.ok(!manifest.dependencies['@bloxwap/hig-native-fonts']&&!manifest.devDependencies?.['@bloxwap/hig-native-fonts'],'OG cards must use the OG-only package');
+assert.ok(!manifest.dependencies['@bloxwap/hig-native-fonts']&&!manifest.devDependencies?.['@bloxwap/hig-native-fonts'],'OG cards must use the hig/og-fonts entry point');
 assert.equal(provenance.ogFonts.length,2,'The renderer uses only the approved Bold and Black faces');
 for(const face of provenance.ogFonts){
  const descriptor=ogFonts.find(font=>font.asset===face.asset);

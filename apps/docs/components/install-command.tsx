@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
-import { Tabs } from '@bloxwap/hig-react/navigation';
+import { Tabs } from '@bloxwap/hig/react/navigation';
 
 const managers = [
   { name: 'bun', command: 'bun add @bloxwap/sfx' },

@@ -160,7 +160,7 @@ import {
 | --- | --- |
 | `play(name = 'chime', options?)` | Plays a sound now. `options`: `volume` (0–2), `rate` (0.25–4), `pan` (-1–1), `delay` (seconds, 0–10), `minInterval` (ms, overrides `configure()`), `force` (skip the user-gesture check), `signal` (AbortSignal that stops this play only). Never throws. |
 | `define(name, recipe)` | Registers or replaces an immutable custom recipe. Up to 128 custom names, 64 layers per sound and 10 seconds including echo; invalid or over-budget data throws `RangeError`. Built-in names are reserved. |
-| `preload(names?)` | Renders sounds (all of them by default) to buffers. Resolves `true` only when every requested sound is cached; `false` on failure or disposal. Safe before any gesture. |
+| `preload(names?)` | Renders sounds (all of them by default) to buffers. Resolves `true` only when every requested sound is cached; `false` on failure or disposal. Safe before any gesture; devices not running at 48 kHz re-render once after the first gesture. |
 | `bind(root = document, options?)` | Wires `data-sound-*` attributes under `root`. Each call owns a subscription and returns its own `unbind()`; listeners remain until all subscribers release them. The latest subscriber supplies options. Options: `keyboard`, `hoverInterval`. |
 | `unlock()` | Creates and resumes audio from inside a gesture. `bind()` calls it on the first press. |
 | `setEnabled(on)` / `isEnabled()` | Global mute. Sounds already playing finish; sounds waiting on a suspended context are dropped. |
@@ -273,6 +273,14 @@ Attach only to `onClick` to preserve native keyboard activation without pointer 
 `dispose()` when the application/audio adapter is removed. A HIG host should use its existing
 `FeedbackController`/`createWebSoundAdapter` and preferences instead of mounting a second
 SFX preference owner. Sound, haptics and motion remain independently controllable.
+
+React and imperative setters share the same persisted preferences. A provider temporarily
+overrides the enabled/volume fields it specifies; removing it reveals the remaining owners,
+then the saved preferences. Category updates survive provider reapplication. Later registered
+providers own overlapping fields, so mount one provider near the root. Nested providers warn
+once per page in development; all consumers observe the engine's effective preferences.
+Provider overrides accept boolean enabled values and clamp finite numeric volumes to
+0–1; invalid values fall back to the saved preference.
 
 The approved native subset is available at `@bloxwap/sfx/assets/hig/*`, with a manifest.
 Regenerate from this checkout with `npm ci && npm run export:hig` (Node 24). The lockfile pins

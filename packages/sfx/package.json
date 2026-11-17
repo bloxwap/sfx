@@ -1,7 +1,7 @@
 {
   "name": "@bloxwap/sfx",
   "version": "0.3.1",
-  "description": "Interface sound effects for the web, synthesized live with Web Audio. No audio files, zero runtime dependencies.",
+  "description": "Interface sound effects for the web and React Native from one set of recipes: synthesized live with Web Audio on the web, played from baked PCM by a tiny Expo module on iOS and Android. Zero runtime JS dependencies.",
   "type": "module",
   "sideEffects": false,
   "license": "MIT",
@@ -21,10 +21,17 @@
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "react-native": "./dist/native.js",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "react-native": "./dist/native.js",
       "import": "./dist/index.js"
+    },
+    "./native": {
+      "types": "./dist/native.d.ts",
+      "import": "./dist/native.js",
+      "default": "./dist/native.js"
     },
     "./recipes": {
       "types": "./dist/recipes.d.ts",
@@ -37,6 +44,7 @@
     "./package.json": "./package.json",
     "./react": {
       "types": "./dist/react.d.ts",
+      "react-native": "./dist/react.native.js",
       "import": "./dist/react.js"
     },
     "./semantic": {
@@ -54,7 +62,13 @@
     "CHANGELOG.md",
     "LICENSE",
     "README.md",
-    "assets/hig"
+    "assets/hig",
+    "native/assets",
+    "ios",
+    "android/build.gradle",
+    "android/src",
+    "BloxwapSfx.podspec",
+    "expo-module.config.json"
   ],
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
@@ -66,12 +80,14 @@
     "coverage": "npm run build && node --enable-source-maps --test --experimental-test-coverage --test-coverage-exclude='test/**' --test-coverage-exclude='scripts/**' --test-coverage-exclude='src/cli/sfx-wav.ts' --test-coverage-exclude='**/node_modules/**' --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-branches=100 \"test/**/*.test.ts\"",
     "bench": "npm run build && node bench/schedule.bench.ts",
     "size": "npm run build && node scripts/size.ts",
+    "bake:native": "npm run build && node scripts/bake-native.ts",
     "prepack": "npm run build",
     "prepublishOnly": "npm test",
     "coverage:lcov": "npm run build && node -e \"require('node:fs').mkdirSync('coverage', {recursive:true})\" && node --enable-source-maps --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/lcov.info --test --experimental-test-coverage --test-coverage-exclude='test/**' --test-coverage-exclude='scripts/**' --test-coverage-exclude='src/cli/sfx-wav.ts' --test-coverage-exclude='**/node_modules/**' --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-branches=100 \"test/**/*.test.ts\"",
     "test:browser": "npm run build && playwright test",
     "smoke:registry": "node scripts/registry-smoke.ts",
-    "bench:perf": "npm run build && node bench/perf/run-all.ts"
+    "bench:perf": "npm run build && node bench/perf/run-all.ts",
+    "test:native": "node scripts/test-native.ts"
   },
   "keywords": [
     "web-audio",
@@ -83,17 +99,25 @@
     "interface-sounds",
     "hover",
     "click",
-    "synthesis"
+    "synthesis",
+    "react-native",
+    "expo",
+    "ios",
+    "android"
   ],
   "peerDependencies": {
     "node-web-audio-api": "^2.0.0",
-    "react": "^18.0.0 || ^19.0.0"
+    "react": "^18.0.0 || ^19.0.0",
+    "expo": ">=52"
   },
   "peerDependenciesMeta": {
     "node-web-audio-api": {
       "optional": true
     },
     "react": {
+      "optional": true
+    },
+    "expo": {
       "optional": true
     }
   },

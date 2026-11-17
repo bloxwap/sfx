@@ -13,6 +13,9 @@ export function BindDemo() {
   const [alerts, setAlerts] = useState(false);
   const [amount, setAmount] = useState('250');
   const [status, setStatus] = useState<'idle' | 'pending' | 'done' | 'failed'>('idle');
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [submitted, setSubmitted] = useState<number | null>(null);
+  useEffect(() => () => { if (timer.current !== null) clearTimeout(timer.current); }, []);
   const [tab, setTab] = useState('Overview');
 
   useEffect(() => {
@@ -21,11 +24,15 @@ export function BindDemo() {
   }, []);
 
   function deposit() {
+    if (timer.current !== null) return;
     const value = Number(amount);
+    setSubmitted(null);
     setStatus('pending');
     play('loading');
-    window.setTimeout(() => {
-      if (Number.isFinite(value) && value > 0 && value <= 10_000) {
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      if (Number.isFinite(value) && value >= 1 && value <= 10_000) {
+        setSubmitted(value);
         setStatus('done');
         play('deposit');
       } else {
@@ -53,7 +60,7 @@ export function BindDemo() {
           </button>
         </div>
         <p className={`demo-status demo-status--${status}`} role="status">
-          {status === 'done' ? `Deposited $${amount}.` : status === 'failed' ? 'Enter an amount from 1 to 10,000.' : status === 'pending' ? 'Waiting for confirmation…' : ' '}
+          {status === 'done' ? `Deposited $${submitted}.` : status === 'failed' ? 'Enter an amount from 1 to 10,000.' : status === 'pending' ? 'Waiting for confirmation…' : ' '}
         </p>
       </div>
       <div className="demo-card">

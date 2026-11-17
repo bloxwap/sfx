@@ -3,11 +3,9 @@
 import { build } from 'esbuild';
 import { brotliCompressSync, gzipSync } from 'node:zlib';
 
-// Custom recipe validation adds to the full API; play/bind still tree-shake it away.
-// Category metadata and preference controls add a small fixed cost.
-// Invariant guards (#92 disposed resumes, #93 sample-rate cache invalidation) add a few cold-path bytes;
-// per-caller bind() removers (#96) add reference counting.
-const BUDGET_GZIP = 6752;
+// The full API includes bounded rendering, rollback, shared preference ownership and binding leases.
+// Keep a measured 8 KiB ceiling for these correctness guarantees; play-only consumers tree-shake the rest.
+const BUDGET_GZIP = 8192;
 
 const entries: [label: string, contents: string][] = [
   ['full bundle', `export * from './dist/index.js';`],

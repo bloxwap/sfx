@@ -1,0 +1,24 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+def packageVersion = new groovy.json.JsonSlurper().parse(file("${projectDir}/../package.json")).version
+
+group = 'com.bloxwap.sfx'
+version = packageVersion
+
+android {
+  namespace "com.bloxwap.sfx"
+  defaultConfig {
+    versionCode 1
+    versionName packageVersion
+  }
+  // The baked sounds are shared with iOS. They land in the APK under bloxwap-sfx/, uncompressed (aapt never
+  // compresses .wav), so SoundPool can read them straight from the asset file descriptor.
+  sourceSets {
+    main {
+      assets.srcDirs += ["${projectDir}/../native/assets"]
+    }
+  }
+}

@@ -27,7 +27,9 @@
     "smoke:registry": "npm --workspace @bloxwap/sfx run smoke:registry --",
     "docs:smoke": "npm --workspace @bloxwap/sfx-docs run smoke --",
     "export:hig": "npm run build && node packages/sfx/scripts/export-approved.ts",
-    "lint": "oxlint packages/sfx/src apps/docs/components"
+    "lint": "oxlint packages/sfx/src apps/docs/components",
+    "test:native": "npm --workspace @bloxwap/sfx run test:native",
+    "bake:native": "npm --workspace @bloxwap/sfx run bake:native"
   },
   "engines": {
     "node": ">=24"

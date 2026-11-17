@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pause, Play, RotateCcw, Volume2, VolumeX, Zap } from 'lucide-react';
-import { getOutput, play, preload, sounds, type SoundName } from '@bloxwap/sfx';
+import { getOutput, play, preload, sounds, type BuiltinSoundName as SoundName } from '@bloxwap/sfx';
 import { useSoundPreference } from '@bloxwap/sfx/react';
 import { CopyButton } from './copy-button';
 import { GROUPS, KEYS, describe } from '@/lib/catalog';
@@ -51,31 +51,45 @@ export function SoundBoard() {
   const [ready, setReady] = useState(false);
   const scope = useRef<HTMLCanvasElement>(null);
   const analyser = useRef<AnalyserNode | null>(null);
+  const analyserOutput = useRef<AudioNode | null>(null);
+  const sequenceController = useRef<AbortController | null>(null);
+  const detachAnalyser = useCallback(() => {
+    if (analyser.current) {
+      try { analyserOutput.current?.disconnect(analyser.current); } catch { /* output was disposed */ }
+      analyser.current.disconnect();
+    }
+    analyser.current = null;
+    analyserOutput.current = null;
+  }, []);
   const wakeScope = useRef<(() => void) | null>(null);
   const timers = useRef<number[]>([]);
 
 
-  const trigger = useCallback((name: SoundName) => {
-    play(name, { volume: gain, rate, pan });
+  const trigger = useCallback((name: SoundName, signal?: AbortSignal) => {
+    play(name, { volume: gain, rate, pan, ...(signal ? { signal } : {}) });
     setLast(name);
     setFlash((current) => ({ ...current, [name]: (current[name] ?? 0) + 1 }));
     // The master output exists once the first sound has created the audio context.
+    const output = getOutput();
+    if (analyserOutput.current !== output) detachAnalyser();
     if (!analyser.current) {
-      const output = getOutput();
       if (output) {
         const node = output.context.createAnalyser();
         node.fftSize = 2048;
         output.connect(node);
         analyser.current = node;
+        analyserOutput.current = output;
       }
     }
     wakeScope.current?.();
-  }, [gain, rate, pan]);
+  }, [gain, rate, pan, detachAnalyser]);
+  const latestTrigger = useRef(trigger);
+  latestTrigger.current = trigger;
 
   // Render all sounds ahead of time after the first gesture, so every later play is one buffer node.
   const warm = useCallback(() => {
     if (ready) return;
-    preload().then(() => setReady(true), () => {});
+    preload().then(loaded => setReady(loaded), () => {});
   }, [ready]);
 
   useEffect(() => {
@@ -107,9 +121,11 @@ export function SoundBoard() {
     let quiet = 0;
     let bins: Uint8Array<ArrayBuffer> | null = null;
     let edges: Int32Array | null = null;
+    let sampled: AnalyserNode | null = null;
 
     // Pushes one row of log-spaced band peaks (60 Hz–16 kHz) and returns the loudest band.
     function sample(node: AnalyserNode): number {
+      if (sampled !== node) { sampled = node; bins = null; edges = null; }
       bins ??= new Uint8Array(node.frequencyBinCount);
       if (!edges) {
         const binHz = node.context.sampleRate / 2 / node.frequencyBinCount;
@@ -196,16 +212,19 @@ export function SoundBoard() {
     };
   }, []);
 
-  useEffect(() => () => { timers.current.forEach(clearTimeout); }, []);
+  useEffect(() => () => { timers.current.forEach(clearTimeout); sequenceController.current?.abort(); detachAnalyser(); }, [detachAnalyser]);
 
   function playAll() {
     timers.current.forEach(clearTimeout);
+    sequenceController.current?.abort();
     if (sequence) { timers.current = []; setSequence(false); return; }
     warm();
     setSequence(true);
+    const controller = new AbortController();
+    sequenceController.current = controller;
     const all = GROUPS.flatMap((group) => group.sounds);
     timers.current = all.map((name, index) => window.setTimeout(() => {
-      trigger(name);
+      latestTrigger.current(name, controller.signal);
       if (index === all.length - 1) setSequence(false);
     }, index * 650));
   }
@@ -239,9 +258,8 @@ export function SoundBoard() {
             key={name}
             className={`pad${last === name ? ' pad--last' : ''}`}
             style={{ '--pad': group.color } as React.CSSProperties}
-            onPointerDown={(event) => { if (event.button === 0) { event.preventDefault(); trigger(name); } }}
+            onClick={() => trigger(name)}
             onPointerEnter={(event) => { if (hoverPlay && event.pointerType === 'mouse' && event.buttons === 0) trigger(name); }}
-            onKeyDown={(event) => { if ((event.key === 'Enter' || event.key === ' ') && !event.repeat) { event.preventDefault(); trigger(name); } }}
             aria-label={`Play ${name}: ${describe(name)}`}
           >
             {flash[name] ? <span key={flash[name]} className="pad-flash" aria-hidden="true" /> : null}

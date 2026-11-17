@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { approvedCues, semanticPresets, type FeedbackIntent } from '../dist/semantic.js';
+import { assetFingerprint } from '../scripts/asset-fingerprint.ts';
 import { recipes } from '../dist/recipes.js';
 
 test('semantic presets and manifest intents only use approved cues', () => {
@@ -25,6 +26,7 @@ test('semantic presets and manifest intents only use approved cues', () => {
 
 test('approved artifacts match recipes, semantic intent, format, hashes and envelope/level metadata', () => {
   const manifest = JSON.parse(readFileSync(new URL('../assets/hig/manifest.json', import.meta.url), 'utf8'));
+  assert.equal(manifest.sourceSha256, assetFingerprint('hig'), 'HIG renderer changed; run npm run export:hig');
   assert.deepEqual(manifest.semanticPresets, semanticPresets);
   assert.deepEqual(manifest.cues.map((cue: { name: string }) => cue.name), approvedCues);
   assert.equal(manifest.format.sampleRate, 48000);

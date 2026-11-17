@@ -4,6 +4,7 @@
  */
 export const semanticSource = { version: 'hig-0.1.0', repository: 'https://github.com/bloxwap/hig', commit: '1a776b9326c6ba03702894943b3edbfd178c4b40' } as const;
 export const approvedCues = ['tick', 'toggle', 'success', 'error'] as const;
+export type FeedbackIntent = 'press' | 'activate' | 'release' | 'cancel' | 'selection' | 'toggle' | 'disclosure' | 'success' | 'warning' | 'error' | 'notification';
 export const semanticPresets = {
   press: { sound: null, cooldown: 0 },
   activate: { sound: 'tick', cooldown: 80 },
@@ -17,4 +18,3 @@ export const semanticPresets = {
   error: { sound: 'error', cooldown: 400 },
   notification: { sound: null, cooldown: 800 },
 } as const satisfies Record<FeedbackIntent, { sound: (typeof approvedCues)[number] | null; cooldown: number }>;
-export type FeedbackIntent = 'press' | 'activate' | 'release' | 'cancel' | 'selection' | 'toggle' | 'disclosure' | 'success' | 'warning' | 'error' | 'notification';

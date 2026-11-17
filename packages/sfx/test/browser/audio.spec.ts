@@ -160,3 +160,29 @@ test('cold playback defers offline construction and fills the playback cache', a
   });
   expect(cached).toEqual({ starts: 1, oscillators: 1, offline: 1 });
 });
+
+test('renderTo disconnects its live graph only after its scheduled tail', async ({ page }) => {
+  await page.locator('#unlock').click();
+  await expect.poll(() => page.evaluate(() => (window as any).context.state)).toBe('running');
+  const result = await page.evaluate(async () => {
+    const { sfx, context } = window as any;
+    let created = 0, disconnected = 0;
+    for (const factory of ['createGain', 'createOscillator', 'createBufferSource']) {
+      const original = context[factory].bind(context);
+      context[factory] = (...args: any[]) => {
+        const node = original(...args); created++;
+        const disconnect = node.disconnect.bind(node);
+        node.disconnect = (...outputs: any[]) => { disconnected++; return disconnect(...outputs); };
+        return node;
+      };
+    }
+    const ok = sfx.renderTo(context, 'tick', { delay: 0.1 });
+    const immediate = disconnected;
+    await new Promise(resolve => setTimeout(resolve, 600));
+    return { ok, immediate, created, disconnected };
+  });
+  expect(result.ok).toBe(true);
+  expect(result.immediate).toBe(0);
+  expect(result.created).toBeGreaterThan(3);
+  expect(result.disconnected).toBe(result.created);
+});

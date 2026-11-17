@@ -1,11 +1,56 @@
 ---
-title: Native apps and WAV export
-description: Render the same sounds to WAV files for iOS, Android, and desktop apps, or into a video soundtrack.
+title: React Native and WAV export
+description: Play the same sounds in React Native with the built-in Expo module, or render them to WAV files for any native app or video soundtrack.
 ---
 
-A native app can't run the web engine, but it can ship the same sounds as files. `@bloxwap/sfx` renders its recipes offline and writes them as WAV, so your web and native apps sound identical.
+## React Native
 
-## The sfx-wav CLI
+`@bloxwap/sfx` runs in React Native with the same import and the same API as the web:
+
+```sh
+npx expo install @bloxwap/sfx
+npx expo prebuild   # or rebuild your dev client / EAS build
+```
+
+```ts
+import { play, preload, setVolume } from '@bloxwap/sfx';
+
+preload(['press', 'release', 'tick', 'success']); // optional, see below
+play('success');
+play('payout', { volume: 0.35, pan: -0.2 });
+
+// A tap: release 90 ms after press, scheduled natively.
+play('press');
+play('release', { delay: 0.09 });
+```
+
+Metro picks the native entry through the package's `react-native` export condition, so shared code that imports `@bloxwap/sfx` works on web, iOS, and Android. You can also import `@bloxwap/sfx/native` explicitly.
+
+### How it plays
+
+Native platforms have no Web Audio, so the package bakes every recipe to PCM at build time (48 kHz, 16-bit, mono unless the recipe pans) and ships a small Expo module that plays it. The files are rendered in Chromium from the same recipes the web synthesizes, and a test fails if a recipe changes without a re-bake, so the two platforms can't drift.
+
+- **iOS:** one `AVAudioEngine`. Each sound is decoded once into a float32 buffer and played on a pooled `AVAudioPlayerNode`. The engine pauses after 3 s of silence, and decoded buffers are dropped on a memory warning and reload on their next play.
+- **Android:** one `SoundPool` reading the sounds straight from the APK, with no `ExoPlayer` or media session.
+- **Every play** is one synchronous native call on the JS thread. There is no seek, promise, or bridge round trip.
+- **Memory** grows only with the sounds you use: a sound is decoded on its first play, or ahead of time by `preload()`. The whole catalog is about 1.8 MB decoded on iOS. Pass `preload()` only the sounds you use to keep it smaller.
+
+### Platform behavior
+
+- On iOS the audio session is set to **ambient**: it respects the silent switch and mixes with other apps' audio. Apps that also play media can pass `configure({ audioSession: 'manual' })` before the first sound and manage the session themselves. Android's SoundPool never takes audio focus.
+- Nothing plays or keeps sounding while the app is in the background.
+- `maxVoices` defaults to 16 on native, and `configure()` applies it when the engine starts, so call it before the first sound (or after `dispose()`). `minInterval`, volumes, categories, `delay`, `pan`, and `signal` work as on the web. `rate` works from 0.25 to 4 on iOS and from 0.5 to 2 on Android.
+- No user gesture is needed, so `force` has no effect.
+- Web-only APIs have inert stand-ins, so shared code still runs: `bind()` returns a no-op, `renderTo()` returns `false`, `renderBuffer()` and `getOutput()` return `null`, and sounds registered with `define()` are validated but stay silent.
+- Expo Go, Jest, and binaries built before the package was installed have no native module. There every call is a silent no-op.
+
+The native module needs a development build (Expo SDK 52 or later, iOS 15.1+); it does not run in Expo Go.
+
+## WAV export for other native apps
+
+For SwiftUI, Kotlin, desktop, or game engines, render the recipes offline to WAV files instead, so every app sounds identical.
+
+### The sfx-wav CLI
 
 The package ships an `sfx-wav` command. It renders with [`node-web-audio-api`](https://www.npmjs.com/package/node-web-audio-api), an optional peer dependency, so install both:
 
@@ -41,7 +86,7 @@ Each file lasts the sound's [`duration()`](/docs/api#sounds--issound--duration) 
 
 The command exits with 0 on success, 1 if rendering or writing fails or `node-web-audio-api` can't be loaded, and 2 for bad flags. Flags are checked before any audio is rendered, so a typo such as an unknown sound writes nothing.
 
-## Combos: the tap sound
+### Combos: the tap sound
 
 On the web, a button plays `press` on pointer down and `release` on pointer up. A native tap handler often fires once, so bake both into one file with `--combo`:
 
@@ -53,7 +98,7 @@ npx sfx-wav --out assets/sfx --sounds "" --combo tap=press@0,release@0.09
 
 This is the same as `play('press'); play('release', { delay: 0.09 })` on the web. See [Sound design](/docs/guides/sound-design#combine-sounds-with-delay).
 
-## Trimming and formats
+### Trimming and formats
 
 Recipes leave room for their echo to decay, so the end of a file is often near-silent. `--trim` cuts everything after the last sample within 60 dB of the peak and keeps 20 ms after it. `success.wav` drops from 1004 ms to about 570 ms, and `tap.wav` from 247 ms to about 220 ms. It never trims the start, so timing stays exact.
 
@@ -65,7 +110,7 @@ Pick the format your platform prefers:
 
 Use `--channels 1` if your app only plays mono. Many sounds pan their layers, so mono loses that width. Set `--sample-rate` to your audio engine's output rate to skip resampling at runtime.
 
-## From code
+### From code
 
 The WAV encoder lives at `@bloxwap/sfx/wav`, a separate entry point with no dependencies. It runs in browsers and Node, and takes any `AudioBuffer`. In a browser, pair it with [`renderBuffer()`](/docs/api#renderbuffer) to offer a download:
 
@@ -156,8 +201,15 @@ background/interruption/audio-session/silent-mode behavior and missing asset han
 
 <Callout type="warn" title="Platform verification">
 
-No physical iPhone/Android playback was tested on this Linux VM. Linux WebKit and mocked native
-API tests cannot certify iOS unlock, latency, silent mode, interruptions, background transitions,
-or perceived haptic intensity. Those remain native host/device validation, not SFX export claims.
+SDK compilation and lifecycle tests do not certify device latency, silent mode, interruptions
+or background transitions. Verify those behaviors in an iPhone/Android development build.
 
 </Callout>
+
+### Playback lifecycle and validation
+
+Abort subscriptions are released by native voice-end notifications, including cancellation, stealing, backgrounding and disposal. iOS uses `AVAudioPlayerNode` completion; SoundPool has no completion callback, so Android schedules retirement from the successful native start using the full PCM length and actual clamped rate. Decode time is not subtracted from a voice's lifetime. Master-volume changes also update active Android streams.
+
+Native PCM is baked at twice nominal gain with verified headroom, and both native mixers divide the requested 0–2 gain by two. The native files are engine assets; the `assets/hig` exports retain nominal gain for external players. Asset manifests fingerprint the renderer and encoder as well as the recipes.
+
+Run `npm run test:native` from the repository root to type-check iOS and Android engines against their SDKs and run the Android lifecycle tests. It requires Xcode and Android Studio on macOS, or explicit `SFX_KOTLINC`, `SFX_JAVA`, and `ANDROID_HOME` paths for Android. Physical device playback is still a separate check.

@@ -53,10 +53,10 @@ If the audio context is suspended, what happens depends on `configure({ resume }
 ## preload()
 
 ```ts
-function preload(names?: readonly SoundName[]): Promise<void>;
+function preload(names?: readonly SoundName[]): Promise<boolean>;
 ```
 
-Renders sounds to buffers ahead of time: every sound by default, or just the ones you list. Unknown names are skipped. Rendering happens offline, so you can call this before any user gesture. Until a sound is rendered, `play()` synthesizes it live, which sounds the same but costs more.
+Renders sounds to buffers ahead of time: every sound by default, or just the ones you list. Resolves `true` only when every requested sound is cached; unknown names, failed renders, eviction or disposal during loading resolve `false`. Rendering happens offline, so you can call this before any user gesture. Until a sound is rendered, `play()` synthesizes it live, which sounds the same but costs more.
 
 ## bind()
 
@@ -69,7 +69,7 @@ interface BindOptions {
 }
 ```
 
-Plays sounds for `data-sound-hover`, `data-sound-press`, `data-sound-release`, and `data-sound-toggle` under `root` (default: `document`). Returns a function that removes the listeners. Binding the same root again shares its listeners and returns a separate remover; the listeners are removed when the last remover runs. Without a DOM, it returns a no-op. See [Declarative binding](/docs/guides/binding).
+Plays sounds for `data-sound-hover`, `data-sound-press`, `data-sound-release`, and `data-sound-toggle` under `root` (default: `document`). Each call returns its own cleanup function; listeners remain until the last owner releases them. The most recent owner's options apply. Without a DOM, it returns a no-op. See [Declarative binding](/docs/guides/binding).
 
 ## unlock()
 

@@ -1,10 +1,11 @@
+import { sounds } from '@bloxwap/sfx';
 import type { Metadata } from 'next';
 import { basePath, siteUrl } from './site';
 
 export const socialImageSize = { width: 1200, height: 630 };
 export const homeSocial = {
   title: 'Interface sounds. Zero files.',
-  description: 'Nineteen interaction sounds synthesized with Web Audio. No audio files, no dependencies, about 5 kB gzipped.',
+  description: `${sounds.length} interaction sounds synthesized with Web Audio. No audio files, no runtime dependencies.`,
 };
 
 /** Explicit PNG paths work on GitHub Pages without a running image service. */

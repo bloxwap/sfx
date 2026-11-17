@@ -1,0 +1,10 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["BloxwapSfxModule"],
+    "podspecPath": "BloxwapSfx.podspec"
+  },
+  "android": {
+    "modules": ["com.bloxwap.sfx.BloxwapSfxModule"]
+  }
+}

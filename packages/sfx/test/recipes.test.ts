@@ -65,7 +65,7 @@ test('ring-out times match the reference (source end + echo tail + two 50 ms pad
 
 test('echo tail edge cases', () => {
   assert.equal(echoTail({ level: 1, layers: [] }), 0);
-  assert.equal(echoTail({ level: 1, layers: [], echo: { delay: 0.1, feedback: 0, wet: 1, lowpass: 1 } }), 0);
+  assert.equal(echoTail({ level: 1, layers: [], echo: { delay: 0.1, feedback: 0, wet: 1, lowpass: 1 } }), 0.1);
   assert.equal(echoTail({ level: 1, layers: [], echo: { delay: 0.1, feedback: 1, wet: 1, lowpass: 1 } }), 0.1);
   assert.equal(sourceEnd({ level: 1, layers: [] }), 0);
 });

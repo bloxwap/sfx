@@ -1,4 +1,4 @@
-import { beforeEach, describe, test } from 'node:test';
+import { afterEach, beforeEach, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Window } from 'happy-dom';
 import { FakeAudioContext, asReal, globals, installAudio, setActivation, tick } from './fake-audio.ts';
@@ -14,6 +14,7 @@ let clock = 10_000;
 Object.defineProperty(globalThis, 'performance', { value: { now: () => clock }, configurable: true, writable: true });
 
 const { bind, configure, define, dispose, setEnabled } = await import('../dist/index.js');
+afterEach(() => dispose());
 
 /** Count of sounds played, by the recipe fingerprint each leaves in the fake context. */
 function played(): number {
@@ -75,7 +76,7 @@ describe('bind()', () => {
     assert.ok(added.every(([, capture]) => capture === true));
     const counts = Object.fromEntries(['pointerenter', 'pointerup', 'click', 'keyup'].map((type) => [type, added.filter(([t]) => t === type).length]));
     assert.deepEqual(counts, { pointerenter: 1, pointerup: 1, click: 1, keyup: 1 });
-    assert.equal(added.length, 8, 'rebinding adds no listeners');
+    assert.equal(added.length, 10, 'rebinding adds no listeners, including focus/cancellation cleanup');
     root.innerHTML = '<button data-sound-press>Save</button>';
     second();
     pointer('pointerdown', root.firstElementChild!);
@@ -91,7 +92,7 @@ describe('bind()', () => {
     unbind();
   });
 
-  test('first options win until all owners leave, then binding starts fresh', () => {
+  test('remaining owners retain their options and fresh bindings survive stale removers', () => {
     root.innerHTML = '<button data-sound-press data-sound-hover>Save</button>';
     const button = root.firstElementChild!;
     const first = bind(root, { keyboard: false, hoverInterval: 0 });
@@ -99,10 +100,10 @@ describe('bind()', () => {
     first();
     first();
     key('keydown', button, { key: 'Enter' });
-    assert.equal(played(), 0, 'first keyboard option still wins');
+    assert.equal(played(), 1, 'remaining owner enables keyboard playback');
     pointer('pointerenter', button);
     pointer('pointerenter', button);
-    assert.equal(played(), 2, 'first hover interval still wins');
+    assert.equal(played(), 2, 'remaining owner throttles the repeated hover');
     second();
     const fresh = bind(root);
     first();
@@ -367,4 +368,35 @@ test('attributes resolve user-defined sound names', async () => {
   assert.ok(tones().includes(777));
   unbind();
   await dispose();
+});
+
+test('one subscriber cannot remove another subscriber and the latest options are restored', () => {
+  root.innerHTML = '<button data-sound-press data-sound-release>Play</button>';
+  const button = root.firstElementChild!;
+  const first = bind(root, { keyboard: true });
+  const second = bind(root, { keyboard: false });
+  key('keydown', button, { key: 'Enter' }); assert.equal(played(), 0);
+  second(); second();
+  key('keydown', button, { key: 'Enter' }); assert.equal(played(), 1);
+  const third = bind(root);
+  first();
+  pointer('pointerdown', button); assert.equal(played(), 2);
+  third(); pointer('pointerdown', button); assert.equal(played(), 2);
+});
+
+test('disabled descendants stay silent and keyboard releases match the key and focus lifetime', () => {
+  root.innerHTML = '<div data-sound-toggle><span aria-disabled="true">Disabled</span></div><button data-sound-press data-sound-release>Play</button>';
+  const unbind = bind(root);
+  click(root.querySelector('span')!); assert.equal(played(), 0);
+  const button = root.querySelector('button')!;
+  key('keydown', button, { key: 'Enter' }); assert.equal(played(), 1);
+  key('keyup', button, { key: ' ' }); assert.equal(played(), 1);
+  key('keyup', button, { key: 'Enter' }); assert.equal(played(), 2);
+  key('keydown', button, { key: ' ' });
+  button.dispatchEvent(asReal<Event>(new dom.Event('focusout', { bubbles: true })));
+  key('keyup', button, { key: ' ' }); assert.equal(played(), 3);
+  key('keydown', button, { key: 'Enter' });
+  dom.dispatchEvent(new dom.Event('blur'));
+  key('keyup', button, { key: 'Enter' }); assert.equal(played(), 4);
+  unbind();
 });

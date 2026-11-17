@@ -1,4 +1,7 @@
-import { categoryOf, echoTail, getRecipe, isCategory, isSound, recipes, registerRecipe, sourceEnd, type Recipe, type SoundName, type SoundCategory } from './recipes.js';
+import { categoryOf, echoTail, getRecipe, isCategory, isSound, recipes, registerRecipe, observeRecipes, sourceEnd, type Recipe, type SoundName, type SoundCategory } from './recipes.js';
+
+import { getVolume, isEnabled, setEnabled, setVolume as saveVolume, hasExplicitVolume, subscribePreference, type VolumeOptions } from './preferences.js';
+export { getVolume, isEnabled, setEnabled, type VolumeOptions };
 
 /** Per-play adjustments. All are optional and cheap: they add at most two nodes to a voice. */
 export interface PlayOptions {
@@ -51,6 +54,12 @@ export interface EngineOptions {
    * play together when it ends.
    */
   resume?: 'queue' | 'eager';
+  /**
+   * React Native only (ignored on the web). 'ambient' (default) sets the iOS audio session to the ambient
+   * category: respects the silent switch and mixes with other apps' audio. 'manual' leaves the session to
+   * the app, for apps that also play media. Android's SoundPool never takes audio focus either way.
+   */
+  audioSession?: 'ambient' | 'manual';
 }
 
 type Ctx = BaseAudioContext;
@@ -68,10 +77,6 @@ const FALLBACK_RATE = 48000;
 /** Requests that waited longer than this for a suspended context are dropped, not played late. */
 const STALE_MS = 250;
 
-let enabled = true;
-let volume = 1;
-let explicitVolume = false;
-const categoryVolumes: Record<SoundCategory, number> = { hover: 1, controls: 1, feedback: 1, money: 1 };
 let maxVoices = 24;
 let minInterval = 16;
 let eager = false;
@@ -86,6 +91,7 @@ let listeners: (() => void)[] = [];
 const voices = new Set<Voice>();
 const lastPlayed = new Map<SoundName, number>();
 const rendered = new Map<SoundName, AudioBuffer>();
+let renderingBytes = 0;
 const rendering = new Map<SoundName, Promise<AudioBuffer | null>>();
 const deferred = new Map<SoundName, () => void>();
 let renderRate = FALLBACK_RATE;
@@ -120,20 +126,24 @@ function activated(): boolean {
 
 /** The shared context and its master bus (volume → limiter → speakers), created on first need. */
 function audio(): AudioContext | null {
+  if (context?.state === 'closed') void dispose();
   if (context) return context;
   const Constructor = contextConstructor();
   if (!Constructor) return null;
-  let ctx: AudioContext;
+  let ctx: AudioContext | undefined;
+  const nodes: AudioNode[] = [];
   let gain: GainNode;
   let last: AudioNode;
   try {
     ctx = new Constructor({ latencyHint: 'interactive' });
     gain = ctx.createGain();
-    gain.gain.value = volume;
+    nodes.push(gain);
+    gain.gain.value = getVolume();
     last = gain;
     // A fast, hard-knee limiter keeps overlapping sounds from clipping. Feature-detected.
     if (typeof ctx.createDynamicsCompressor === 'function') {
       const limiter = ctx.createDynamicsCompressor();
+      nodes.push(limiter);
       limiter.threshold.value = -3;
       limiter.knee.value = 0;
       limiter.ratio.value = 20;
@@ -144,6 +154,8 @@ function audio(): AudioContext | null {
     }
     last.connect(ctx.destination);
   } catch {
+    disconnect(nodes);
+    try { void ctx?.close().catch(NOOP); } catch { /* a partially created context */ }
     return null;
   }
   context = ctx;
@@ -205,77 +217,91 @@ function envelope(param: AudioParam, start: number, attack: number, end: number,
   param.exponentialRampToValueAtTime(FLOOR, end);
 }
 
+/** Disconnect even partially constructed graphs, stopping scheduled sources as well. */
+function disconnect(nodes: readonly AudioNode[], stopSources = true): void {
+  for (const node of nodes) {
+    const source = node as AudioScheduledSourceNode;
+    if (stopSources && typeof source.stop === 'function') { try { source.stop(); } catch { /* not started or already stopped */ } }
+    try { node.disconnect(); } catch { /* already detached */ }
+  }
+}
+
 /**
  * Schedules a recipe's layers and echo into `ctx`, starting at `t0`. Used for both the one-time
  * offline render and the live path; `rate` stretches time and pitch like a buffer's playbackRate.
  * Returns the recipe's level node (already connected to `out`) so the caller can detach it.
  */
 export function synthesize(ctx: Ctx, recipe: Recipe, out: AudioNode, t0: number, rate = 1, gain = 1): AudioNode[] {
-  const level = ctx.createGain();
-  level.gain.value = recipe.level * gain;
-  level.connect(out);
-  const nodes: AudioNode[] = [level];
-  const e = recipe.echo;
-  if (e) {
-    // Echo: level → delay → lowpass → (feedback → delay) + (wet → out)
-    const delay = ctx.createDelay(1);
-    const lowpass = ctx.createBiquadFilter();
-    const feedback = ctx.createGain();
-    const wet = ctx.createGain();
-    delay.delayTime.value = e.delay / rate;
-    lowpass.type = 'lowpass';
-    lowpass.frequency.value = Math.min(e.lowpass * rate, ctx.sampleRate / 2);
-    feedback.gain.value = e.feedback;
-    wet.gain.value = e.wet;
-    level.connect(delay).connect(lowpass);
-    lowpass.connect(feedback).connect(delay);
-    lowpass.connect(wet).connect(out);
-    nodes.push(delay, lowpass, feedback, wet);
-  }
-  const panners = typeof (ctx as { createStereoPanner?: unknown }).createStereoPanner === 'function';
-  const nyquist = ctx.sampleRate / 2;
-  for (const layer of recipe.layers) {
-    const start = t0 + layer.at / rate;
-    const attack = layer.attack / rate;
-    const end = start + attack + layer.decay / rate;
-    const env = ctx.createGain();
-    envelope(env.gain, start, attack, end, layer.peak);
-    let source: AudioScheduledSourceNode;
-    if ('noise' in layer) {
-      const buffer = noiseFor(ctx);
-      const player = ctx.createBufferSource();
-      player.buffer = buffer;
-      player.loop = true;
-      const filter = ctx.createBiquadFilter();
-      filter.type = layer.noise;
-      filter.frequency.value = Math.min(layer.freq * rate, nyquist);
-      if (layer.q !== undefined) filter.Q.value = layer.q;
-      player.connect(filter).connect(env);
-      player.start(start, Math.random() * buffer.duration);
-      source = player;
-    } else {
-      const osc = ctx.createOscillator();
-      osc.type = layer.wave;
-      osc.frequency.setValueAtTime(Math.min(layer.freq * rate, nyquist), start);
-      if (layer.to !== undefined) {
-        const glide = (layer.glide ?? layer.attack + layer.decay) / rate;
-        osc.frequency.exponentialRampToValueAtTime(Math.min(layer.to * rate, nyquist), start + glide);
+  const nodes: AudioNode[] = [];
+  const own = <T extends AudioNode>(node: T): T => { nodes.push(node); return node; };
+  try {
+    const level = own(ctx.createGain());
+    level.gain.value = recipe.level * gain;
+    level.connect(out);
+    const e = recipe.echo;
+    if (e) {
+      // Echo: level → delay → lowpass → (feedback → delay) + (wet → out)
+      const delay = own(ctx.createDelay(Math.max(1, e.delay / rate)));
+      const lowpass = own(ctx.createBiquadFilter());
+      const feedback = own(ctx.createGain());
+      const wet = own(ctx.createGain());
+      delay.delayTime.value = e.delay / rate;
+      lowpass.type = 'lowpass';
+      lowpass.frequency.value = Math.min(e.lowpass * rate, ctx.sampleRate / 2);
+      feedback.gain.value = e.feedback;
+      wet.gain.value = e.wet;
+      level.connect(delay).connect(lowpass);
+      lowpass.connect(feedback).connect(delay);
+      lowpass.connect(wet).connect(out);
+    }
+    const panners = typeof (ctx as { createStereoPanner?: unknown }).createStereoPanner === 'function';
+    const nyquist = ctx.sampleRate / 2;
+    for (const layer of recipe.layers) {
+      const start = t0 + layer.at / rate;
+      const attack = layer.attack / rate;
+      const end = start + attack + layer.decay / rate;
+      const env = own(ctx.createGain());
+      envelope(env.gain, start, attack, end, layer.peak);
+      let source: AudioScheduledSourceNode;
+      if ('noise' in layer) {
+        const buffer = noiseFor(ctx);
+        const player = own(ctx.createBufferSource());
+        player.buffer = buffer;
+        player.loop = true;
+        const filter = own(ctx.createBiquadFilter());
+        filter.type = layer.noise;
+        filter.frequency.value = Math.min(layer.freq * rate, nyquist);
+        if (layer.q !== undefined) filter.Q.value = layer.q;
+        player.connect(filter).connect(env);
+        player.start(start, Math.random() * buffer.duration);
+        source = player;
+      } else {
+        const osc = own(ctx.createOscillator());
+        osc.type = layer.wave;
+        osc.frequency.setValueAtTime(Math.min(layer.freq * rate, nyquist), start);
+        if (layer.to !== undefined) {
+          const glide = (layer.glide ?? layer.attack + layer.decay) / rate;
+          osc.frequency.exponentialRampToValueAtTime(Math.min(layer.to * rate, nyquist), start + glide);
+        }
+        if (layer.detune) osc.detune.value = layer.detune;
+        osc.connect(env);
+        osc.start(start);
+        source = osc;
       }
-      if (layer.detune) osc.detune.value = layer.detune;
-      osc.connect(env);
-      osc.start(start);
-      source = osc;
+      source.stop(end + PAD);
+      if (layer.pan !== undefined && panners) {
+        const panner = own(ctx.createStereoPanner());
+        panner.pan.setValueAtTime(clamp(layer.pan, -1, 1, 0), start);
+        env.connect(panner).connect(level);
+      } else {
+        env.connect(level);
+      }
     }
-    source.stop(end + PAD);
-    if (layer.pan !== undefined && panners) {
-      const panner = ctx.createStereoPanner();
-      panner.pan.setValueAtTime(clamp(layer.pan, -1, 1, 0), start);
-      env.connect(panner).connect(level);
-    } else {
-      env.connect(level);
-    }
+    return nodes;
+  } catch (error) {
+    disconnect(nodes);
+    throw error;
   }
-  return nodes;
 }
 
 /** Seconds a sound rings for, including its echo and scheduling pad. */
@@ -288,13 +314,20 @@ async function bake(name: SoundName, sampleRate: number, channels = 2): Promise<
   const Offline = offlineConstructor();
   if (!Offline) return null;
   const recipe = getRecipe(name);
+  const frames = Math.ceil(length(recipe) * sampleRate);
+  const bytes = frames * channels * 4;
+  if (!Number.isFinite(bytes) || bytes > 32 * 1024 * 1024 || renderingBytes + bytes > 64 * 1024 * 1024) return null;
+  renderingBytes += bytes;
+  let result: AudioBuffer | null = null;
   try {
-    const offline = new Offline(channels, Math.ceil(length(recipe) * sampleRate), sampleRate);
+    const offline = new Offline(channels, frames, sampleRate);
     synthesize(offline, recipe, offline.destination, 0);
-    return await offline.startRendering();
-  } catch {
-    return null;
+    result = await offline.startRendering();
+  } catch { /* unsupported format or exhausted audio resources */ }
+  finally {
+    renderingBytes -= bytes;
   }
+  return result;
 }
 
 /** Renders a sound once for playback at the live context's rate, sharing a render already in flight. */
@@ -307,7 +340,14 @@ function render(name: SoundName): Promise<AudioBuffer | null> {
       // Skip stale renders after disposal, a rate change or recipe replacement.
       if (rendering.get(name) === pending) {
         rendering.delete(name);
-        if (buffer) rendered.set(name, buffer);
+        if (buffer) {
+          rendered.set(name, buffer);
+          let bytes = 0;
+          for (const entry of [...rendered].reverse()) {
+            bytes += entry[1].length * entry[1].numberOfChannels * 4;
+            if (bytes > 64 * 1024 * 1024) rendered.delete(entry[0]);
+          }
+        }
       }
       return buffer;
     });
@@ -332,11 +372,12 @@ function deferRender(name: SoundName): void {
 }
 
 /** Adds the per-play panner only when it changes something. */
-function route(ctx: Ctx, source: AudioNode, options: PlayOptions | undefined, destination: AudioNode): StereoPannerNode | undefined {
+function route(ctx: Ctx, source: AudioNode, options: PlayOptions | undefined, destination: AudioNode, nodes: AudioNode[]): void {
   let panner: StereoPannerNode | undefined;
   const pan = clamp(options?.pan, -1, 1, 0);
   if (pan !== 0 && typeof (ctx as { createStereoPanner?: unknown }).createStereoPanner === 'function') {
     panner = ctx.createStereoPanner();
+    nodes.push(panner);
     // Preserve the stereo pan law even when the cached source is mono.
     panner.channelCount = 2;
     panner.channelCountMode = 'explicit';
@@ -344,7 +385,6 @@ function route(ctx: Ctx, source: AudioNode, options: PlayOptions | undefined, de
     source = source.connect(panner);
   }
   source.connect(destination);
-  return panner;
 }
 
 /** Stops `voice` when `signal` aborts. Returns the remover, called once the voice is gone. */
@@ -356,13 +396,15 @@ function watch(voice: Voice, signal: AbortSignal | undefined): () => void {
 }
 
 class BufferedVoice implements Voice {
-  constructor(
-    readonly name: SoundName,
-    readonly source: AudioBufferSourceNode,
-  ) {}
-
-  stop(): void {
-    try { this.source.stop(); } catch { /* already stopped */ }
+  private stopped = false;
+  release = NOOP;
+  constructor(readonly name: SoundName, readonly nodes: AudioNode[]) {}
+  stop(stopSources = true): void {
+    if (this.stopped) return;
+    this.stopped = true;
+    voices.delete(this);
+    this.release();
+    disconnect(this.nodes, stopSources);
   }
 }
 
@@ -385,70 +427,80 @@ function schedule(ctx: Ctx, name: SoundName, options: PlayOptions | undefined, d
   const recipe = getRecipe(name);
   const rate = clamp(options?.rate, 0.25, 4, 1);
   const delay = clamp(options?.delay, 0, 10, 0);
-  const mix = ctx.createGain();
-  const panner = route(ctx, mix, options, destination);
-  const nodes = synthesize(ctx, recipe, mix, ctx.currentTime + delay, rate, clamp(options?.volume, 0, 2, 1));
-  nodes.push(mix);
-  if (panner) nodes.push(panner);
-  return [nodes, delay + length(recipe) / rate];
+  const nodes: AudioNode[] = [];
+  try {
+    const mix = ctx.createGain();
+    nodes.push(mix);
+    route(ctx, mix, options, destination, nodes);
+    nodes.push(...synthesize(ctx, recipe, mix, ctx.currentTime + delay, rate, clamp(options?.volume, 0, 2, 1)));
+    return [nodes, delay + length(recipe) / rate];
+  } catch (error) {
+    disconnect(nodes);
+    throw error;
+  }
+}
+
+/** Retirement follows the audio clock, including suspension, rather than wall time. */
+function retire(ctx: Ctx, seconds: number, cleanup: () => void): () => void {
+  const end = ctx.currentTime + seconds;
+  const done = (): void => {
+    const left = end - ctx.currentTime;
+    if (left > 0 && ctx.state !== 'closed') timer = setTimeout(done, left * 1000);
+    else cleanup();
+  };
+  let timer = setTimeout(done, seconds * 1000);
+  return () => clearTimeout(timer);
 }
 
 function start(ctx: AudioContext, name: SoundName, options: PlayOptions | undefined): void {
   const destination = bus as GainNode;
   const buffer = rendered.get(name);
-  const multiplier = categoryVolumes[isCategory(options?.category) ? options.category : categoryOf(name)];
+  const multiplier = getVolume({ category: isCategory(options?.category) ? options.category : categoryOf(name) });
   const gain = clamp(options?.volume, 0, 2, 1) * multiplier;
   if (gain === 0) return;
   const rate = clamp(options?.rate, 0.25, 4, 1);
   if (buffer) {
     // Hot path: one buffer source per play (plus a gain/panner only when asked for).
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    if (rate !== 1) source.playbackRate.value = rate;
-    let head: AudioNode = source;
-    let level: GainNode | undefined;
-    if (gain !== 1) {
-      level = ctx.createGain();
-      level.gain.value = gain;
-      head = source.connect(level);
+    const nodes: AudioNode[] = [];
+    const voice = new BufferedVoice(name, nodes);
+    try {
+      const source = ctx.createBufferSource();
+      nodes.push(source);
+      source.buffer = buffer;
+      if (rate !== 1) source.playbackRate.value = rate;
+      let head: AudioNode = source;
+      if (gain !== 1) {
+        const level = ctx.createGain();
+        nodes.push(level);
+        level.gain.value = gain;
+        head = source.connect(level);
+      }
+      route(ctx, head, options, destination, nodes);
+      voice.release = watch(voice, options?.signal);
+      source.onended = () => voice.stop(false);
+      register(voice);
+      source.start(ctx.currentTime + clamp(options?.delay, 0, 10, 0));
+    } catch (error) {
+      voice.stop();
+      throw error;
     }
-    const panner = route(ctx, head, options, destination);
-    const voice = new BufferedVoice(name, source);
-    const release = watch(voice, options?.signal);
-    source.onended = () => {
-      release();
-      voices.delete(voice);
-      source.disconnect();
-      level?.disconnect();
-      panner?.disconnect();
-    };
-    register(voice);
-    source.start(ctx.currentTime + clamp(options?.delay, 0, 10, 0));
     return;
   }
   if (multiplier !== 1) options = { ...options, volume: gain };
   // First play of this sound: synthesize it live now, and render its buffer for next time.
   const [nodes, seconds] = schedule(ctx, name, options, destination);
-  const end = ctx.currentTime + seconds;
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let cancel = NOOP;
   const voice: Voice = {
     name,
     stop() {
-      clearTimeout(timer);
+      cancel();
       voices.delete(voice);
-      for (const node of nodes) node.disconnect();
+      disconnect(nodes);
       release();
     },
   };
   const release = watch(voice, options?.signal);
-  // Tear down by the audio clock, which stands still while the context is suspended, so a sound
-  // scheduled before (or paused by) a suspension is not cut off when it finally plays.
-  const done = (): void => {
-    const left = end - ctx.currentTime;
-    if (left > 0 && ctx.state !== 'closed') timer = setTimeout(done, left * 1000);
-    else voice.stop();
-  };
-  timer = setTimeout(done, seconds * 1000);
+  cancel = retire(ctx, seconds, () => voice.stop());
   register(voice);
   deferRender(name);
 }
@@ -457,7 +509,7 @@ function flush(): void {
   const ctx = context;
   const pending = queued;
   queued = [];
-  if (!ctx || !enabled || ctx.state !== 'running') return;
+  if (!ctx || !isEnabled() || ctx.state !== 'running') return;
   const cutoff = now() - STALE_MS;
   const seen = new Set<SoundName>();
   for (const request of pending) {
@@ -491,17 +543,21 @@ function resume(ctx: AudioContext): Promise<void> {
  * Audio all make it a silent no-op.
  */
 export function play(name: SoundName = 'chime', options?: PlayOptions): void {
-  if (!enabled || !isSound(name) || options?.signal?.aborted || !(options?.force || activated())) return;
+  if (!isEnabled() || !isSound(name) || options?.signal?.aborted || !(options?.force || activated())) return;
   const t = now();
   const last = lastPlayed.get(name);
   const gap = options?.minInterval;
-  if (last !== undefined && t - last < (typeof gap === 'number' && gap >= 0 ? gap : minInterval)) return;
+  if (last !== undefined && t - last < (typeof gap === 'number' && Number.isFinite(gap) && gap >= 0 ? gap : minInterval)) return;
   const ctx = audio();
   if (!ctx) return;
   lastPlayed.set(name, t);
   if (ctx.state !== 'running') {
     const wait = !eager || !asleep(ctx);
-    if (wait && queued.length < 16) queued.push({ name, options: options && { ...options }, at: t });
+    if (wait) {
+      queued = queued.filter(request => request.at >= t - STALE_MS && !request.options?.signal?.aborted);
+      if (queued.length === 16) queued.shift();
+      queued.push({ name, options: options ? { ...options } : undefined, at: t });
+    }
     void resume(ctx);
     if (wait) return;
   }
@@ -517,8 +573,10 @@ export function play(name: SoundName = 'chime', options?: PlayOptions): void {
  * as every other. Works before any user gesture: rendering is offline and makes no sound.
  * Devices not running at 48 kHz re-render once after the first gesture.
  */
-export async function preload(names: readonly SoundName[] = Object.keys(recipes) as SoundName[]): Promise<void> {
-  await Promise.all(names.filter(isSound).map(render));
+export async function preload(names: readonly SoundName[] = Object.keys(recipes) as SoundName[]): Promise<boolean> {
+  const unique = [...new Set(names)];
+  const results = await Promise.all(unique.map(name => isSound(name) ? render(name) : null));
+  return results.every((buffer, index) => buffer !== null && rendered.get(unique[index]!) === buffer);
 }
 
 /**
@@ -528,10 +586,21 @@ export async function preload(names: readonly SoundName[] = Object.keys(recipes)
  */
 export function renderTo(target: BaseAudioContext, name: SoundName, options?: RenderOptions): boolean {
   if (!isSound(name)) return false;
+  let nodes: AudioNode[] = [];
   try {
-    schedule(target, name, options, options?.destination ?? target.destination);
+    const scheduled = schedule(target, name, options, options?.destination ?? target.destination);
+    nodes = scheduled[0];
+    if (typeof (target as AudioContext).resume === 'function' && typeof (target as AudioContext).close === 'function') {
+      // A silent one-frame source supplies an audio-clock completion, including suspension.
+      const tail = target.createBufferSource();
+      nodes.push(tail);
+      tail.buffer = target.createBuffer(1, 1, target.sampleRate);
+      tail.onended = () => { tail.onended = null; disconnect(nodes); };
+      tail.start(target.currentTime + scheduled[1]);
+    }
     return true;
   } catch {
+    disconnect(nodes);
     return false;
   }
 }
@@ -558,50 +627,30 @@ export async function unlock(): Promise<boolean> {
   return ctx.state === 'running';
 }
 
-/**
- * Turns all future playback on or off. Sounds already playing finish, but muting a suspended context
- * also drops the sounds waiting on it. Non-booleans are ignored.
- */
-export function setEnabled(value: boolean): void {
-  if (typeof value !== 'boolean') return;
-  enabled = value;
-  if (value) return;
-  // In 'eager' mode sounds requested during a suspension are already scheduled; none has been heard yet.
-  if (context && asleep(context)) stopAll();
-  else queued = [];
-}
-
-export function isEnabled(): boolean {
-  return enabled;
-}
-
-/** Sets the master volume, 0–1. Changes glide over a few milliseconds to avoid clicks. */
-export interface VolumeOptions { category?: SoundCategory }
-
-export function setVolume(value: number, options?: VolumeOptions): void {
-  if (typeof value !== 'number' || Number.isNaN(value)) return;
-  if (options?.category !== undefined) {
-    if (isCategory(options.category)) categoryVolumes[options.category] = clamp(value, 0, 1, categoryVolumes[options.category]);
-    return;
+// One store owns effective settings, including provider overrides and imperative setters.
+subscribePreference(() => {
+  if (!isEnabled()) {
+    if (context && asleep(context)) stopAll();
+    else queued = [];
   }
-  explicitVolume = true;
-  volume = clamp(value, 0, 1, volume);
   if (context && bus) {
     const param = bus.gain;
-    if (typeof param.setTargetAtTime === 'function') param.setTargetAtTime(volume, context.currentTime, 0.01);
-    else param.value = volume;
+    if (typeof param.setTargetAtTime === 'function') param.setTargetAtTime(getVolume(), context.currentTime, 0.01);
+    else param.value = getVolume();
   }
-}
+});
 
-export function getVolume(options?: VolumeOptions): number {
-  return isCategory(options?.category) ? categoryVolumes[options.category] : volume;
+/** Sets the master volume (0–1), or a category multiplier. */
+export function setVolume(value: number, options?: VolumeOptions): void {
+  saveVolume(value, options);
 }
 
 /** Tunes voice limits and resume behavior. Unknown or invalid fields are ignored. */
 export function configure(options: EngineOptions): void {
-  if (options.respectReducedMotion === true && !explicitVolume && typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) setVolume(0.5);
-  if (typeof options.maxVoices === 'number' && options.maxVoices >= 1) maxVoices = Math.floor(options.maxVoices);
-  if (typeof options.minInterval === 'number' && options.minInterval >= 0) minInterval = options.minInterval;
+  if (options.respectReducedMotion === true && !hasExplicitVolume() && typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) setVolume(0.5);
+  if (typeof options.maxVoices === 'number' && Number.isFinite(options.maxVoices) && options.maxVoices >= 1) maxVoices = Math.min(64, Math.floor(options.maxVoices));
+  while (voices.size > maxVoices) { const oldest = voices.values().next().value!; voices.delete(oldest); oldest.stop(); }
+  if (typeof options.minInterval === 'number' && Number.isFinite(options.minInterval) && options.minInterval >= 0) minInterval = options.minInterval;
   if (options.resume === 'queue' || options.resume === 'eager') eager = options.resume === 'eager';
 }
 
@@ -652,12 +701,12 @@ export async function dispose(): Promise<void> {
 }
 
 
-/** Defines or replaces a custom sound, invalidating its cached and in-flight renders. */
-export function define<Name extends string>(name: Name, recipe: Recipe): Name {
-  const result = registerRecipe(name, recipe);
+observeRecipes(name => {
   rendered.delete(name);
   rendering.delete(name);
   deferred.delete(name);
   lastPlayed.delete(name);
-  return result;
-}
+});
+
+/** Defines or replaces a custom sound, invalidating its cached and in-flight renders. */
+export const define = registerRecipe;

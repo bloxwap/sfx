@@ -5,6 +5,41 @@ All notable changes to `@bloxwap/sfx` are documented here. This project follows
 
 ## Unreleased
 
+- **Invariant enforcement.** Context replacement isolates pending resumes; failed graph creation rolls back;
+  queued plays snapshot options and discard expired requests. Voice limits are finite and trim live web
+  voices immediately. `renderTo()` releases live graphs after their audio-clock tail.
+- Built-ins are deeply immutable, every registration path invalidates cached renders, and custom recipes
+  have bounded count, name length, layers, duration and render memory. Correct single echoes and slow-rate
+  delays; unknown `duration()` returns zero and WAV trimming sanitizes non-finite samples.
+- **Readiness:** `preload()` now resolves a boolean, false when any sound fails or its result is invalidated.
+  Existing callers can continue awaiting it without inspecting the result.
+- React and imperative calls share one preference store; mounted providers own their overrides. Bindings
+  use independent cleanup leases, follow replaced refs, and handle keyboard pairing, focus loss and disabled
+  descendants. Native React imports select the native backend.
+- Compared with 0.3.1, imperative category updates persist across provider reapplication, and the most
+  recent binding owner supplies options until it releases them; removing it restores the previous owner.
+- Native completion releases cancellation listeners after playback, stealing or disposal. Android tracks
+  its own voices, updates active-stream volume, and isolates load callbacks by pool generation; iOS serializes
+  preload and retries failed audio-session setup. Native assets bake at 2× gain to support per-play gain 0–2.
+- Asset manifests fingerprint renderer inputs and toolchain versions. Added native SDK compilation and
+  Android lifecycle tests via `npm run test:native`. The full web bundle budget is now 8 KiB gzip to include
+  lifecycle rollback, resource bounds and preference ownership (previously 6.5 KiB).
+- Docs honor saved preferences on direct routes, snapshot and cancel deposits, use current sequence controls,
+  release analyser connections, accept click-only activation, and derive catalog counts/version from source.
+
+- **React Native.** `import … from '@bloxwap/sfx'` now resolves to a native entry under Metro (the
+  `react-native` export condition; also `@bloxwap/sfx/native`) with the same exports and the same recipes. The
+  package includes an Expo module: iOS plays from one `AVAudioEngine` with pooled player nodes and an
+  ambient audio session, pauses itself after 3 s of silence, and drops its buffers on memory warnings. Android
+  plays from one `SoundPool`. Every play is one synchronous native call. Sounds decode lazily or through
+  `preload()`. Supports `volume`, category volumes, `pan`, `rate`, `delay`, `minInterval` and `signal`. Web-only
+  APIs (`bind`, `renderTo`, `renderBuffer`, `getOutput`) have inert stand-ins, so shared code runs on all
+  platforms. Needs a development build (Expo SDK 52+).
+- All 19 recipes are baked to 48 kHz 16-bit PCM in `native/assets/bloxwap-sfx` by `npm run bake:native`
+  (rendered in Chromium, seeded). A test fails when a recipe changes without a re-bake.
+- `configure({ audioSession: 'ambient' | 'manual' })` (React Native only) lets apps that also play media
+  manage the iOS audio session themselves.
+
 ## 0.3.1 — 2026-11-14
 
 Release-process only; no code changes from 0.3.0.

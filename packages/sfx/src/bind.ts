@@ -28,18 +28,7 @@ const INERT = ':disabled, [aria-disabled="true"], [inert]';
 
 /** An event already turned into a sound by one root is ignored by every other root it reaches. */
 const handled = new WeakSet<Event>();
-interface Binding { count: number; remove: () => void }
-const bound = new WeakMap<Node, Binding>();
-
-function retain(binding: Binding): () => void {
-  binding.count++;
-  let active = true;
-  return () => {
-    if (!active) return;
-    active = false;
-    if (!--binding.count) binding.remove();
-  };
-}
+const bound = new WeakMap<Node, (options: BindOptions) => () => void>();
 let lastHover = -Infinity;
 let finePointer: MediaQueryList | null | undefined;
 
@@ -59,7 +48,7 @@ function carrier(root: Node, event: Event, kind: Kind): Element | null {
   const target = event.target;
   if (!isElement(target)) return null;
   const element = target.closest(SELECTOR[kind]);
-  if (!element || !root.contains(element) || element.closest(INERT)) return null;
+  if (!element || !root.contains(element) || target.closest(INERT)) return null;
   return element;
 }
 
@@ -76,19 +65,19 @@ function fire(event: Event, element: Element, kind: Kind): void {
 /**
  * Plays sounds for every `data-sound-hover`, `-press`, `-release` and `-toggle` element under `root`
  * (default: the document), including elements added later. Uses one delegated capture listener per
- * event type, and unlocks audio on the first pointer or key press. Calls on the same root share
- * listeners and the first caller's options until all bindings are removed. Each call returns its
- * own idempotent remover; listeners are removed only when the last caller removes its binding.
+ * event type, and unlocks audio on the first pointer or key press. Binding the same root again is a
+ * shared subscription. Each caller must release its own subscription. The latest subscriber owns options.
  */
 export function bind(root?: ParentNode | null, options: BindOptions = {}): () => void {
   const target = (root ?? (typeof document === 'undefined' ? null : document)) as (Node & EventTarget) | null;
   if (!target || typeof target.addEventListener !== 'function') return () => {};
   const existing = bound.get(target);
-  if (existing) return retain(existing);
+  if (existing) return existing(options);
 
-  const keyboard = options.keyboard !== false;
-  const hoverInterval = options.hoverInterval ?? 150;
-  const held = new WeakSet<Element>();
+  const owners = new Map<object, BindOptions>();
+  let current = options;
+  const held = new Map<string, Element>();
+  const reset = () => held.clear();
 
   const onEnter = (event: Event) => {
     if (handled.has(event)) return;
@@ -100,6 +89,8 @@ export function bind(root?: ParentNode | null, options: BindOptions = {}): () =>
     const from = pointer.relatedTarget as Node | null;
     if (from && typeof from === 'object' && element.contains(from)) return;
     const t = now();
+    const interval = current.hoverInterval;
+    const hoverInterval = typeof interval === 'number' && Number.isFinite(interval) && interval >= 0 ? interval : 150;
     if (t - lastHover < hoverInterval) return;
     lastHover = t;
     fire(event, element, 'hover');
@@ -123,17 +114,17 @@ export function bind(root?: ParentNode | null, options: BindOptions = {}): () =>
   };
 
   const onKey = (event: Event) => {
-    if (handled.has(event)) return;
+    if (handled.has(event) || current.keyboard === false) return;
     const key = event as KeyboardEvent;
     if (key.key !== 'Enter' && key.key !== ' ') return;
     const down = event.type === 'keydown';
     if (down && key.repeat) return;
+    const pressed = held.get(key.key);
+    if (!down) held.delete(key.key);
     const element = carrier(target, event, down ? 'press' : 'release');
     if (!element) return;
-    // Pair each release with a press on the same element, so a key held elsewhere stays silent.
-    if (down) held.add(element);
-    else if (!held.has(element)) return;
-    else held.delete(element);
+    if (down) held.set(key.key, element);
+    else if (pressed !== element) return;
     fire(event, element, down ? 'press' : 'release');
   };
 
@@ -154,15 +145,28 @@ export function bind(root?: ParentNode | null, options: BindOptions = {}): () =>
     ['pointerdown', onDown],
     ['pointerup', onUp],
     ['click', onClick],
+    ['keydown', onKey],
+    ['keyup', onKey],
+    ['focusout', reset],
+    ['pointercancel', reset],
   ];
-  if (keyboard) listeners.push(['keydown', onKey], ['keyup', onKey]);
   for (const [type, listener] of listeners) target.addEventListener(type, listener, true);
 
-  const unbind = () => {
-    bound.delete(target);
-    for (const [type, listener] of listeners) target.removeEventListener(type, listener, true);
+  const win = target.ownerDocument?.defaultView ?? (target as Document).defaultView;
+  win?.addEventListener('blur', reset);
+  const acquire = (next: BindOptions): (() => void) => {
+    const owner = {};
+    owners.set(owner, { ...next });
+    current = owners.get(owner)!;
+    return () => {
+      if (!owners.delete(owner)) return;
+      reset();
+      if (owners.size) { current = [...owners.values()].at(-1)!; return; }
+      bound.delete(target);
+      for (const [type, listener] of listeners) target.removeEventListener(type, listener, true);
+      win?.removeEventListener('blur', reset);
+    };
   };
-  const binding = { count: 0, remove: unbind };
-  bound.set(target, binding);
-  return retain(binding);
+  bound.set(target, acquire);
+  return acquire(options);
 }

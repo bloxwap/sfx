@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { sounds } from '@bloxwap/sfx';
+import { packageVersion } from '@/lib/catalog';
 import { ArrowDown, ArrowRight } from 'lucide-react';
 import { HomeLayout } from 'fumadocs-ui/layouts/home';
 import { baseOptions } from '@/lib/layout.shared';
@@ -13,9 +15,9 @@ export default function Home() {
     <main className="home">
       <section className="hero">
         <div className="hero-copy">
-          <p className="eyebrow"><span className="status-dot" /> DEVELOPER PREVIEW · v0.1.0</p>
+          <p className="eyebrow"><span className="status-dot" /> DEVELOPER PREVIEW · v{packageVersion}</p>
           <h1>Interface sounds.<br /><span>Zero files.</span></h1>
-          <p className="hero-description">Nineteen sounds for hovers, presses, toggles, confirmations, and money moments, synthesized with Web Audio. Each one renders once, then every play is a single audio node.</p>
+          <p className="hero-description">{sounds.length} sounds for hovers, presses, toggles, confirmations, and money moments, synthesized with Web Audio. Each one renders once, then every play is a single audio node.</p>
           <div className="hero-actions"><a href="#board" className="hig-button">Play the sound board <ArrowDown aria-hidden="true" /></a><Link href="/docs/getting-started" className="hig-button" data-intent="secondary">Start building <ArrowRight aria-hidden="true" /></Link></div>
           <InstallCommand />
         </div>
@@ -43,7 +45,7 @@ export default function Home() {
         <div><span className="feature-number">03</span><h2>Safe by default.</h2><p>SSR-safe imports. play() never throws and waits for the first user gesture. Disabled controls stay silent.</p></div>
       </section>
       <section className="start-grid">
-        <div><p className="eyebrow">A SMALL API. ABOUT 5 KB.</p><h2>From one attribute<br />to a sound design system.</h2><p>Start with bind(), then add sounds for the moments that matter in your product.</p></div>
+        <div><p className="eyebrow">A SMALL API. ZERO RUNTIME DEPENDENCIES.</p><h2>From one attribute<br />to a sound design system.</h2><p>Start with bind(), then add sounds for the moments that matter in your product.</p></div>
         <div className="guide-links">{[
           ['/docs/getting-started', '01', 'Quick start', 'Install, bind, and play your first sound.'],
           ['/docs/guides/react', '02', 'Use it with React', 'Bind a component root and clean up.'],

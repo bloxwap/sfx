@@ -1,6 +1,13 @@
 {
   "schemaVersion": 1,
+  "semanticSource": {
+    "version": "hig-0.1.0",
+    "repository": "https://github.com/bloxwap/hig",
+    "commit": "1a776b9326c6ba03702894943b3edbfd178c4b40"
+  },
   "package": "@bloxwap/sfx@0.2.1",
+  "sourceRepository": "https://github.com/bloxwap/sfx",
+  "sourceSha256": "ffbf301a145d0ea08df8e78166675155613f3c741dff44aa9a6af6bbb417ec27",
   "renderer": "node-web-audio-api@2.2.0",
   "command": "npm ci && npm run export:hig",
   "flags": [
@@ -98,11 +105,11 @@
         ]
       },
       "recipeSha256": "c7cf1c8b622b6fa3b81bc0098af3edc0df168a2a985a9c5fdb8ee48ab1f81eda",
-      "sha256": "5fabc4a353b387c61962d8e0ed43bbd27901bfe7114fb79c2e926a7cad8ccb81",
-      "frames": 4254,
-      "durationMs": 88.625,
-      "peak": 0.11083984375,
-      "rms": 0.00817237055318835
+      "sha256": "53f8ad65ab99b69778d5e24686eae4f374ea1a6623df9f1c47534ea6631181fd",
+      "frames": 3985,
+      "durationMs": 83.02083333333333,
+      "peak": 0.17132568359375,
+      "rms": 0.009730548661268304
     },
     {
       "name": "toggle",
@@ -131,11 +138,11 @@
         ]
       },
       "recipeSha256": "248794bd0795cad967145ba1781e76e7a4ff4f97293f49b1712c93ff8b9d4da8",
-      "sha256": "5b9925b2804383f17f5c55d9805cf2df92a2d800cae739c5123c13d710915f13",
-      "frames": 5491,
-      "durationMs": 114.39583333333333,
-      "peak": 0.13897705078125,
-      "rms": 0.0092159424194113
+      "sha256": "ab58d5b1f7aca487f855b091b4a380f6e272dc62700302ef28dc1ac2c5c995b5",
+      "frames": 5413,
+      "durationMs": 112.77083333333333,
+      "peak": 0.11968994140625,
+      "rms": 0.009354989451513656
     },
     {
       "name": "success",
@@ -216,17 +223,11 @@
         ]
       },
       "recipeSha256": "9fdb0d7120f9f322dd179798924ffeee091b7829a83eed1882b0a31759e038f0",
-      "sha256": "cdd535b8e8506495ca7812e3c9c3dd7f4a7e2d729d2c490fd65a6bd7429f2e5f",
+      "sha256": "8571705c2cfa09c5b2225226b44dd6b6a4e495e20717ed144ddaa7e2dfb568ba",
       "frames": 15072,
       "durationMs": 314,
-      "peak": 0.177703857421875,
-      "rms": 0.025415846945591323
+      "peak": 0.178314208984375,
+      "rms": 0.025476524967541644
     }
-  ],
-  "semanticSource": {
-    "version": "hig-0.1.0",
-    "repository": "https://github.com/bloxwap/hig",
-    "commit": "1a776b9326c6ba03702894943b3edbfd178c4b40"
-  },
-  "sourceRepository": "https://github.com/bloxwap/sfx"
+  ]
 }

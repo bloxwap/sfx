@@ -164,7 +164,7 @@ test('HIG shell: install tabs and copy, search states, callout, 404, keyboard an
   await page.goto(new URL('docs/guides/native/', live!).href);
   const callout = page.locator('.docs-callout [data-severity="warning"]');
   await expect(callout).toContainText('Platform verification');
-  await expect(callout).toContainText('No physical iPhone/Android playback');
+  await expect(callout).toContainText('SDK compilation and lifecycle tests do not certify device latency');
   await expect(callout).not.toHaveAttribute('role', /.+/);
 
   // 404 keeps the base path on its recovery link.
@@ -186,4 +186,101 @@ test('HIG shell: install tabs and copy, search states, callout, 404, keyboard an
   // WebKit reports Next's RSC prefetches that a navigation cancels as "access control checks" page errors;
   // those payloads serve 200 from the static export, so only other errors fail the run.
   expect(errors.filter(message => !message.includes('due to access control checks'))).toEqual([]);
+});
+
+test('saved mute applies on a direct sound-docs visit', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('bloxwap:sfx', JSON.stringify({ enabled: false, volume: 0.3 }));
+    (window as any).createdAudio = 0;
+    const Original = window.AudioContext;
+    window.AudioContext = class extends Original {
+      constructor(options?: AudioContextOptions) { super(options); (window as any).createdAudio++; }
+    };
+  });
+  await page.goto(new URL('docs/sounds/', live!).href);
+  await page.locator('html[data-docs-hydrated=true]').waitFor();
+  await page.getByRole('button', { name: 'Play chime', exact: true }).click();
+  expect(await page.evaluate(() => (window as any).createdAudio)).toBe(0);
+});
+
+test('demo results retain submitted values and enforce the displayed minimum', async ({ page }) => {
+  await page.goto(live!);
+  await page.locator('html[data-docs-hydrated=true]').waitFor();
+  const input = page.getByRole('textbox', { name: 'Deposit amount' });
+  const submit = page.getByRole('button', { name: 'Deposit', exact: true });
+  await submit.click();
+  await input.fill('999');
+  await expect(page.getByText('Deposited $250.')).toBeVisible();
+  await input.fill('0.5'); await submit.click();
+  await expect(page.getByText('Enter an amount from 1 to 10,000.')).toBeVisible();
+});
+
+test('click-only pad activation works and sequence controls remain live', async ({ page }) => {
+  await page.addInitScript(() => {
+    const state = { rates: [] as number[], disconnected: 0 };
+    (window as any).sequenceProof = state;
+    const Original = window.AudioContext;
+    window.AudioContext = class extends Original {
+      override createBufferSource() {
+        const source = super.createBufferSource(), start = source.start.bind(source);
+        source.start = (...args) => { state.rates.push(source.playbackRate.value); start(...args); };
+        return source;
+      }
+    };
+    const disconnect = AudioNode.prototype.disconnect;
+    AudioNode.prototype.disconnect = function (...args: any[]) {
+      if (args[0] instanceof AnalyserNode) state.disconnected++;
+      return (disconnect as Function).apply(this, args);
+    };
+  });
+  await page.goto(live!);
+  await page.locator('html[data-docs-hydrated=true]').waitFor();
+  const pad = page.getByRole('button', { name: 'Play success:', exact: false });
+  // DOM click has no pointerdown or keydown. The resulting UI state proves the activation path runs.
+  await pad.evaluate(element => (element as HTMLButtonElement).click());
+  await expect(page.locator('.pad--last')).toContainText('success');
+  await page.getByRole('button', { name: 'Play all', exact: true }).click();
+  await page.getByRole('slider', { name: 'Playback rate', exact: true }).fill('2');
+  await expect.poll(() => page.evaluate(() => (window as any).sequenceProof.rates.includes(2))).toBe(true);
+  await page.getByRole('link', { name: /Use it with React/ }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).sequenceProof.disconnected)).toBe(1);
+});
+
+test('failed preload keeps the board in live synthesis mode', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.OfflineAudioContext = class extends OfflineAudioContext {
+      override startRendering(): Promise<AudioBuffer> { return Promise.reject(new Error('audio resources exhausted')); }
+    };
+  });
+  await page.goto(live!);
+  await page.locator('html[data-docs-hydrated=true]').waitFor();
+  await page.getByRole('button', { name: 'Play success:', exact: false }).click();
+  await expect(page.locator('.pad--last')).toContainText('success');
+  await expect(page.getByText('Live synth', { exact: true })).toBeVisible();
+  await expect(page.getByText('Pre-rendered', { exact: true })).toHaveCount(0);
+});
+
+test('leaving the deposit demo cancels its pending result', async ({ page }) => {
+  await page.addInitScript(() => {
+    const state = { created: 0, canceled: 0, fired: 0 };
+    (window as any).depositProof = state;
+    const schedule = window.setTimeout.bind(window), clear = window.clearTimeout.bind(window);
+    const deposits = new Set<number>();
+    window.setTimeout = ((callback: TimerHandler, delay?: number, ...args: any[]) => {
+      if (delay !== 700 || typeof callback !== 'function') return schedule(callback, delay, ...args);
+      state.created++;
+      const id = schedule(() => { deposits.delete(id); state.fired++; callback(...args); }, 700);
+      deposits.add(id); return id;
+    }) as typeof window.setTimeout;
+    window.clearTimeout = ((id?: number) => { if (id !== undefined && deposits.delete(id)) state.canceled++; clear(id); }) as typeof window.clearTimeout;
+  });
+  await page.goto(live!);
+  await page.locator('html[data-docs-hydrated=true]').waitFor();
+  // Start and navigate in the same task so a busy test runner cannot consume the 700 ms window.
+  await page.getByRole('button', { name: 'Deposit', exact: true }).evaluate(element => {
+    (element as HTMLButtonElement).click();
+    const link = [...document.querySelectorAll('a')].find(link => link.textContent?.includes('Use it with React'))!;
+    link.click();
+  });
+  await expect.poll(() => page.evaluate(() => (window as any).depositProof)).toEqual({ created: 1, canceled: 1, fired: 0 });
 });

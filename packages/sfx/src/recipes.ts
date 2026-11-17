@@ -290,6 +290,12 @@ export type BuiltinSoundName = keyof typeof recipeTable;
 export type SoundName = BuiltinSoundName | (string & {});
 
 /** The recipe for every sound, keyed by name. Frozen; treat as read-only data. */
+for (const recipe of Object.values(recipeTable) as Recipe[]) {
+  recipe.layers.forEach(Object.freeze);
+  Object.freeze(recipe.layers);
+  if (recipe.echo) Object.freeze(recipe.echo);
+  Object.freeze(recipe);
+}
 export const recipes: Readonly<Record<BuiltinSoundName, Recipe>> = Object.freeze(recipeTable);
 
 /** All sound names in catalog order. */
@@ -312,19 +318,24 @@ export function sourceEnd(recipe: Recipe): number {
 /** Seconds of echo after the dry sound, until repeats fall below -60 dB. */
 export function echoTail(recipe: Recipe): number {
   const e = recipe.echo;
-  if (!e || e.feedback <= 0) return 0;
+  if (!e || e.wet === 0) return 0;
+  if (e.feedback <= 0) return e.delay;
   if (e.feedback >= 1) return e.delay;
   return e.delay * (1 + Math.ceil(Math.log(0.001) / Math.log(e.feedback)));
 }
 
 /** Total audible length of a sound in seconds, including its echo tail. */
 export function duration(name: SoundName): number {
+  if (!isSound(name)) return 0;
   const recipe = getRecipe(name);
   return sourceEnd(recipe) + echoTail(recipe);
 }
 
 
 const custom = new Map<string, Recipe>();
+const recipeListeners = new Set<(name: SoundName) => void>();
+/** Internal cache invalidation shared by every registration entry point. */
+export function observeRecipes(listener: (name: SoundName) => void): void { recipeListeners.add(listener); }
 
 /** Resolves built-in and registered recipes. Call isSound() before using an untrusted name. */
 export function getRecipe(name: SoundName): Recipe {
@@ -333,12 +344,13 @@ export function getRecipe(name: SoundName): Recipe {
 
 /** Registers an immutable recipe. Built-in sounds and prototype-property names are reserved. */
 export function registerRecipe<Name extends string>(name: Name, recipe: Recipe): Name {
-  if (!name.trim() || name in Object.prototype || own.call(recipeTable, name)) throw new RangeError('Sound name is empty or already reserved');
+  if (typeof name !== 'string' || !name.trim() || name.length > 128 || name in Object.prototype || own.call(recipeTable, name)) throw new RangeError('Sound name is empty, too long or already reserved');
+  if (!custom.has(name) && custom.size >= 128) throw new RangeError('At most 128 custom sounds may be registered');
   const positive = (value: number): boolean => Number.isFinite(value) && value > 0;
   const nonnegative = (value: number): boolean => Number.isFinite(value) && value >= 0;
-  if (!recipe || !positive(recipe.level) || !Array.isArray(recipe.layers) || !recipe.layers.length) throw new RangeError('A recipe needs a positive level and layers');
+  if (!recipe || !positive(recipe.level) || !Array.isArray(recipe.layers) || !recipe.layers.length || recipe.layers.length > 64) throw new RangeError('A recipe needs a positive level and 1–64 layers');
   for (const layer of recipe.layers) {
-    if (!nonnegative(layer.at) || !positive(layer.attack) || !positive(layer.decay) || !nonnegative(layer.peak) || !positive(layer.freq)) throw new RangeError('Invalid layer timing, gain or frequency');
+    if (!layer || !nonnegative(layer.at) || !positive(layer.attack) || !positive(layer.decay) || !nonnegative(layer.peak) || !positive(layer.freq)) throw new RangeError('Invalid layer timing, gain or frequency');
     if (layer.pan !== undefined && (!Number.isFinite(layer.pan) || Math.abs(layer.pan) > 1)) throw new RangeError('Invalid layer pan');
     if ('noise' in layer) {
       if (!['lowpass', 'bandpass', 'highpass'].includes(layer.noise) || (layer.q !== undefined && !positive(layer.q))) throw new RangeError('Invalid noise filter');
@@ -348,15 +360,17 @@ export function registerRecipe<Name extends string>(name: Name, recipe: Recipe):
   }
   const echo = recipe.echo;
   if (echo && (!positive(echo.delay) || echo.delay > 1 || !nonnegative(echo.feedback) || echo.feedback >= 1 || !nonnegative(echo.wet) || !positive(echo.lowpass))) throw new RangeError('Invalid echo');
+  if (!(sourceEnd(recipe) + echoTail(recipe) <= 10) || !Number.isFinite(recipe.level * recipe.layers.reduce((sum, layer) => sum + layer.peak, 0) * Math.max(1, echo?.wet ?? 1))) throw new RangeError('A recipe must fit within 10 seconds and have finite mixed gain');
   custom.set(name, Object.freeze({
     level: recipe.level,
     layers: Object.freeze(recipe.layers.map(layer => Object.freeze({ ...layer }))),
     ...(echo ? { echo: Object.freeze({ ...echo }) } : {}),
   }));
+  for (const listener of recipeListeners) listener(name);
   return name;
 }
 
-export const categories = ['hover', 'controls', 'feedback', 'money'] as const;
+export const categories = Object.freeze(['hover', 'controls', 'feedback', 'money'] as const);
 export type SoundCategory = typeof categories[number];
 /** Default groups match the documentation sound board. Custom sounds default to feedback. */
 export const soundCategories: Readonly<Partial<Record<SoundName, SoundCategory>>> = Object.freeze({

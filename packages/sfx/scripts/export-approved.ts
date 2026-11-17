@@ -8,6 +8,7 @@ import { run } from '../dist/cli/index.js';
 import { approvedCues, semanticPresets, semanticSource } from '../dist/semantic.js';
 import { recipes, duration } from '../dist/recipes.js';
 import { synthesize } from '../dist/engine.js';
+import { assetFingerprint } from './asset-fingerprint.ts';
 
 const out = process.argv[2] ?? fileURLToPath(new URL('../assets/hig', import.meta.url));
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
@@ -35,6 +36,7 @@ for (const name of approvedCues) {
 }
 await writeFile(join(out, 'manifest.json'), JSON.stringify({
   schemaVersion: 1, semanticSource, package: `@bloxwap/sfx@${packageJson.version}`, sourceRepository: 'https://github.com/bloxwap/sfx',
+  sourceSha256: assetFingerprint('hig'),
   renderer: `node-web-audio-api@${lock.packages['node_modules/node-web-audio-api'].version}`,
   command: 'npm ci && npm run export:hig',
   flags: flags.map(value => value === out ? 'packages/sfx/assets/hig' : value),

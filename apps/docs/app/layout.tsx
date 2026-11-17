@@ -1,3 +1,4 @@
+import { sounds } from '@bloxwap/sfx';
 import type { Metadata } from 'next';
 import { BloxwapSans as sans } from '@bloxwap/font/sans';
 import { BloxwapMono as mono } from '@bloxwap/font/mono';
@@ -10,7 +11,7 @@ import './global.css';
 export const metadata: Metadata = {
   metadataBase: new URL(`${siteUrl}${basePath}/`),
   title: { default: '@bloxwap/sfx — Interface sounds, synthesized live', template: '%s · @bloxwap/sfx' },
-  description: 'Nineteen interaction sounds synthesized with Web Audio. No audio files, no dependencies. Guides, a live sound board and API documentation for @bloxwap/sfx.',
+  description: `${sounds.length} interaction sounds synthesized with Web Audio. No audio files, no dependencies. Guides, a live sound board and API documentation for @bloxwap/sfx.`,
   icons: { icon: `${basePath}/icon.svg` },
   ...socialMetadata({ ...homeSocial, path: '/', imagePath: socialImagePath() }),
 };

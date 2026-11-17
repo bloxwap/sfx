@@ -124,7 +124,7 @@ export function trimSilence(buffer: AudioBufferLike, options: TrimOptions = {}):
   let peak = 0;
   for (const samples of data) {
     for (let i = 0; i < length; i++) {
-      const a = Math.abs(samples[i] as number);
+      const a = Math.abs(clamp(samples[i] as number));
       if (a > peak) peak = a;
     }
   }
@@ -133,7 +133,7 @@ export function trimSilence(buffer: AudioBufferLike, options: TrimOptions = {}):
   if (peak > 0) {
     for (const samples of data) {
       for (let i = length - 1; i >= end; i--) {
-        if (Math.abs(samples[i] as number) >= threshold) { end = i + 1; break; }
+        if (Math.abs(clamp(samples[i] as number)) >= threshold) { end = i + 1; break; }
       }
     }
   }

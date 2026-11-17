@@ -108,3 +108,9 @@ HIG owns independent sound/haptic/motion settings, storage (including native sto
 source/id deduplication, per-source cooldowns, suppression and lifecycle. SFX's hook cadence
 is a per-recipe guard, not a substitute for HIG event identity or controlled-value validation.
 Use an operation id for delayed success/error; do not infer success from a click.
+
+### Shared preference ownership
+
+Imperative `setEnabled()` and `setVolume()` calls and React hooks share one store. Mount a `SoundProvider` in the app root so saved settings are loaded on every route. Provider overrides are temporary; later registered providers take precedence for fields they specify, and removing one restores the remaining owners before falling back to saved settings. Consumers observe the same effective settings.
+
+React Native resolves `@bloxwap/sfx/react` to native playback hooks without DOM or localStorage access. Use `useSound()` with `onPress`; `useBindSounds()` is a no-op there. Native preferences last for the JS session; persist them through the host app's storage if needed.

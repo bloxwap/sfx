@@ -20,6 +20,7 @@
 - **A mixed output.** One master bus with volume control and a limiter, so overlapping sounds don't clip. Voice stealing and retrigger guards stop sounds from piling up.
 - **Declarative binding.** Add `data-sound-*` attributes and call `bind()` once. It uses delegated listeners with no MutationObserver, handles keyboard press and release, skips disabled controls, and returns an unbind function.
 - **Safe everywhere.** Importing is SSR-safe. `play()` never throws, and it waits for the browser's first user gesture before touching audio. Audio resumes on its own when the page comes back from the background or an iOS interruption.
+- **React Native too.** The same import plays the same recipes on iOS and Android through a tiny built-in Expo module: baked PCM on one `AVAudioEngine` / `SoundPool`, one synchronous native call per play, decoded only for the sounds you use.
 - **Native and video export.** The `sfx-wav` CLI and `@bloxwap/sfx/wav` render the same sounds to WAV files for native apps, and `renderTo()` bakes them into a video soundtrack.
 - **Tested.** 100% line, branch, and function coverage, including real offline renders of every sound.
 
@@ -76,6 +77,21 @@ loading.abort(); // stops this play only; other voices keep going
 play('press');
 play('release', { delay: 0.09 });
 ```
+
+## React Native
+
+```sh
+npx expo install @bloxwap/sfx && npx expo prebuild
+```
+
+```ts
+import { play } from '@bloxwap/sfx'; // Metro resolves the native entry automatically
+play('success');
+```
+
+Same API and recipes as the web, played from PCM baked at build time by the package's Expo module (a
+development build, not Expo Go). iOS mixes through one `AVAudioEngine` with an ambient audio session; Android
+uses one `SoundPool`. See the [React Native guide](https://bloxwap.github.io/sfx/docs/guides/native/).
 
 ## React
 
@@ -137,19 +153,19 @@ import {
 | Function | Description |
 | --- | --- |
 | `play(name = 'chime', options?)` | Plays a sound now. `options`: `volume` (0-2), `rate` (0.25-4), `pan` (-1 to 1), `delay` (seconds, 0-10), `minInterval` (ms, overrides `configure()`), `force` (skip the user-gesture check), `signal` (AbortSignal that stops this play only). Never throws. |
-| `define(name, recipe)` | Registers or replaces an immutable custom recipe. Built-in names are reserved. Invalid data throws `RangeError`. |
-| `preload(names?)` | Renders sounds (all of them by default) to buffers. Safe to call before any user gesture. |
-| `bind(root = document, options?)` | Wires `data-sound-*` attributes under `root`. Returns `unbind()`. Options: `keyboard`, `hoverInterval`. |
+| `define(name, recipe)` | Registers or replaces an immutable custom recipe. Up to 128 custom names, 64 layers per sound and 10 seconds including echo; invalid or over-budget data throws `RangeError`. Built-in names are reserved. |
+| `preload(names?)` | Renders sounds (all of them by default) to buffers. Resolves `true` only when every requested sound is cached; `false` on failure or disposal. Safe before any gesture. |
+| `bind(root = document, options?)` | Wires `data-sound-*` attributes under `root`. Each call owns a subscription and returns its own `unbind()`; listeners remain until all subscribers release them. The latest subscriber supplies options. Options: `keyboard`, `hoverInterval`. |
 | `unlock()` | Creates and resumes audio from inside a gesture. `bind()` calls it on the first press. |
 | `setEnabled(on)` / `isEnabled()` | Global mute. Sounds already playing finish. |
 | `setVolume(0-1)` / `getVolume()` | Master volume, with a short glide to avoid clicks. |
-| `configure({ maxVoices, minInterval, resume })` | Voice cap (default 24), per-sound retrigger guard (default 16 ms), and what `play()` does while audio is suspended: `'queue'` (default) or `'eager'`. |
+| `configure({ maxVoices, minInterval, resume })` | Voice cap (1–64, default 24; lowering it stops excess voices immediately), per-sound retrigger guard (default 16 ms), and what `play()` does while audio is suspended: `'queue'` (default) or `'eager'`. |
 | `stopAll()` / `activeVoices()` | Stops every playing sound / counts them. |
 | `getOutput()` | The last node before the speakers, for an `AnalyserNode` or a recorder. |
 | `dispose()` | Closes the audio context, removes its page listeners, and clears caches. |
 | `renderTo(context, name, options?)` | Schedules a sound onto any `BaseAudioContext`, such as an `OfflineAudioContext`. `options`: `volume`, `rate`, `pan`, `delay`, `destination`. Returns `false` instead of throwing. |
 | `renderBuffer(name, { sampleRate }?)` | Renders one sound to a new stereo `AudioBuffer` (3000-768000 Hz). Resolves `null` if it can't. |
-| `sounds` / `isSound(value)` / `duration(name)` | The catalog, a type guard, and each sound's length in seconds. |
+| `sounds` / `isSound(value)` / `duration(name)` | The catalog, a type guard, and each sound's length in seconds (`0` for an unknown name). |
 
 Define custom sounds with `define('coin', { level: 0.6, layers: [{ wave: 'sine', freq: 880, at: 0, attack: 0.006, decay: 0.15, peak: 0.2 }] })`. Then `play('coin')` and `data-sound-press="coin"` use the recipe.
 

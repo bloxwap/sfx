@@ -98,3 +98,5 @@ Definitions survive `dispose()`; that function releases audio resources.
 import { RecipeEditor } from '@/components/recipe-editor';
 
 <RecipeEditor />
+
+Custom recipes are limited to 64 layers and 10 seconds including echo. Up to 128 custom names may be registered; replacing a name does not consume another slot. Built-in recipes are deeply frozen. All registration paths invalidate cached renders. Offline renders are limited to 32 MiB each, 64 MiB concurrently, and 64 MiB retained in the playback cache. Requests exceeding those render budgets return `null`/`false` rather than allocating an oversized buffer.

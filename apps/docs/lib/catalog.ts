@@ -1,17 +1,20 @@
-import type { SoundName } from '@bloxwap/sfx';
+import { categories, categoryOf, sounds, type BuiltinSoundName, type SoundCategory } from '@bloxwap/sfx';
+export { version as packageVersion } from '@bloxwap/sfx/package.json';
 
 /** Sound board groups, in the order pads are laid out (and keyboard keys assigned). */
-export const GROUPS: { title: string; color: string; sounds: SoundName[] }[] = [
-  { title: 'Hover and ambience', color: 'var(--bloxwap-blue)', sounds: ['chime', 'sparkle', 'droplet', 'bloom', 'whisper'] },
-  { title: 'Controls', color: 'var(--bloxwap-green)', sounds: ['tick', 'press', 'release', 'toggle', 'page'] },
-  { title: 'Feedback', color: 'var(--bloxwap-yellow)', sounds: ['success', 'error', 'loading', 'ready', 'notification'] },
-  { title: 'Money', color: 'var(--bloxwap-pink)', sounds: ['payout', 'deposit', 'pluck', 'loss'] },
-];
+const groupDetails: Record<SoundCategory, { title: string; color: string }> = {
+  hover: { title: 'Hover and ambience', color: 'var(--bloxwap-blue)' },
+  controls: { title: 'Controls', color: 'var(--bloxwap-green)' },
+  feedback: { title: 'Feedback', color: 'var(--bloxwap-yellow)' },
+  money: { title: 'Money', color: 'var(--bloxwap-pink)' },
+};
+export const GROUPS = categories.map(category => ({ ...groupDetails[category], sounds: sounds.filter(name => categoryOf(name) === category) }));
 
 /** Keyboard shortcuts for the pads, left to right, top to bottom. */
-export const KEYS = ['q', 'w', 'e', 'r', 't', 'a', 's', 'd', 'f', 'g', 'z', 'x', 'c', 'v', 'b', 'y', 'u', 'i', 'o'];
+export const KEYS = ['q', 'w', 'e', 'r', 't', 'a', 's', 'd', 'f', 'g', 'z', 'x', 'c', 'v', 'b', 'y', 'u', 'i', 'o', 'p', 'h', 'j', 'k', 'l', 'n', 'm'];
+if (KEYS.length < sounds.length || new Set(KEYS).size !== KEYS.length) throw new Error('Each catalog sound needs a unique keyboard shortcut');
 
-const DESCRIPTIONS: Record<SoundName, [character: string, useFor: string]> = {
+const DESCRIPTIONS: Record<BuiltinSoundName, [character: string, useFor: string]> = {
   chime: ['Soft rising two-note bell', 'Default hover'],
   sparkle: ['Quick four-note twinkle', 'Playful accents'],
   droplet: ['Single note gliding down', 'Dismiss, collapse'],
@@ -33,10 +36,10 @@ const DESCRIPTIONS: Record<SoundName, [character: string, useFor: string]> = {
   loss: ['Heavy two-stage fall', 'Losses, negative outcomes'],
 };
 
-export function describe(name: SoundName): string {
+export function describe(name: BuiltinSoundName): string {
   return DESCRIPTIONS[name][0];
 }
 
-export function useFor(name: SoundName): string {
+export function useFor(name: BuiltinSoundName): string {
   return DESCRIPTIONS[name][1];
 }

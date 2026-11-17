@@ -35,7 +35,7 @@ function Icon({ name }: { name: string }) {
 
 const stats: [icon: string, value: string, label: string][] = [
   ['sounds', String(sounds.length), 'Sounds'],
-  ['size', '5 kB', 'Gzipped'],
+  ['size', 'ESM', 'Tree-shakable'],
   ['dependencies', '0', 'Dependencies'],
   ['files', '0', 'Audio files'],
 ];

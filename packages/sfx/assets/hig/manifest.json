@@ -5,9 +5,9 @@
     "repository": "https://github.com/bloxwap/hig",
     "commit": "1a776b9326c6ba03702894943b3edbfd178c4b40"
   },
-  "package": "@bloxwap/sfx@0.4.0",
+  "package": "@bloxwap/sfx@0.5.0",
   "sourceRepository": "https://github.com/bloxwap/sfx",
-  "sourceSha256": "d9d394e1b8be9db0bbe8f4b851d221671d017d8c75018e4f740881239d142459",
+  "sourceSha256": "5a2075d507bb16cb3085bdd941ee51b183315d275b58aecf885da76914ab2df6",
   "renderer": "node-web-audio-api@2.2.0",
   "command": "npm ci && npm run export:hig",
   "flags": [

@@ -347,7 +347,7 @@ describe('rendering', () => {
     assert.equal(FakeAudioContext.constructed, 0);
     assert.ok(FakeOfflineAudioContext.instances.every((ctx) => ctx.sampleRate === 48000));
     const bytes = FakeOfflineAudioContext.instances.reduce((sum, ctx) => sum + ctx.channels * ctx.length * 4, 0);
-    assert.ok(bytes <= 3_050_000, String(bytes));
+    assert.ok(bytes <= 3_150_000, String(bytes));
     assert.equal(FakeOfflineAudioContext.instances.filter((ctx) => ctx.channels === 1).length, 14);
     await preload(['toString', 'nope'] as string[] as SoundName[]);
     assert.equal(FakeOfflineAudioContext.instances.length, sounds.length, 'invalid names are skipped');

@@ -3,6 +3,10 @@
 All notable changes to `@bloxwap/sfx` are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.5.0 — 2026-11-18
+
+- Added `block-break`, a short stereo crack with scattered chips for chart target crossings. Available on web and React Native.
+
 ## 0.4.0 — 2026-11-17
 
 - **Invariant enforcement.** Context replacement isolates pending resumes; failed graph creation rolls back;

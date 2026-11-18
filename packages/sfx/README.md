@@ -14,7 +14,7 @@
 
 ## Features
 
-- **19 sounds** for hovers, presses, toggles, confirmations, errors, loading, and money moments.
+- **20 sounds** for hovers, presses, toggles, confirmations, errors, loading, and money moments.
 - **Zero files, zero dependencies.** Every sound is a small recipe of oscillators and filtered noise.
 - **One node per play.** Each sound is rendered once with an `OfflineAudioContext` and cached. After
   that, a play is a single `AudioBufferSourceNode`, 5–75× cheaper on the main thread than building
@@ -142,6 +142,7 @@ play only for a mouse on a fine pointer, at most one every 150 ms. Controls that
 | `pluck` | tight falling pluck | pickups, selections |
 | `notification` | bright physical bell | messages, activity |
 | `loss` | heavy two-stage fall | losses, negative outcomes |
+| `block-break` | dry crack followed by scattered bright ticks | a line breaking through a block |
 
 ## API
 

@@ -34,7 +34,7 @@ This is the main-thread cost of one play with real Web Audio nodes ([node-web-au
 | notification | 43 | 381.6 | 8.3 | 46.1× |
 | payout | 51 | 505.1 | 9.8 | 51.3× |
 | deposit | 53 | 565.0 | 7.5 | 75.7× |
-| **mean (all 19)** | **17.1** | **164.0** | **9.9** | **16.6×** |
+| **mean (19 sounds measured)** | **17.1** | **164.0** | **9.9** | **16.6×** |
 
 Rendering each sound once takes 0.6–6 ms of audio-thread time.
 
@@ -49,4 +49,4 @@ Rendering each sound once takes 0.6–6 ms of audio-thread time.
 
 ## Size
 
-About 6 kB gzipped for the whole package. Roughly 2 kB of that is the recipe data for all nineteen sounds. `npm run size` enforces the budget in CI.
+About 6 kB gzipped for the whole package. Roughly 2 kB of that is the recipe data for the built-in sounds. `npm run size` enforces the budget in CI.

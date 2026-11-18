@@ -1,6 +1,6 @@
 {
   "name": "@bloxwap/sfx",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Interface sound effects for the web and React Native from one set of recipes: synthesized live with Web Audio on the web, played from baked PCM by a tiny Expo module on iOS and Android. Zero runtime JS dependencies.",
   "type": "module",
   "sideEffects": false,

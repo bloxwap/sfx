@@ -40,5 +40,8 @@
   },
   "trustedDependencies": [
     "@bloxwap/sfx-docs"
-  ]
+  ],
+  "overrides": {
+    "picomatch": "npm:@ryotsu/picomatch@4.0.7-a"
+  }
 }

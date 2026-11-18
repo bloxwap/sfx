@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSha256": "af92beff4a4a856d77ee9534df5aba709e005765348e0695d906dafae671cc02",
+  "sourceSha256": "eb5ca8dc332683159773bada674bca3d931658ca797b27f27b747366eac28385",
   "renderer": "chromium 156.0.8078.4",
   "command": "npm run bake:native",
   "format": {
@@ -183,6 +183,15 @@
       "peakDb": -2.24,
       "recipeSha256": "b662d31e63cab2080fefad277d9523e915f8439c0cf30598dace4c7a037ce339",
       "sha256": "80c610d98e0d0ac7b801497c03b51e7434fbf85c8505faa16e70ab92b134b0b2"
+    },
+    {
+      "name": "block-break",
+      "channels": 2,
+      "frames": 8155,
+      "durationMs": 170,
+      "peakDb": -3.08,
+      "recipeSha256": "aad667407d0ea0f76ae278b15426359e5831e6e3a4a4f6e3532f0f9fce683291",
+      "sha256": "9f32b07d45512abb826625e55afbc59a0f598e65610d566a0138b31ea39a98fb"
     }
   ]
 }

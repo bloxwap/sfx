@@ -11,7 +11,7 @@ const groupDetails: Record<SoundCategory, { title: string; color: string }> = {
 export const GROUPS = categories.map(category => ({ ...groupDetails[category], sounds: sounds.filter(name => categoryOf(name) === category) }));
 
 /** Keyboard shortcuts for the pads, left to right, top to bottom. */
-export const KEYS = ['q', 'w', 'e', 'r', 't', 'a', 's', 'd', 'f', 'g', 'z', 'x', 'c', 'v', 'b', 'y', 'u', 'i', 'o', 'p', 'h', 'j', 'k', 'l', 'n', 'm'];
+export const KEYS = ['q', 'w', 'e', 'r', 't', 'a', 's', 'd', 'f', 'g', 'z', 'x', 'c', 'v', 'b', 'p', 'y', 'u', 'i', 'o', 'h', 'j', 'k', 'l', 'n', 'm'];
 if (KEYS.length < sounds.length || new Set(KEYS).size !== KEYS.length) throw new Error('Each catalog sound needs a unique keyboard shortcut');
 
 const DESCRIPTIONS: Record<BuiltinSoundName, [character: string, useFor: string]> = {
@@ -34,6 +34,7 @@ const DESCRIPTIONS: Record<BuiltinSoundName, [character: string, useFor: string]
   pluck: ['Tight falling pluck', 'Pickups, selections'],
   notification: ['Bright physical bell', 'Messages, activity'],
   loss: ['Heavy two-stage fall', 'Losses, negative outcomes'],
+  'block-break': ['Dry crack and scattered bright ticks', 'A line breaking through a block'],
 };
 
 export function describe(name: BuiltinSoundName): string {

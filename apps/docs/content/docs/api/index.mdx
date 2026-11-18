@@ -243,7 +243,7 @@ function isSound(value: unknown): value is SoundName;
 function duration(name: SoundName): number;
 ```
 
-`sounds` lists all nineteen names in catalog order, and it is frozen. `isSound` is a type guard that accepts own names only. `duration` returns a sound's length in seconds, including its echo tail.
+`sounds` lists the built-in names in catalog order, and it is frozen. `isSound` is a type guard that accepts own names only. `duration` returns a sound's length in seconds, including its echo tail.
 
 ## SoundName
 
@@ -252,7 +252,7 @@ type SoundName =
   | 'chime' | 'sparkle' | 'droplet' | 'bloom' | 'whisper'
   | 'tick' | 'press' | 'release' | 'toggle'
   | 'success' | 'error' | 'page' | 'loading' | 'ready'
-  | 'payout' | 'deposit' | 'pluck' | 'notification' | 'loss';
+  | 'payout' | 'deposit' | 'pluck' | 'notification' | 'loss' | 'block-break';
 ```
 
 

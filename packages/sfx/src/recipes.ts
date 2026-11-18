@@ -282,6 +282,21 @@ const recipeTable = {
       noise('highpass', 10500, undefined, 0.125, 0.01, 0.028, 0.035, -0.42),
     ],
   },
+  // The block cracks on contact. Smaller chips scatter outward at uneven intervals.
+  'block-break': {
+    level: 1.6,
+    layers: [
+      tone('triangle', 315, 0, 0.0008, 0.054, 0.16, { to: 128, glide: 0.023 }),
+      noise('bandpass', 1850, 0.85, 0, 0.0005, 0.038, 0.24),
+      noise('highpass', 4700, 0.7, 0.002, 0.0005, 0.012, 0.115),
+      noise('bandpass', 960, 1.15, 0.013, 0.0007, 0.026, 0.15, -0.18),
+      noise('bandpass', 2700, 1.3, 0.032, 0.0006, 0.024, 0.15, 0.35),
+      tone('triangle', 1160, 0.032, 0.0007, 0.018, 0.045, { pan: 0.35 }),
+      noise('bandpass', 3650, 1.5, 0.064, 0.0005, 0.019, 0.12, -0.56),
+      noise('bandpass', 4900, 1.3, 0.105, 0.0005, 0.016, 0.08, 0.64),
+      tone('sine', 3380, 0.105, 0.0008, 0.05, 0.028, { pan: 0.64 }),
+    ],
+  },
 } satisfies Record<string, Recipe>;
 
 /** Every built-in sound name. */
@@ -377,6 +392,7 @@ export const soundCategories: Readonly<Partial<Record<SoundName, SoundCategory>>
   chime: 'hover', sparkle: 'hover', droplet: 'hover', bloom: 'hover', whisper: 'hover',
   tick: 'controls', press: 'controls', release: 'controls', toggle: 'controls', page: 'controls',
   success: 'feedback', error: 'feedback', loading: 'feedback', ready: 'feedback', notification: 'feedback',
+  'block-break': 'feedback',
   payout: 'money', deposit: 'money', pluck: 'money', loss: 'money',
 });
 export function isCategory(value: unknown): value is SoundCategory {

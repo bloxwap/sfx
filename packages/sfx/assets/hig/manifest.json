@@ -7,7 +7,7 @@
   },
   "package": "@bloxwap/sfx@0.5.0",
   "sourceRepository": "https://github.com/bloxwap/sfx",
-  "sourceSha256": "5a2075d507bb16cb3085bdd941ee51b183315d275b58aecf885da76914ab2df6",
+  "sourceSha256": "3e121b78eff5b2abb86fa7b93569bc632fbc9cd881c8168f10131459b3ba72f1",
   "renderer": "node-web-audio-api@2.2.0",
   "command": "npm ci && npm run export:hig",
   "flags": [

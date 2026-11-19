@@ -347,8 +347,8 @@ describe('rendering', () => {
     assert.equal(FakeAudioContext.constructed, 0);
     assert.ok(FakeOfflineAudioContext.instances.every((ctx) => ctx.sampleRate === 48000));
     const bytes = FakeOfflineAudioContext.instances.reduce((sum, ctx) => sum + ctx.channels * ctx.length * 4, 0);
-    assert.ok(bytes <= 3_150_000, String(bytes));
-    assert.equal(FakeOfflineAudioContext.instances.filter((ctx) => ctx.channels === 1).length, 14);
+    assert.ok(bytes <= 3_300_000, String(bytes));
+    assert.equal(FakeOfflineAudioContext.instances.filter((ctx) => ctx.channels === 1).length, 15);
     await preload(['toString', 'nope'] as string[] as SoundName[]);
     assert.equal(FakeOfflineAudioContext.instances.length, sounds.length, 'invalid names are skipped');
   });
@@ -485,6 +485,16 @@ describe('live synthesis graph', () => {
     const ctx = new FakeOfflineAudioContext(2, 100, 48000);
     synthesize(asReal(ctx), { level: 1, layers: [{ wave: 'sine', freq: 100, to: 200, at: 0, attack: 0.1, decay: 0.2, peak: 0.5 }] }, asReal(ctx.destination), 0);
     assert.deepEqual(ctx.of('oscillator')[0].frequency.events[1], ['exp', 200, 0.30000000000000004]);
+  });
+
+  test('rate scales the peak hold and the default glide together', async () => {
+    const { synthesize } = await import('../dist/engine.js');
+    const ctx = new FakeOfflineAudioContext(2, 100, 48000);
+    const layer = { wave: 'sine' as const, freq: 100, to: 200, at: 0, attack: 0.125, hold: 0.25, decay: 0.125, peak: 0.5 };
+    synthesize(asReal(ctx), { level: 1, layers: [layer] }, asReal(ctx.destination), 0, 2);
+    const envelope = ctx.of('gain').find(node => node.gain.events.length === 4)!;
+    assert.deepEqual(envelope.gain.events, [['set', 0.0001, 0], ['exp', 0.5, 0.0625], ['set', 0.5, 0.1875], ['exp', 0.0001, 0.25]]);
+    assert.deepEqual(ctx.of('oscillator')[0].frequency.events[1], ['exp', 400, 0.25]);
   });
 
   test('the echo taps the level node: delay → lowpass → feedback loop and wet send', () => {

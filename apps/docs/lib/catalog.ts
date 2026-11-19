@@ -31,6 +31,7 @@ const DESCRIPTIONS: Record<BuiltinSoundName, [character: string, useFor: string]
   ready: ['Focus tick and open fifth', 'Content ready'],
   payout: ['Deep two-stage coin', 'Payouts, rewards'],
   deposit: ['Wide metallic shimmer', 'Deposits, credits'],
+  'money-machine': ['Rapid banknote flicks followed by one steady high beep', 'Completed cash-outs'],
   pluck: ['Tight falling pluck', 'Pickups, selections'],
   notification: ['Bright physical bell', 'Messages, activity'],
   loss: ['Heavy two-stage fall', 'Losses, negative outcomes'],

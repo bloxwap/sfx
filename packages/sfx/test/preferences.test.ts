@@ -22,6 +22,8 @@ test('reduced-motion preset is opt-in and preserves an explicitly chosen master 
 test('categories match the sound board and reject arbitrary property names', () => {
   assert.deepEqual(categories, ['hover', 'controls', 'feedback', 'money']);
   assert.equal(Object.keys(soundCategories).length, sounds.length);
+  assert.equal(categoryOf('money-machine'), 'money');
+  assert.equal(categoryOf('success'), 'feedback');
   for (const name of sounds) assert.ok(isCategory(categoryOf(name)));
   for (const name of ['unknown', 'toString', '__proto__']) assert.equal(categoryOf(name as typeof sounds[number]), 'feedback');
   for (const value of ['toString', '__proto__', '', {}, null]) assert.equal(isCategory(value), false);

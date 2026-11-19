@@ -71,7 +71,7 @@ Object.assign(globalThis, { OfflineAudioContext: class extends OfflineAudioConte
 try {
   await preload();
   console.log(`\n48 kHz preloaded catalog: ${retainedBytes.toLocaleString('en-US')} bytes of sample data`);
-  if (retainedBytes > 3_150_000) throw new Error('Catalog cache exceeds 3.15 MB');
+  if (retainedBytes > 3_300_000) throw new Error('Catalog cache exceeds 3.30 MB');
 } finally {
   await dispose();
   if (originalOffline) globalThis.OfflineAudioContext = originalOffline;

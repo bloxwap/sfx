@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSha256": "eb5ca8dc332683159773bada674bca3d931658ca797b27f27b747366eac28385",
+  "sourceSha256": "d3841736e5e29b8081c8c6e36f9854666b28f0ce5288fa6f20e9c8fce38375f9",
   "renderer": "chromium 156.0.8078.4",
   "command": "npm run bake:native",
   "format": {
@@ -192,6 +192,15 @@
       "peakDb": -3.08,
       "recipeSha256": "aad667407d0ea0f76ae278b15426359e5831e6e3a4a4f6e3532f0f9fce683291",
       "sha256": "9f32b07d45512abb826625e55afbc59a0f598e65610d566a0138b31ea39a98fb"
+    },
+    {
+      "name": "money-machine",
+      "channels": 1,
+      "frames": 28238,
+      "durationMs": 588,
+      "peakDb": -4.92,
+      "recipeSha256": "c45a778422419c2f618f81ab08253fcb223b7fc8814b502d57cb82d63f9a1e7b",
+      "sha256": "0ef9e9601e64dcc79afa4b21e729d14dca46275f6345fabfea1239d0de4dabc4"
     }
   ]
 }

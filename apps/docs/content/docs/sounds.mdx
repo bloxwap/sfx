@@ -42,10 +42,11 @@ Click a name to hear it. The whole board is on the [home page](/#board).
 | --- | --- | --- |
 | <SoundButton name="payout" /> | A deep two-stage coin: body, then a strike an octave up | Payouts, rewards, wins |
 | <SoundButton name="deposit" /> | A wide, metallic, inharmonic shimmer | Deposits, credits |
+| <SoundButton name="money-machine" /> | Bills flutter through the rollers, then a steady high beep signals the finished count | Completed cash-outs |
 | <SoundButton name="pluck" /> | A tight square-wave pluck dropping an octave | Pickups, selections |
 | <SoundButton name="loss" /> | A heavy two-stage fall | Losses, liquidations, negative outcomes |
 
-The five money sounds were fitted to reference recordings. They use stereo width, and three of them (payout, deposit, and notification) layer 14–16 voices. Pre-rendering pays off most for these: each is one node per play instead of 30–53.
+The stereo cues `payout`, `deposit`, `pluck`, `loss`, and `notification` were fitted to reference recordings. Three of them (payout, deposit, and notification) layer 14–16 voices. Pre-rendering reduces each to one node per play.
 
 ## Lengths
 

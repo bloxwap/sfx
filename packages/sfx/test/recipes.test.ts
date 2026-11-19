@@ -18,6 +18,9 @@ test('define() validation rejects broken copies of built-ins', () => {
   const tone = recipe.layers.find((layer): layer is ToneLayer => 'wave' in layer)!;
   for (const broken of [
     { ...recipe, layers: [{ ...tone, to: 0 }] },
+    { ...recipe, layers: [{ ...tone, hold: -0.01 }] },
+    { ...recipe, layers: [{ ...tone, hold: Infinity }] },
+    { ...recipe, layers: [{ ...tone, hold: 10 }] },
     { ...recipe, echo: { ...recipe.echo!, feedback: 1 } },
     { ...recipe, echo: { ...recipe.echo!, delay: 1.5 } },
   ]) {
@@ -27,7 +30,7 @@ test('define() validation rejects broken copies of built-ins', () => {
 
 const ORDER: SoundName[] = [
   'chime', 'sparkle', 'droplet', 'bloom', 'whisper', 'tick', 'press', 'release', 'toggle', 'success',
-  'error', 'page', 'loading', 'ready', 'payout', 'deposit', 'pluck', 'notification', 'loss', 'block-break',
+  'error', 'page', 'loading', 'ready', 'payout', 'deposit', 'pluck', 'notification', 'loss', 'block-break', 'money-machine',
 ];
 
 test('built-in sounds in catalog order, frozen', () => {
@@ -48,7 +51,7 @@ test('recipe levels', () => {
   assert.deepEqual(levels, {
     chime: 1.75, sparkle: 2.9, droplet: 1.85, bloom: 1.3, whisper: 3.75, tick: 2.5, press: 3.2, release: 2.75,
     toggle: 3.3, success: 2.4, error: 4.1, page: 2.4, loading: 2.1, ready: 2.6, payout: 0.68, deposit: 0.63,
-    pluck: 0.62, notification: 0.62, loss: 0.54, 'block-break': 1.6,
+    pluck: 0.62, notification: 0.62, loss: 0.54, 'block-break': 1.6, 'money-machine': 1.55,
   });
 });
 
@@ -56,7 +59,7 @@ test('ring-out times match the reference (source end + echo tail + two 50 ms pad
   const expected: Record<SoundName, number> = {
     chime: 1176, sparkle: 918, droplet: 844, bloom: 1400, whisper: 300, tick: 119, press: 121, release: 157,
     toggle: 145, success: 1004, error: 344, page: 222, loading: 965, ready: 1137, payout: 1258, deposit: 516,
-    pluck: 129, notification: 912, loss: 576, 'block-break': 256,
+    pluck: 129, notification: 912, loss: 576, 'block-break': 256, 'money-machine': 671,
   };
   for (const name of ORDER) {
     assert.equal(Math.round((duration(name) + 0.1) * 1000), expected[name], name);

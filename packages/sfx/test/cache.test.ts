@@ -11,7 +11,7 @@ test('mono cache matches stereo output at center and non-zero pan for every unpa
   const { bytes, maxDiff } = await compareCache(sfx, recipes, OfflineAudioContext);
   assert.equal(maxDiff, 0);
   console.log(`48 kHz catalog cache: ${bytes} bytes`);
-  assert.ok(bytes <= 3_150_000);
+  assert.ok(bytes <= 3_300_000);
 });
 
 test('custom layers with absent or zero pan cache mono; either pan direction caches stereo', async () => {

@@ -14,7 +14,7 @@
 
 ## Features
 
-- **20 sounds.** Hovers, presses, toggles, confirmations, errors, loading, and money moments.
+- **21 sounds.** Hovers, presses, toggles, confirmations, errors, loading, and money moments.
 - **Zero files, zero dependencies.** Every sound is a small recipe of oscillators and filtered noise.
 - **One node per play.** Each sound is rendered once with an `OfflineAudioContext` and cached. After that, a play is a single `AudioBufferSourceNode`, 5-75× cheaper on the main thread than building the synth graph each time.
 - **A mixed output.** One master bus with volume control and a limiter, so overlapping sounds don't clip. Voice stealing and retrigger guards stop sounds from piling up.
@@ -34,7 +34,7 @@ ESM only. Works in all modern browsers, and is a silent no-op on the server.
 
 ## Release status
 
-`0.5.0` is an early developer preview; expect breaking changes before `1.0`.
+`0.6.0` is an early developer preview; expect breaking changes before `1.0`.
 
 ## Usage
 
@@ -133,6 +133,7 @@ play only for a mouse on a fine pointer, at most one every 150 ms. Controls that
 | `ready` | focus tick and open fifth | content ready |
 | `payout` | deep two-stage coin | payouts, rewards |
 | `deposit` | wide metallic shimmer | deposits, credits |
+| `money-machine` | rapid banknote flicks followed by one steady high beep | completed cash-outs |
 | `pluck` | tight falling pluck | pickups, selections |
 | `notification` | bright physical bell | messages, activity |
 | `loss` | heavy two-stage fall | losses, negative outcomes |

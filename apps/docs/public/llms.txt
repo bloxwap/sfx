@@ -1,6 +1,6 @@
 # @bloxwap/sfx
 
-> Interface sound effects for the web, synthesized with Web Audio. 20 sounds, no audio files, zero runtime dependencies. Each sound renders once to a buffer; every play is one AudioBufferSourceNode.
+> Interface sound effects for the web, synthesized with Web Audio. 21 sounds, no audio files, zero runtime dependencies. Each sound renders once to a buffer; every play is one AudioBufferSourceNode.
 
 Install: `npm install @bloxwap/sfx`
 
@@ -8,7 +8,7 @@ Install: `npm install @bloxwap/sfx`
 
 - [Introduction](https://bloxwap.github.io/sfx/docs/): what the library is and how it works
 - [Quick start](https://bloxwap.github.io/sfx/docs/getting-started/): install, bind(), play()
-- [Sound catalog](https://bloxwap.github.io/sfx/docs/sounds/): all 20 sounds and when to use them
+- [Sound catalog](https://bloxwap.github.io/sfx/docs/sounds/): all 21 sounds and when to use them
 - [Declarative binding](https://bloxwap.github.io/sfx/docs/guides/binding/): data-sound-hover, -press, -release, -toggle
 - [React](https://bloxwap.github.io/sfx/docs/guides/react/)
 - [Other frameworks](https://bloxwap.github.io/sfx/docs/guides/frameworks/): Vue, Svelte, Astro, plain HTML

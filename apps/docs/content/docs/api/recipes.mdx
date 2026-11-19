@@ -30,23 +30,23 @@ interface Echo {
 
 ## Layers
 
-Each layer has an envelope that rises exponentially from silence to `peak` over `attack`, then falls back over `decay`. It starts `at` seconds after the trigger. `pan` places it in the stereo field; leave it out to keep the layer centered.
+Each layer starts `at` seconds after the trigger. Its envelope rises exponentially to `peak` over `attack`, stays there for `hold` seconds (zero by default), then falls exponentially over `decay`. Set `pan` to place the layer in the stereo field. A layer is centered by default.
 
 ```ts
 interface ToneLayer {
   wave: 'sine' | 'triangle' | 'sawtooth' | 'square';
   freq: number;     // Hz
   to?: number;      // Hz: glide exponentially to this pitch
-  glide?: number;   // glide time in seconds; defaults to attack + decay
+  glide?: number;   // glide duration in seconds (default attack + hold + decay)
   detune?: number;  // cents
-  at: number; attack: number; decay: number; peak: number; pan?: number;
+  at: number; attack: number; hold?: number; decay: number; peak: number; pan?: number;
 }
 
 interface NoiseLayer {
   noise: 'lowpass' | 'bandpass' | 'highpass'; // white noise through this filter
   freq: number;     // filter frequency, Hz
   q?: number;       // filter Q (default 1)
-  at: number; attack: number; decay: number; peak: number; pan?: number;
+  at: number; attack: number; hold?: number; decay: number; peak: number; pan?: number;
 }
 ```
 

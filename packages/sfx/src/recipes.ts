@@ -14,6 +14,8 @@ interface LayerTiming {
   readonly at: number;
   /** Seconds from silence to `peak` (exponential). */
   readonly attack: number;
+  /** Seconds to hold the peak before decay. Defaults to zero. */
+  readonly hold?: number;
   /** Seconds from `peak` back to silence (exponential). */
   readonly decay: number;
   /** Linear envelope peak, before the recipe level. */
@@ -57,7 +59,7 @@ export interface Recipe {
   readonly echo?: Echo;
 }
 
-type ToneExtras = Pick<ToneLayer, 'to' | 'glide' | 'detune' | 'pan'>;
+type ToneExtras = Pick<ToneLayer, 'to' | 'glide' | 'detune' | 'pan' | 'hold'>;
 
 function tone(wave: Waveform, freq: number, at: number, attack: number, decay: number, peak: number, extras?: ToneExtras): ToneLayer {
   return { wave, freq, at, attack, decay, peak, ...extras };
@@ -297,6 +299,18 @@ const recipeTable = {
       tone('sine', 3380, 0.105, 0.0008, 0.05, 0.028, { pan: 0.64 }),
     ],
   },
+  // Six 25 ms paper flicks, spaced 35 ms apart, fill the 200 ms count.
+  'money-machine': {
+    level: 1.55,
+    layers: [
+      ...[0, 0.035, 0.07, 0.105, 0.14, 0.175].flatMap(at => [
+        { ...noise('bandpass', 1460, 0.85, at, 0.002, 0.013, 0.15), hold: 0.007 },
+        noise('bandpass', 3340, 0.75, at + 0.005, 0.001, 0.019, 0.19),
+      ]),
+      // After the paper clears, a single steady sine fades in and out.
+      tone('sine', 2923, 0.223, 0.012, 0.03, 0.098, { hold: 0.306 }),
+    ],
+  },
 } satisfies Record<string, Recipe>;
 
 /** Every built-in sound name. */
@@ -326,7 +340,7 @@ export function isSound(value: unknown): value is SoundName {
 /** Seconds from the trigger until the last layer's envelope ends. */
 export function sourceEnd(recipe: Recipe): number {
   let end = 0;
-  for (const layer of recipe.layers) end = Math.max(end, layer.at + layer.attack + layer.decay);
+  for (const layer of recipe.layers) end = Math.max(end, layer.at + layer.attack + (layer.hold ?? 0) + layer.decay);
   return end;
 }
 
@@ -366,6 +380,7 @@ export function registerRecipe<Name extends string>(name: Name, recipe: Recipe):
   if (!recipe || !positive(recipe.level) || !Array.isArray(recipe.layers) || !recipe.layers.length || recipe.layers.length > 64) throw new RangeError('A recipe needs a positive level and 1–64 layers');
   for (const layer of recipe.layers) {
     if (!layer || !nonnegative(layer.at) || !positive(layer.attack) || !positive(layer.decay) || !nonnegative(layer.peak) || !positive(layer.freq)) throw new RangeError('Invalid layer timing, gain or frequency');
+    if (layer.hold !== undefined && !nonnegative(layer.hold)) throw new RangeError('Invalid layer hold');
     if (layer.pan !== undefined && (!Number.isFinite(layer.pan) || Math.abs(layer.pan) > 1)) throw new RangeError('Invalid layer pan');
     if ('noise' in layer) {
       if (!['lowpass', 'bandpass', 'highpass'].includes(layer.noise) || (layer.q !== undefined && !positive(layer.q))) throw new RangeError('Invalid noise filter');
@@ -393,7 +408,7 @@ export const soundCategories: Readonly<Partial<Record<SoundName, SoundCategory>>
   tick: 'controls', press: 'controls', release: 'controls', toggle: 'controls', page: 'controls',
   success: 'feedback', error: 'feedback', loading: 'feedback', ready: 'feedback', notification: 'feedback',
   'block-break': 'feedback',
-  payout: 'money', deposit: 'money', pluck: 'money', loss: 'money',
+  payout: 'money', deposit: 'money', pluck: 'money', loss: 'money', 'money-machine': 'money',
 });
 export function isCategory(value: unknown): value is SoundCategory {
   return typeof value === 'string' && (categories as readonly string[]).includes(value);

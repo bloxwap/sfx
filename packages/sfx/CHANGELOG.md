@@ -3,6 +3,11 @@
 All notable changes to `@bloxwap/sfx` are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.6.0 — 2026-11-18
+
+- Added `money-machine` in the Money category for completed cash-outs on web and React Native. Six bill flicks over 200 ms lead into a clear completion beep.
+- Added optional `hold` timing to recipe layers so a tone or noise can sustain its peak before fading.
+
 ## 0.5.0 — 2026-11-18
 
 - Added `block-break`, a short stereo crack with scattered chips for chart target crossings. Available on web and React Native.

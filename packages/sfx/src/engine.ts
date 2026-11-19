@@ -211,9 +211,11 @@ function noiseFor(ctx: Ctx): AudioBuffer {
   return buffer;
 }
 
-function envelope(param: AudioParam, start: number, attack: number, end: number, peak: number): void {
+function envelope(param: AudioParam, start: number, attack: number, hold: number, end: number, peak: number): void {
+  const amplitude = Math.max(FLOOR, peak);
   param.setValueAtTime(FLOOR, start);
-  param.exponentialRampToValueAtTime(Math.max(FLOOR, peak), start + attack);
+  param.exponentialRampToValueAtTime(amplitude, start + attack);
+  if (hold > 0) param.setValueAtTime(amplitude, start + attack + hold);
   param.exponentialRampToValueAtTime(FLOOR, end);
 }
 
@@ -259,9 +261,10 @@ export function synthesize(ctx: Ctx, recipe: Recipe, out: AudioNode, t0: number,
     for (const layer of recipe.layers) {
       const start = t0 + layer.at / rate;
       const attack = layer.attack / rate;
-      const end = start + attack + layer.decay / rate;
+      const hold = (layer.hold ?? 0) / rate;
+      const end = start + attack + hold + layer.decay / rate;
       const env = own(ctx.createGain());
-      envelope(env.gain, start, attack, end, layer.peak);
+      envelope(env.gain, start, attack, hold, end, layer.peak);
       let source: AudioScheduledSourceNode;
       if ('noise' in layer) {
         const buffer = noiseFor(ctx);
@@ -280,7 +283,7 @@ export function synthesize(ctx: Ctx, recipe: Recipe, out: AudioNode, t0: number,
         osc.type = layer.wave;
         osc.frequency.setValueAtTime(Math.min(layer.freq * rate, nyquist), start);
         if (layer.to !== undefined) {
-          const glide = (layer.glide ?? layer.attack + layer.decay) / rate;
+          const glide = (layer.glide ?? layer.attack + (layer.hold ?? 0) + layer.decay) / rate;
           osc.frequency.exponentialRampToValueAtTime(Math.min(layer.to * rate, nyquist), start + glide);
         }
         if (layer.detune) osc.detune.value = layer.detune;

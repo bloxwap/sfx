@@ -107,13 +107,11 @@ try {
   if (!archive) {
     const response = await fetch(`https://deno.bundlejs.com/?q=${encodeURIComponent(`@bloxwap/sfx@${argument}`)}`, { signal: AbortSignal.timeout(60000) });
     assert.ok(response.ok, 'bundlejs API responds');
-    const data = await response.json() as { size?: { compressedSize?: string } };
-    assert.ok(data.size?.compressedSize, 'bundlejs reports compressed size');
-    const match = data.size.compressedSize.match(/([\d.]+)\s*(kB|KiB|B)/i);
-    assert.ok(match, 'bundlejs size has a recognized unit');
-    const bytes = Number(match[1]) * (/^k/i.test(match[2]) ? 1024 : 1);
-    assert.ok(bytes < 8192, `bundlejs full package stays within the 8 KiB budget: ${data.size.compressedSize}`);
-    console.log(`bundlejs badge: ${data.size.compressedSize}`);
+    const data = await response.json() as { size?: { rawCompressedSize?: number } };
+    const bytes = data.size?.rawCompressedSize;
+    assert.ok(typeof bytes === 'number' && Number.isSafeInteger(bytes) && bytes > 0, 'bundlejs reports compressed bytes');
+    assert.ok(bytes <= 8192, `bundlejs full package stays within the 8 KiB budget: ${bytes} bytes`);
+    console.log(`bundlejs compressed size: ${bytes} bytes`);
   } else console.log('Local archive rehearsal passed; registry/CDN/badge checks require publication.');
 } finally {
   for (const child of servers) {

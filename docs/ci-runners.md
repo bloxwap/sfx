@@ -18,12 +18,11 @@ The publish job uses Node 24, pinned npm 11.6.1, `id-token: write`, and
 `npm publish --provenance`, building and testing on Ubuntu itself with package-manager
 caching disabled. Its `npm-release` environment must have required reviewers configured.
 
-The org-level `NPM_TOKEN` is scoped only to authentication verification and publishing
-as a transitional fallback. npm tries OIDC first, then token authentication; provenance
-is attached with either method. Configure the npm Trusted Publisher for organization
-`bloxwap`, repository `sfx`, workflow filename `publish_npm.yml`, and environment
-`npm-release`. After verifying OIDC publishing, delete `NPM_TOKEN` and its workflow
-references. Token-only registry commands still require separate credentials.
+Keep the npm Trusted Publisher bound to organization `bloxwap`, repository
+`sfx`, workflow filename `publish_npm.yml`, and environment `npm-release`.
+`@bloxwap/sfx@0.6.0` already published this way with SLSA provenance, and the
+transitional `NPM_TOKEN` fallback has been removed. Token-only registry
+commands still require separate credentials.
 
 ## Labels
 
@@ -94,7 +93,7 @@ CoreAudio on these machines.
   runner must be allowed to request ID tokens for those jobs.
 - Configure required reviewers for the `npm-release` environment. Merely naming
   the environment in YAML does not enable approval protection.
-- Configure and verify the npm Trusted Publisher above before deleting the fallback token.
+- Keep the npm Trusted Publisher above configured; the publish workflow no longer uses a token fallback.
 - First-time contributors to this repository need approval to run workflows
   from fork pull requests (`first_time_contributors`).
 

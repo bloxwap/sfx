@@ -280,10 +280,9 @@ for the npm publish job on GitHub-hosted `ubuntu-24.04` (required by npm trusted
 See [docs/ci-runners.md](docs/ci-runners.md) for runner labels and tools.
 
 A GitHub release tagged `v<version>` publishes with provenance through the `npm-release`
-environment, which must have required reviewers configured. `NPM_TOKEN` remains only as a
-transitional fallback until the npm Trusted Publisher is verified: organization `bloxwap`,
-repository `sfx`, workflow `publish_npm.yml`, environment `npm-release`. Then delete the token
-and its workflow references. See [Releasing](https://bloxwap.github.io/sfx/docs/releasing/).
+environment, which must have required reviewers configured. Publishing uses the npm
+Trusted Publisher for organization `bloxwap`, repository `sfx`, workflow
+`publish_npm.yml`, environment `npm-release`. See [Releasing](https://bloxwap.github.io/sfx/docs/releasing/).
 
 ## License
 

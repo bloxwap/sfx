@@ -101,7 +101,7 @@ CoreAudio on these machines.
 ## Local rehearsal
 
 ```sh
-npm ci
+bun install --frozen-lockfile
 npm test
 npm run coverage
 npx playwright install chromium webkit

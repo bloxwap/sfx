@@ -253,7 +253,7 @@ This repository is an npm workspace: the library lives in [`packages/sfx`](packa
 documentation site, with its live sound board, in [`apps/docs`](apps/docs).
 
 ```sh
-npm ci
+bun install --frozen-lockfile
 npm test            # build and run the test suite
 npm run coverage    # tests with 100% line, branch, and function coverage enforcement
 npm run bench       # play() cost: live synthesis vs. pre-rendered buffers

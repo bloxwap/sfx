@@ -285,7 +285,7 @@ Provider overrides accept boolean enabled values and clamp finite numeric volume
 0–1; invalid values fall back to the saved preference.
 
 The approved native subset is available at `@bloxwap/sfx/assets/hig/*`, with a manifest.
-Regenerate from this checkout with `npm ci && npm run export:hig` (Node 24). The lockfile pins
+Regenerate from this checkout with `bun install --frozen-lockfile && npm run export:hig` (Node 24). The lockfile pins
 the optional offline renderer. Only four 48 kHz mono PCM16 WAVs ship; native hosts import
 assets, never Web Audio or the offline renderer. Recipes with noise are not byte-identical
 across regenerations; provenance, hashes, format, durations, peak/RMS and envelope bounds

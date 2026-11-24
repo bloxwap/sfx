@@ -83,9 +83,6 @@ jobs:
 
       # Check authentication even if the version below is already published.
       - name: Verify npm publish authentication
-        # Transitional fallback: delete after the npm Trusted Publisher works.
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: node packages/sfx/scripts/check-publish-auth.ts
 
       - name: Skip if this version is already on npm
@@ -99,12 +96,9 @@ jobs:
           fi
 
       # prepack builds and prepublishOnly runs the full test suite before anything is uploaded;
-      # publishConfig.access is public.
-      # Provenance is attached with either OIDC or the transitional token.
+      # publishConfig.access is public. Provenance is attached via OIDC trusted publishing.
       - name: Publish @bloxwap/sfx@${{ steps.tag.outputs.version }}
         if: steps.exists.outputs.published != 'true'
-        # Transitional fallback: delete after the npm Trusted Publisher works.
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_TAG: ${{ steps.tag.outputs.value }}
         run: npm publish --workspace @bloxwap/sfx --tag "$NPM_TAG" --provenance

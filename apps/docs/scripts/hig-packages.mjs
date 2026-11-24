@@ -8,7 +8,7 @@ import {readOgFont} from '@bloxwap/hig/og-fonts/node';
 const root=new URL('../../../',import.meta.url),docs=new URL('../',import.meta.url);
 const provenance=JSON.parse(await readFile(new URL('hig-packages.json',docs),'utf8'));
 const manifest=JSON.parse(await readFile(new URL('package.json',docs),'utf8'));
-const lock=JSON.parse(await readFile(new URL('package-lock.json',root),'utf8'));
+const bunLock=new Function(`return (${await readFile(new URL('bun.lock',root),'utf8')})`)();
 async function installedManifest(name){
  for(const base of [docs,root]){
   try{return JSON.parse(await readFile(new URL(`node_modules/${name}/package.json`,base),'utf8'));}catch{/* Try the workspace root. */}
@@ -18,11 +18,14 @@ async function installedManifest(name){
 for(const name of provenance.packages){
  const spec=manifest.dependencies[name]??manifest.devDependencies?.[name];
  assert.equal(spec,provenance.version,`${name}: use the exact reviewed registry version`);
- const entry=lock.packages[`apps/docs/node_modules/${name}`]??lock.packages[`node_modules/${name}`];
- assert.ok(entry,`${name}: missing from the lockfile`);
- assert.equal(entry.version,provenance.version,`${name}: lockfile version differs`);
- assert.equal(entry.resolved,`https://registry.npmjs.org/${name}/-/${name.split('/')[1]}-${provenance.version}.tgz`,`${name}: must resolve from npm`);
- assert.match(entry.integrity,/^sha512-[A-Za-z0-9+/]+={0,2}$/,`${name}: lockfile must pin registry integrity`);
+ const entry=bunLock.packages[name];
+ assert.ok(entry,`${name}: missing from bun.lock`);
+ const version=entry[0].slice(entry[0].lastIndexOf('@')+1);
+ const resolved=entry[1]||`https://registry.npmjs.org/${name}/-/${name.split('/')[1]}-${provenance.version}.tgz`;
+ const integrity=[...entry].reverse().find((value)=>typeof value==='string'&&value.startsWith('sha'))??'';
+ assert.equal(version,provenance.version,`${name}: lockfile version differs`);
+ assert.equal(resolved,`https://registry.npmjs.org/${name}/-/${name.split('/')[1]}-${provenance.version}.tgz`,`${name}: must resolve from npm`);
+ assert.match(integrity,/^sha512-[A-Za-z0-9+/]+={0,2}$/,`${name}: lockfile must pin registry integrity`);
  assert.equal((await installedManifest(name)).version,provenance.version,`${name}: installed version differs`);
 }
 assert.ok(!manifest.dependencies['@bloxwap/hig-native-fonts']&&!manifest.devDependencies?.['@bloxwap/hig-native-fonts'],'OG cards must use the hig/og-fonts entry point');

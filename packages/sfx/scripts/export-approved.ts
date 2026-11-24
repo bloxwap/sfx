@@ -12,7 +12,7 @@ import { assetFingerprint } from './asset-fingerprint.ts';
 
 const out = process.argv[2] ?? fileURLToPath(new URL('../assets/hig', import.meta.url));
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
-const lock = JSON.parse(await readFile(new URL('../../../package-lock.json', import.meta.url), 'utf8'));
+const bunLock = new Function(`return (${await readFile(new URL('../../../bun.lock', import.meta.url), 'utf8')})`)();
 const sampleRate = 48000;
 const flags = ['--out', out, '--sounds', approvedCues.join(','), '--sample-rate', String(sampleRate), '--bit-depth', '16', '--channels', '1', '--trim'];
 await mkdir(out, { recursive: true });
@@ -37,8 +37,8 @@ for (const name of approvedCues) {
 await writeFile(join(out, 'manifest.json'), JSON.stringify({
   schemaVersion: 1, semanticSource, package: `@bloxwap/sfx@${packageJson.version}`, sourceRepository: 'https://github.com/bloxwap/sfx',
   sourceSha256: assetFingerprint('hig'),
-  renderer: `node-web-audio-api@${lock.packages['node_modules/node-web-audio-api'].version}`,
-  command: 'npm ci && npm run export:hig',
+  renderer: `node-web-audio-api@${bunLock.packages['node-web-audio-api'][0].slice('node-web-audio-api@'.length)}`,
+  command: 'bun install --frozen-lockfile && npm run export:hig',
   flags: flags.map(value => value === out ? 'packages/sfx/assets/hig' : value),
   format: { sampleRate, channels: 1, bitDepth: 16, encoding: 'PCM', trimThresholdDb: -60, trimPadMs: 20 },
   variance: 'Noise uses Math.random; regenerations may differ in samples, hashes, trim duration and levels. Review versioned artifacts and bounded envelope/level checks; byte identity is not guaranteed across renderers or platforms.',

@@ -11,8 +11,7 @@ The docs use `@bloxwap/hig/tokens`, `@bloxwap/hig/react/status` and
 component CSS imports. OG cards use `readOgFont()` from
 `@bloxwap/hig/og-fonts/node`; they do not load the native font entry point.
 
-`bun.lock` pins the CI install. `package-lock.json` pins the registry URL and
-SHA-512 integrity for npm audit and the HIG verifier. `npm run docs:check`
+`bun.lock` pins the CI install and the registry URL / SHA-512 integrity for the HIG verifier. `npm run docs:check`
 checks the exact installed version and npm lock entry, plus the approved
 Bold and Black font names, weights, byte lengths and SHA-256 hashes recorded
 in `apps/docs/hig-packages.json`. The font hashes are unchanged by this migration.

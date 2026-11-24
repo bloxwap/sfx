@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSha256": "d3841736e5e29b8081c8c6e36f9854666b28f0ce5288fa6f20e9c8fce38375f9",
+  "sourceSha256": "924bbac44a4fbb092a98ec1f2f5d1355b93f873bf99040c01300a58b318c7f4a",
   "renderer": "chromium 156.0.8078.4",
   "command": "npm run bake:native",
   "format": {

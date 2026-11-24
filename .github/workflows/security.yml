@@ -19,7 +19,7 @@ jobs:
   audit:
     # Security: never run fork PR code on the self-hosted runner.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    name: npm audit (runtime + tooling)
+    name: bun audit (runtime + tooling)
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 10
     steps:
@@ -33,7 +33,7 @@ jobs:
           bun-version: '1.4.2'
       - run: bun install --frozen-lockfile
       # The published package has zero runtime dependencies; this gates the build and docs toolchain.
-      - run: npm audit --audit-level=high
+      - run: bun audit --audit-level=high
       - name: Published package has no runtime dependencies
         run: |
           node -e "const p=require('./packages/sfx/package.json'); const d=Object.keys(p.dependencies??{}); if(d.length){console.error('runtime deps:',d);process.exit(1)} console.log('0 runtime dependencies')"

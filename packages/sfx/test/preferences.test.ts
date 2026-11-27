@@ -23,6 +23,7 @@ test('categories match the sound board and reject arbitrary property names', () 
   assert.deepEqual(categories, ['hover', 'controls', 'feedback', 'money']);
   assert.equal(Object.keys(soundCategories).length, sounds.length);
   assert.equal(categoryOf('money-machine'), 'money');
+  assert.equal(categoryOf('opening-bell'), 'money');
   assert.equal(categoryOf('success'), 'feedback');
   for (const name of sounds) assert.ok(isCategory(categoryOf(name)));
   for (const name of ['unknown', 'toString', '__proto__']) assert.equal(categoryOf(name as typeof sounds[number]), 'feedback');

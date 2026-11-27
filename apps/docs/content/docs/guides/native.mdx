@@ -33,7 +33,7 @@ Native platforms have no Web Audio, so the package bakes every recipe to PCM at 
 - **iOS:** one `AVAudioEngine`. Each sound is decoded once into a float32 buffer and played on a pooled `AVAudioPlayerNode`. The engine pauses after 3 s of silence, and decoded buffers are dropped on a memory warning and reload on their next play.
 - **Android:** one `SoundPool` reading the sounds straight from the APK, with no `ExoPlayer` or media session.
 - **Every play** is one synchronous native call on the JS thread. There is no seek, promise, or bridge round trip.
-- **Memory** grows only with the sounds you use: a sound is decoded on its first play, or ahead of time by `preload()`. The whole catalog is about 2 MB decoded on iOS. Pass `preload()` only the sounds you use to keep it smaller.
+- **Memory** grows only with the sounds you use: a sound is decoded on its first play, or ahead of time by `preload()`. The whole catalog is about 2.3 MB decoded on iOS. Pass `preload()` only the sounds you use to keep it smaller.
 
 ### Platform behavior
 

@@ -311,6 +311,24 @@ const recipeTable = {
       tone('sine', 2923, 0.223, 0.012, 0.03, 0.098, { hold: 0.306 }),
     ],
   },
+  // Three strikes on a small brass bell, 240 ms apart. Every partial completes whole cycles between
+  // strikes, so each new strike lands in phase with the ring before it instead of fighting it.
+  'opening-bell': {
+    level: 0.5,
+    layers: [0, 0.24, 0.48].flatMap(at => [
+      // The clapper: a short bright knock.
+      noise('bandpass', 5200, 1, at, 0.0006, 0.02, 0.2),
+      // The strike tone is a pair 8.3 Hz apart, so it throbs between the ears as it fades.
+      tone('sine', 4512.5, at, 0.0006, 1, 0.2, { pan: -0.5 }),
+      tone('sine', 4520.83, at, 0.0006, 1, 0.24, { pan: 0.5 }),
+      // Two upper partials flash and fade first.
+      tone('sine', 5825, at, 0.0006, 0.4, 0.2, { pan: 0.5 }),
+      tone('sine', 3325, at, 0.0006, 0.4, 0.15, { pan: -0.5 }),
+      // The body of the bell swells in just after the strike.
+      tone('sine', 2250, at, 0.02, 1, 0.1),
+      tone('sine', 1287.5, at, 0.02, 1, 0.1),
+    ]),
+  },
 } satisfies Record<string, Recipe>;
 
 /** Every built-in sound name. */
@@ -408,7 +426,7 @@ export const soundCategories: Readonly<Partial<Record<SoundName, SoundCategory>>
   tick: 'controls', press: 'controls', release: 'controls', toggle: 'controls', page: 'controls',
   success: 'feedback', error: 'feedback', loading: 'feedback', ready: 'feedback', notification: 'feedback',
   'block-break': 'feedback',
-  payout: 'money', deposit: 'money', pluck: 'money', loss: 'money', 'money-machine': 'money',
+  payout: 'money', deposit: 'money', pluck: 'money', loss: 'money', 'money-machine': 'money', 'opening-bell': 'money',
 });
 export function isCategory(value: unknown): value is SoundCategory {
   return typeof value === 'string' && (categories as readonly string[]).includes(value);

@@ -3,6 +3,10 @@
 All notable changes to `@bloxwap/sfx` are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.7.0 — 2026-11-27
+
+- Added `opening-bell` in the Money category for market opens and session starts on web and React Native. Three strikes on a small brass bell land 240 ms apart, and the last rings out for about a second.
+
 ## 0.6.0 — 2026-11-18
 
 - Added `money-machine` in the Money category for completed cash-outs on web and React Native. Six bill flicks over 200 ms lead into a clear completion beep.

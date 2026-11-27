@@ -28,7 +28,7 @@ test('preload and every offline render are audible, finite, stereo and decay', a
     return { results, contexts: stats.contexts };
   });
   expect(result.contexts).toBe(0);
-  expect(result.results).toHaveLength(21);
+  expect(result.results).toHaveLength(22);
   for (const sound of result.results) {
     expect(sound.peak, sound.name).toBeGreaterThan(0.05);
     expect(sound.peak, sound.name).toBeLessThan(1);
@@ -122,7 +122,7 @@ test('mono cache preserves stereo output at center and non-zero pan', async ({ p
     return (window as any).compareCache((window as any).sfx, recipes, OfflineAudioContext, 1e-5);
   });
   console.log(`mono vs stereo cache: max sample difference ${maxDiff}`);
-  expect(bytes).toBeLessThanOrEqual(3_300_000);
+  expect(bytes).toBeLessThanOrEqual(3_900_000);
 });
 
 test('cold playback defers offline construction and fills the playback cache', async ({ page }) => {

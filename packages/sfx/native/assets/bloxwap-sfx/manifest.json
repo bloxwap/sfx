@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSha256": "d3841736e5e29b8081c8c6e36f9854666b28f0ce5288fa6f20e9c8fce38375f9",
+  "sourceSha256": "0599f400dbab48f7db842b880c568d361564a1383298b2ef5b4e4d09d56592e1",
   "renderer": "chromium 156.0.8078.4",
   "command": "npm run bake:native",
   "format": {
@@ -201,6 +201,15 @@
       "peakDb": -4.92,
       "recipeSha256": "c45a778422419c2f618f81ab08253fcb223b7fc8814b502d57cb82d63f9a1e7b",
       "sha256": "0ef9e9601e64dcc79afa4b21e729d14dca46275f6345fabfea1239d0de4dabc4"
+    },
+    {
+      "name": "opening-bell",
+      "channels": 2,
+      "frames": 66940,
+      "durationMs": 1395,
+      "peakDb": -4.52,
+      "recipeSha256": "62d38e77fbc4d9318e80561f00d05e25d092025b5f5b47b34246d4293776c508",
+      "sha256": "ec483cd914c87a9ee776370c84239710f5ea3f5c8dab55891ea139b9f02bf30b"
     }
   ]
 }

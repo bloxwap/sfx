@@ -75,6 +75,8 @@ test('tonal sounds carry their fundamental', async () => {
     ['success', 1318.51, 0.13, 0.25, 1000],
     ['money-machine', 2923, 0.238, 0.308, 1948],
     ['money-machine', 2923, 0.478, 0.538, 5846],
+    ['opening-bell', 4520.83, 0.005, 0.05, 4000],
+    ['opening-bell', 2250, 0.75, 1, 1800],
     ['bloom', 528, 0.05, 0.3, 700],
     ['payout', 2337.5, 0.13, 0.4, 1800],
     ['notification', 873, 0.3, 0.6, 1100],
